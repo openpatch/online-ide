@@ -176,7 +176,8 @@ export class SettingsGUI {
             case 'enumeration':
                 let optionCaptions1: string[] = setting.optionTexts.map(t => t());
                 let defaultSettingIndex = setting.optionValues.indexOf(defaultSettingValue);
-                optionCaptions1.push(SettingsMessages.OptionDefault() + ": " + setting.optionTexts[defaultSettingIndex]());
+                if(defaultSettingIndex == -1) defaultSettingIndex =  0;
+                optionCaptions1.push(SettingsMessages.OptionDefault() + ": " + optionCaptions1[defaultSettingIndex]);
                 let optionValues1: SettingValue[] = setting.optionValues.slice();
                 optionValues1.push(undefined);
 
