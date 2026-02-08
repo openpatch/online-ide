@@ -25,6 +25,9 @@ jobs:
       - name: Build embedded
         run: npm run build-embedded
       
+      - name: Remove source maps
+        run: find dist-embedded -name "*.map" -type f -delete
+      
       - name: Create zip file
         run: |
           cd dist-embedded
