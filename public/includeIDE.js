@@ -1,4 +1,4 @@
-let base = "https://embed.learnj.de/include/";
+let base = "https://onlineide2.openpatch.org/";
 
 
 let scripts = [
