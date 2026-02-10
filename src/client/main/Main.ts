@@ -186,7 +186,7 @@ export class Main implements MainBase {
 
         if (singleUseToken) {
             this.login.initGUI();
-            this.login.loginWithVidis(singleUseToken);
+            this.login.loginWithVidisOrAutoLogin(singleUseToken);
         } else {
             this.login.initGUI();
         }

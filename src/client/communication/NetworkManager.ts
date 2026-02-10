@@ -168,9 +168,14 @@ export class NetworkManager {
                         if (response.workspaces != null) {
                             that.updateWorkspaces(request, response, alertIfNewWorkspacesFound);
                         }
+
                         if (response.filesToForceUpdate != null) {
                             that.updateFiles(response.filesToForceUpdate);
                         }
+
+                        // if(response.activePruefung != null){
+                        //     that.main.pruefungManagerForStudents.startPruefung(response.activePruefung);
+                        // }
 
                         return true;
 
