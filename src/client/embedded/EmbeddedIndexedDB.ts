@@ -1,89 +1,61 @@
 import { ClassDiagram } from "../main/gui/diagrams/classdiagram/ClassDiagram";
+import Dexie from 'dexie';
+
+declare global {
+    interface Window {
+        store: {
+            onlineide: Dexie.Table;
+        };
+    }
+}
 
 export class EmbeddedIndexedDB {
-
-    private db: IDBDatabase;
+    private db: Dexie.Table;
 
     public open(successCallback: () => void) {
-
-        if (window.indexedDB) {
-
-            let request: IDBOpenDBRequest = window.indexedDB.open("LearnJ", 1);
-
-            let that = this;
-
-            request.onerror = function (this: IDBRequest<IDBDatabase>, ev: Event) {
-                console.log("Couldn't open IndexedDB: " + ev.type);
-            };
-
-            request.onsuccess = function (this: IDBRequest<IDBDatabase>, ev: Event) {
-                that.db = request.result;
-                that.db.onerror = function(event) {
-                    // Allgemeine Fehlerbehandlung, die für alle Anfragen an die Datenbank gilt.
-                    // @ts-ignore
-                    console.log("Datenbankfehler: " + event.target.error.message);
-                  };
-                  successCallback();
-            };
-
-            request.onupgradeneeded = function(ev: Event){
-                // @ts-ignore
-                that.db = ev.target.result;
-                let objectStore = that.db.createObjectStore("scripts", { keyPath: "scriptId", autoIncrement: false});
-
-
-                objectStore.transaction.oncomplete = function(event) {
-
-                }
-
+        try {
+            // Access the existing Dexie table
+            this.db = window.store.onlineide;
+            
+            // Verify the table is available and ready
+            if (this.db) {
+                // Dexie table is already initialized, just call the callback
+                successCallback();
+            } else {
+                console.log("Dexie table not available at window.store.onlineide");
             }
-
-        } else {
-            console.log("IndexedDB not available.");
+        } catch (error) {
+            console.log("Couldn't access Dexie table: " + error);
         }
-
     }
 
-
-    public writeScript(scriptId: string, script: string){
-
-        let scriptObjectStore = this.db.transaction("scripts", "readwrite").objectStore("scripts");
-
-        scriptObjectStore.put({
+    public writeScript(scriptId: string, script: string) {
+        this.db.put({
             scriptId: scriptId,
             script: script
+        }).catch(error => {
+            console.error("Error writing script: ", error);
         });
-
     }
 
-    public removeScript(scriptId: string){
-
-        let scriptObjectStore = this.db.transaction("scripts", "readwrite").objectStore("scripts");
-
-        scriptObjectStore.delete(scriptId);
-
+    public removeScript(scriptId: string) {
+        this.db.delete(scriptId).catch(error => {
+            console.error("Error removing script: ", error);
+        });
     }
 
-
-    public getScript(scriptId: string, callback: (script: string) => void){
-
-        let scriptObjectStore = this.db.transaction("scripts", "readwrite").objectStore("scripts");
-
-        let request = scriptObjectStore.get(scriptId);
-
-        request.onerror = (event) => {
-            callback(null);
-        }
-
-        request.onsuccess = (event) => {
-            if(request.result == null){
+    public getScript(scriptId: string, callback: (script: string) => void) {
+        this.db.get(scriptId)
+            .then(result => {
+                if (result == null) {
+                    callback(null);
+                } else {
+                    callback(result.script);
+                }
+            })
+            .catch(error => {
+                console.error("Error getting script: ", error);
                 callback(null);
-            } else {
-                callback(request.result.script);
-            }
-        }
-
+            });
     }
-
-
 }
