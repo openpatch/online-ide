@@ -8,7 +8,7 @@ export class NRWVertexClass extends ObjectClass {
         { type: "declaration", signature: "class Vertex", comment: NRWLang.vertexClassComment },
 
         { type: "method", signature: "Vertex(String pID)", native: NRWVertexClass.prototype._constructor1, comment: NRWLang.vertexConstructorComment },
-        { type: "method", signature: "string getID()", native: NRWVertexClass.prototype._getID, comment: NRWLang.vertexGetIDComment },
+        { type: "method", signature: "String getID()", native: NRWVertexClass.prototype._getID, comment: NRWLang.vertexGetIDComment },
         { type: "method", signature: "boolean isMarked()", native: NRWVertexClass.prototype._isMarked, comment: NRWLang.vertexIsMarkedComment },
         { type: "method", signature: "void setMark(boolean pMark)", native: NRWVertexClass.prototype._setMark, comment: NRWLang.vertexSetMarkComment },
 
