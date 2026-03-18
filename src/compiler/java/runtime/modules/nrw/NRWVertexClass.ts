@@ -28,6 +28,7 @@ export class NRWVertexClass extends ObjectClass {
     _constructor1(pID: string){
         this.id = pID;
         this.mark = false;
+        return this;
     }
 
     _getID(){
