@@ -906,6 +906,11 @@ export abstract class StatementCodeGenerator extends TermCodeGenerator {
             instanceOfVariables.forEach(v => symbolTable.addSymbolWithoutAddingToStackframe(v));
         }
         let statementIfTrue = this.compileStatementOrTerm(node.statementIfTrue);
+
+        if(statementIfTrue?.isEmptyStatement()){
+            this.pushError(JCM.emptyStatementAfterIf(), "warning", statementIfTrue.range);
+        }
+
         if (instanceOfVariables) {
             this.popSymbolTable();
         }
@@ -1026,7 +1031,8 @@ export abstract class StatementCodeGenerator extends TermCodeGenerator {
 
         if (shadowedSymbolInformation) {
             let shadowedVariableErrorLevel: ErrorLevel | "ignore" = this.settingStore.getValue("compiler.shadowedSymbolErrorLevel") as ErrorLevel | "ignore";
-            if (this.codeGenerationMode == "normal") {
+            if(this.codeGenerationMode == "replStandalone") shadowedVariableErrorLevel = "error";
+            if (["normal", "replStandalone"].includes(this.codeGenerationMode)) {
                 let shadowedSymbolLine = shadowedSymbol.identifierRange.startLineNumber;
                 if (shadowedSymbol instanceof JavaLocalVariable) {
                     if (shadowedSymbolInformation.symbolTable == this.currentSymbolTable && this.codeGenerationMode == "normal") {
@@ -1042,7 +1048,9 @@ export abstract class StatementCodeGenerator extends TermCodeGenerator {
         }
 
         if (variable != shadowedSymbolInformation?.symbol) {
-            this.currentSymbolTable.addSymbol(variable);
+            if(shadowedSymbolInformation == null || this.codeGenerationMode != "replStandalone"){
+                this.currentSymbolTable.addSymbol(variable);
+            }
         }
 
         this.module.compiledSymbolsUsageTracker.registerUsagePosition(variable, this.module.file, node.identifierRange);

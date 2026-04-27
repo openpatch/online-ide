@@ -111,7 +111,7 @@ export class Main implements MainBase {
     jUnitTestrunner: JUnitTestrunner;
 
     showFile(file?: CompilerFile): void {
-        if (!file) return;
+        if (!file || !(file instanceof GUIFile)) return;
         this.projectExplorer.setFileActive(<GUIFile>file);
     }
 
@@ -185,6 +185,10 @@ export class Main implements MainBase {
         let singleUseToken: string | undefined = findGetParameter("singleUseToken");
         let loggedInWithVidis: boolean = findGetParameter("vidis") == "true";
 
+        if(loggedInWithVidis){
+            this.login.vidis_id_token = findGetParameter("vidis-id-token") || "";
+        }
+
         if (singleUseToken) {
             this.login.initGUI();
             this.login.loginWithVidisOrAutoLogin(singleUseToken, loggedInWithVidis);
@@ -233,7 +237,7 @@ export class Main implements MainBase {
         this.themeManager.switchTheme("dark");
 
         let breakpointManager = new BreakpointManager(this);
-        this.debugger = new Debugger(<HTMLDivElement>jQuery('#leftpanel>.jo_debugger')[0], this);
+        this.debugger = new Debugger(<HTMLDivElement>jQuery('#leftpanel>.jo_debugger')[0], true, this);
         this.debugger.hide();
         let inputManager = new InputManager(jQuery('#rightdiv-inner .jo_run'), this);
         let printManager = new PrintManager(jQuery('#rightdiv-inner .jo_run'), this);

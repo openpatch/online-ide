@@ -13,12 +13,14 @@ import { SqlIdeUrlHolder } from './SqlIdeUrlHolder.js';
 import { AutoLogout } from './AutoLogout.js';
 import { SchedulerState } from "../../compiler/common/interpreter/SchedulerState.js";
 import * as monaco from 'monaco-editor';
+import * as PIXI from 'pixi.js';
 import { LoginMessages } from './language/MainLanguage.js';
 import { Settings } from '../settings/Settings.js';
 
 export class Login {
 
     loggedInWithVidis: boolean = false;
+    vidis_id_token: string = "";
 
     constructor(private main: Main) {
         new AutoLogout(this);
@@ -132,8 +134,9 @@ export class Login {
                 // window.location.href = 'index.html';
                 
                 if (this.loggedInWithVidis) {
-                    // window.location.assign("https://aai-test.vidis.schule/auth/realms/vidis/protocol/openid-connect/logout?ID_TOKEN_HINT=" + this.main.user.vidis_sub + "&post_logout_redirect_uri=https%3A%2F%2Fwww.online-ide.de");
-                    window.location.assign("https://aai.vidis.schule/auth/realms/vidis/protocol/openid-connect/logout?ID_TOKEN_HINT=" + this.main.user.vidis_sub + "&post_logout_redirect_uri=https%3A%2F%2Fwww.online-ide.de");
+                    // window.location.assign("https://aai-test.vidis.schule/auth/realms/vidis/protocol/openid-connect/logout?ID_TOKEN_HINT=" + this.vidis_id_token +"&post_logout_redirect_uri=https%3A%2F%2Fwww.online-ide.de");
+                    window.location.assign("https://aai-test.vidis.schule/auth/realms/vidis/protocol/openid-connect/logout?ID_TOKEN_HINT=" + this.main.user.vidis_sub + "&post_logout_redirect_uri=https%3A%2F%2Fwww.online-ide.de");
+                    // window.location.assign("https://aai.vidis.schule/auth/realms/vidis/protocol/openid-connect/logout?ID_TOKEN_HINT=" + this.main.user.vidis_sub + "&post_logout_redirect_uri=https%3A%2F%2Fwww.online-ide.de");
                     
                 } else {
                     jQuery('#bitteWartenText').html(LoginMessages.done());
@@ -258,6 +261,10 @@ export class Login {
 
                         this.main.pruefungManagerForStudents.startPruefung(response.activePruefung);
                     }
+                }
+
+                if(!PIXI.isWebGLSupported()){
+                        alert(LoginMessages.webGLNotSupported());
                 }
 
             }

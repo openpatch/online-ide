@@ -116,6 +116,9 @@ export class ThemeManager {
                 // Debugger
                 "--deIdentifier": "rgb(156, 156, 235)",
                 "--deValue": "white",
+                "--debugger-fieldIdentifier": "#e6e92c",
+                "--debugger-localVariableIdentifier": "#4ffa2c",
+
 
                 // Helper
                 "--helper-background-color": "#383838",
@@ -131,6 +134,9 @@ export class ThemeManager {
                 "--defaultOutputColor": "#ffffff",
                 "--runInputColor": "#ffffff",
                 "--runBackgroundColor": "rgba(255, 255, 255, 0.2)",
+
+                //console
+                "--console-fieldidentifier": "#e6e92c",
             }
         });
 
@@ -199,7 +205,7 @@ export class ThemeManager {
                 "--noErrorMessage": "rgb(17, 180, 17)",
                 "--console-top-borderbottom": "#c4c4c4",
                 "--console-top-background": "white",
-                "--consoleEntry-withBorder": "#303030",
+                "--consoleEntry-withBorder": "#dbdbdbff",
                 "--consoleEntryValue": "#0000a0",
                 "--consoleEntryIdentifier": "black",
                 "--consoleEntryNoValue": "gray",
@@ -210,6 +216,9 @@ export class ThemeManager {
                 // Debugger
                 "--deIdentifier": "black",
                 "--deValue": "#0000a0",
+                "--debugger-fieldIdentifier": "#b37c35ff",
+                "--debugger-localVariableIdentifier": "#25940fff",
+
 
                 // Helper
                 "--helper-background-color": "#f3f3f3",
@@ -225,6 +234,9 @@ export class ThemeManager {
                 "--defaultOutputColor": "#303030",
                 "--runInputColor": "#000000",
                 "--runBackgroundColor": "rgba(0, 0, 0, 0.2)",
+
+                //console
+                "--console-fieldidentifier": "#b37c35ff",
 
             }
         });

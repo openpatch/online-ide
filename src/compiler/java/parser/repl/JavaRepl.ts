@@ -2,6 +2,7 @@ import { Error } from "../../../common/Error.ts";
 import { Executable } from "../../../common/Executable.ts";
 import { IMain } from "../../../common/IMain.ts";
 import { DebuggerCallstackEntry } from "../../../common/debugger/DebuggerCallstackEntry.ts";
+import { DummyPrintManager } from "../../../common/interpreter/IPrintManager.ts";
 import { Interpreter } from "../../../common/interpreter/Interpreter.ts";
 import { Program } from "../../../common/interpreter/Program.ts";
 import { SchedulerState } from "../../../common/interpreter/SchedulerState.ts";
@@ -56,12 +57,12 @@ export class JavaRepl {
         this.getInterpreter().eventManager.on("resetRuntime", () => {
             this.state = "none";
             let executable = this.getInterpreter().executable;
-            if(executable) this.init(executable);
+            if (executable) this.init(executable);
         })
     }
 
     init(executable: Executable) {
-        if(!executable){
+        if (!executable) {
             this.state = "none";
             this.main.hideDebugger();
             return;
@@ -167,6 +168,8 @@ export class JavaRepl {
         try {
 
             interpreter.runREPLSynchronously();
+            let stackframe = programAndModule.program?.symbolTable.stackframe;
+            stackframe.numberOfReplLocalVariables = stackframe?.nextFreePosition || 0;
 
             if (currentProgramState) currentProgramState.lastExecutedStep = lastExecutedStep;
             if (stackSizeBefore) threadBefore?.s.splice(stackSizeBefore, threadBefore?.s.length - stackSizeBefore);
@@ -195,7 +198,7 @@ export class JavaRepl {
             return undefined;
         }
 
-        if(programAndModule.module.errors.find(error => error.level == "error")){
+        if (programAndModule.module.errors.find(error => error.level == "error")) {
             return {
                 errors: programAndModule.module.errors,
                 text: null,
@@ -213,6 +216,9 @@ export class JavaRepl {
 
             let callback = (returnValue: ReplReturnValue) => {
 
+                let stackframe = programAndModule.program?.symbolTable.stackframe;
+                stackframe.numberOfReplLocalVariables = stackframe?.nextFreePosition || 0;
+
                 if (currentProgramState) currentProgramState.lastExecutedStep = lastExecutedStep;
                 if (stackSizeBefore) threadBefore?.s.splice(stackSizeBefore, threadBefore?.s.length - stackSizeBefore);
                 if (returnValue) {
@@ -221,6 +227,7 @@ export class JavaRepl {
                     resolve(returnValue);
                     interpreter.updateDebugger();
                 }
+
             }
 
             thread = this.prepareThread(programAndModule!, callback, withMaxSpeed);
@@ -284,7 +291,12 @@ export class JavaRepl {
             currentThread.maxStepsPerSecond = saveMaxStepsPerSecond;
             currentThread.state = ThreadState.running;
             currentThread.lastTimeThreadWasRun = performance.now();
+
+            let pm = interpreter.printManager;
+            interpreter.printManager = new DummyPrintManager();
             interpreter.setState(oldState);
+            interpreter.printManager = pm;
+
             scheduler.retrieveThreads();
             if (callback) callback(currentThread.replReturnValue);
         }

@@ -228,7 +228,7 @@ export class JCM {
      */
 
     static variableNotInitialized = (identifier: string) => le({
-        "de": "Die Variable/der Parameter " + identifier + " is vor diesem lesenden Zugriff noch nicht initialisiert worden.",
+        "de": "Die Variable/der Parameter " + identifier + " ist vor diesem lesenden Zugriff noch nicht initialisiert worden.",
         "en": `Variable/field ${identifier} had not been initialized before first read access.`,
         "fr": `La variable/le champ ${identifier} n'a pas été initialisé(e) avant le premier accès en lecture.`,
     })
@@ -273,6 +273,11 @@ export class JCM {
         "de": "Während ein Programm läuft (oder pausiert ist) kann keine Variable in der Konsole deklariert werden.",
         "en": `You can't declare a variable while a program is running (or paused).`,
         "fr": `Vous ne pouvez pas déclarer de variable pendant qu'un programme est en cours d'exécution (ou en pause).`,
+    })
+
+    static emptyStatementAfterIf = () => le({
+        "de": "Hinter if(...) steht eine leere Anweisung. Dies ist sicher nicht so gewollt.",
+        "en": "There's an empty statement after if(...). This may be unintentional."
     })
 
     static continueNotExpected = () => le({
@@ -405,6 +410,12 @@ export class JCM {
     /**
      * Error messages in class TermCodeGenerator
      */
+
+    static voidTypeNotAllowedAsParameterType = (methodIdentifier: string) => le({
+        "de": `Der Datentyp void ist nicht als Typ eines Parameters der Methode ${methodIdentifier} erlaubt.`,
+        "en": `Void type is not allowed as parameter type of method ${methodIdentifier}.`,
+        "fr": `Le type void n'est pas autorisé comme type de paramètre de la méthode ${methodIdentifier}.`,
+    });
 
     static localVariableUsedBeforeDeclaration = (variable: string) => le({
         "de": `Die Variable ${variable} wurde vor ihrer Deklaration verwendet.`,

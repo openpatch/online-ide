@@ -2,12 +2,11 @@ import { SettingsMessages } from "./SettingsMessages";
 import { TranslatedText } from "../../tools/language/LanguageManager";
 import { AllSettingsMetadata, GroupOfSettingMetadata, SettingMetadata, SettingValues } from "./SettingsMetadata";
 import type { UserData } from "../communication/Data";
-import { SettingDefaultValues, SettingKey, SettingsScope, SettingsStore, SettingValue } from "./SettingsStore";
+import { SettingDefaultValues, SettingKey, SettingsScope, SettingsStore, SettingValue, SettingPrecedenceValues, SettingPrecedence, SettingsPrecedenceArrays } from "./SettingsStore";
 
 
 export class Settings implements SettingsStore {
 
-    hierarchy: SettingsScope[] = ['user', 'class', 'school', 'default'];
     hieararchyTexts: TranslatedText[] = [
         SettingsMessages.ScopeUser,
         SettingsMessages.ScopeClass,
@@ -21,7 +20,7 @@ export class Settings implements SettingsStore {
         default: {}
     }
 
-    constructor(private user: UserData | undefined, 
+    constructor(private user: UserData | undefined,
         userSettings: SettingValues | undefined,
         classSettings: SettingValues | undefined, schoolSettings: SettingValues | undefined) {
         // Initialize default values
@@ -29,7 +28,7 @@ export class Settings implements SettingsStore {
             this.setDefaultValues(setting);
         }
 
-        
+
         this.values.user = userSettings || {};
         this.values.class = classSettings || {};
         this.values.school = schoolSettings || {};
@@ -54,11 +53,19 @@ export class Settings implements SettingsStore {
     }
 
     public getValue(key: SettingKey, scope?: SettingsScope): SettingValue | undefined {
-        if(scope) {
+        if (scope) {
             return this.values[scope][key];
-        } 
-        
-        for (let s of this.hierarchy) {
+        }
+
+        let settingsPrecedence: SettingPrecedence = SettingPrecedenceValues[key] || 'userClassSchoolDefault';
+
+        if (this.user?.is_teacher || this.user?.is_schooladmin) {
+            settingsPrecedence = 'userClassSchoolDefault';
+        }
+
+        let settingPrecedenceArray = SettingsPrecedenceArrays[settingsPrecedence];
+
+        for (let s of settingPrecedenceArray) {
             if (this.values[s] && this.values[s][key] !== undefined) {
                 return this.values[s][key];
             }

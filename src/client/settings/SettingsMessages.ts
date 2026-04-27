@@ -88,6 +88,12 @@ export class SettingsMessages {
         'fr': 'Paramètres de l\'éditeur'
     });
 
+    static SettingDisabledByHigherPrecedence = () => lm({
+        'de': 'Diese Einstellung wird von einer klassen- oder schulweiten Einstellung mit höherer Präzedenz überschrieben und kann daher nicht geändert werden.',
+        'en': 'This setting is overridden by a class- or school-wide setting with higher precedence and therefore cannot be changed.',
+        'fr': 'Ce paramètre est remplacé par un paramètre de priorité supérieure au niveau de la classe ou de l\'école et ne peut donc pas être modifié.'
+    });
+
     static EditorSettingsDescription = () => lm({
         'de': 'Hier können Sie die Einstellungen des Editors anpassen.',
         'en': 'Here you can adjust the editor settings.',
@@ -155,6 +161,55 @@ export class SettingsMessages {
         'fr': 'Assistance à la saisie de code'
     });
 
+    static EditorQuickFixSettingsName = () => lm({
+        'de': 'Quick-Fix-Einstellungen',
+        'en': 'Quick Fix Settings',
+        'fr': 'Paramètres de correction rapide'
+     });
+
+     static EditorQuickFixSettingsDescription = () => lm({
+        'de': 'Hier können Sie einstellen, welche Quick-Fixes angeboten werden sollen. Im Gegensatz zu den meisten anderen Einstellungen gilt hier: Klasseneinstellung vor Schuleinstellung vor User-Einstellung.',
+        'en': 'Here you can set which quick fixes should be offered. In contrast to most other settings, here class setting takes precedence over school setting which takes precedence over user setting.',
+        'fr': 'Ici, vous pouvez définir les corrections rapides qui doivent être proposées. Contrairement à la plupart des autres paramètres, ici la configuration de la classe a la priorité sur la configuration de l\'école qui a la priorité sur la configuration de l\'utilisateur.'
+     });
+
+     static EditorQuickFixGetterSetterName = () => lm({
+        'de': 'Automatische Erstellung von Getter- und Setter-Methoden',
+        'en': 'Automatic generation of getter and setter methods',
+        'fr': 'Génération automatique des méthodes getter et setter'
+     });
+
+        static EditorQuickFixGetterSetterDescription = () => lm({
+        'de': 'Befindet sich der Cursor in einem Attribut einer Klasse, so erscheint daneben eine Glühbirne, über die angeboten wird, automatisch eine Getter- und Setter-Methode für dieses Attribut zu erstellen.',
+        'en': 'If the cursor is on an attribute of a class, a light bulb appears next to it, offering to automatically create a getter and setter method for that attribute.',
+        'fr': 'Si le curseur se trouve sur un attribut d\'une classe, une ampoule apparaît à côté, offrant de créer automatiquement une méthode getter et setter pour cet attribut.'
+    });
+
+    static offer = () => lm({
+        'de': 'Anbieten',
+        'en': 'Offer',
+        'fr': 'Proposer'
+    });
+
+    static dontOffer = () => lm({
+        'de': 'Nicht anbieten',
+        'en': 'Do not offer',
+        'fr': 'Ne pas proposer'
+    });
+
+    static EditorQuickFixGenerateConstructorName = () => lm({
+        'de': 'Automatische Erstellung von Konstruktoren',
+        'en': 'Automatic generation of constructors',
+        'fr': 'Génération automatique des constructeurs'
+     });
+
+        static EditorQuickFixGenerateConstructorDescription = () => lm({
+            'de': 'Befindet sich der Cursor in einer Klasse, aber nicht in einer Methode, so erscheint in der kontextsensitiven Hilfe (<Strg> + <Leertaste>) ein Menüpunkt zur automatischen Erstellung eines Konstruktors.',
+            'en': 'If the cursor is in a class but not in a method, a menu item for automatically creating a constructor appears in the context-sensitive help (<Ctrl> + <Space>).',
+            'fr': 'Si le curseur se trouve dans une classe mais pas dans une méthode, un élément de menu pour créer automatiquement un constructeur apparaît dans l\'aide contextuelle (<Ctrl> + <Espace>).'
+        })
+
+
     static EditorViewSettings = () => lm({
         'de': `Anzeigeeinstellungen des Editors`,
         'en': `Editor View Settings`,
@@ -166,6 +221,48 @@ export class SettingsMessages {
         'en': `You can adjust the editor view settings here.`,
         'fr': `Vous pouvez ajuster les paramètres d'affichage de l'éditeur ici.`
     });    
+
+    static EditorFormatterSettings = () => lm({
+        'de': `Code-Formatter-Einstellungen`,
+        'en': `Editor Formatter Settings`,
+        'fr': `Paramètres du formateur de code`
+    });
+
+    static EditorFormatterSettingsDescription = () => lm({
+        'de': `Hier können Sie die Einstellungen für den Code-Formatter anpassen.`,
+        'en': `Here you can adjust the settings for the code formatter.`,
+        'fr': `Ici, vous pouvez ajuster les paramètres du formateur de code.`
+    });
+
+    static ForceSpacesAfterIfForWhileDoName = () => lm({
+        'de': `Anzahl von Leerzeichen nach if, for, while und do erzwingen`,
+        'en': `Force number of spaces after if, for, while and do`,
+        'fr': `Forcer le nombre d'espaces après if, for, while et do`
+    });
+
+    static ForceSpacesAfterIfForWhileDoDescription = () => lm({
+        'de': `Erzwinge eine bestimmte Anzahl von Leerzeichen nach if, for, while und do`,
+        'en': `Force a specific number of spaces after if, for, while and do`,
+        'fr': `Forcer un nombre spécifique d'espaces après if, for, while et do`
+    });
+
+    static one = () => lm({
+        'de': `1`,
+        'en': `1`,
+        'fr': `1`
+    });
+
+    static zero = () => lm({
+        'de': `0`,
+        'en': `0`,
+        'fr': `0`
+    });
+
+    static no = () => lm({
+        'de': `Nein, nicht erzwingen`,
+        'en': `No, do not force`,
+        'fr': `Non, ne pas forcer`
+    });
 
     static TypingAssistanceDescription = () => lm({
         'de': 'Hier können Sie die Eingabeunterstützung des Editors anpassen.',
