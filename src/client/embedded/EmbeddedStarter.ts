@@ -3,6 +3,7 @@ import jQuery from 'jquery';
 import * as PIXI from 'pixi.js';
 import { ThemeManager } from "../main/gui/ThemeManager.js";
 import { MainEmbedded } from "./MainEmbedded.js";
+import { languages, setLanguageId } from "../../tools/language/LanguageManager.js";
 
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
@@ -119,7 +120,27 @@ export class EmbeddedStarter {
 
     }
 
+    /**
+     * Chooses the language the GUI and the library tooltips speak.
+     *
+     * An embedded page has no `?lang=` parameter and nobody logged in, which are
+     * the only two things that ever set the language, so the IDE always came up
+     * in German. A `data-lang` on the div wins; otherwise the page says what it
+     * is written in, and the IDE follows it.
+     */
+    applyLanguage() {
+        const fromDiv = jQuery('.java-online[data-lang]').first().attr('data-lang');
+        const fromPage = document.documentElement.getAttribute('lang');
+        // "en-GB" and "en" are the same language as far as we are concerned
+        const wanted = (fromDiv ?? fromPage ?? "").toLowerCase().split("-")[0];
+        if (wanted && languages.some(language => language.id == wanted)) {
+            setLanguageId(wanted);
+        }
+    }
+
     async initJavaOnlineDivs() {
+
+        this.applyLanguage();
 
         let divsWithScriptLists: [JQuery<HTMLElement>, JOScript[]][] = [];
 
