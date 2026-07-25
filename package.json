@@ -13,6 +13,7 @@
     "preview": "npm run build && vite preview --port 3000 --host",
     "preview-embedded": "npm run build-embedded && vite preview --port 3000 --host --config vite.config-embedded.js",
     "build_tools": "tsc --project tsconfig_development-tools.json",
+    "build-scratch-assets": "node src/development/scratchAssetsGenerator.js",
     "test": "vitest --config vitest.config.ts",
     "deploy": "node src/development/ZipAndUpload.js"
   },

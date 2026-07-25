@@ -4,6 +4,7 @@ import { LibraryData, LibraryManager } from "../../common/programminglanguage/Li
 import { JavaCompiler } from "../JavaCompiler";
 import { JavaLibraryModule } from "../module/libraries/JavaLibraryModule";
 import { GNGModule } from "./graphics/gng/GNGModule";
+import { ScratchModule } from "./graphics/scratch/ScratchModule";
 import { NiedersachsenModule } from "./modules/niedersachsen/NiedersachsenModule";
 import { NRWModule } from "./modules/nrw/NRWModule";
 
@@ -26,6 +27,11 @@ export class JavaLibraryManager implements LibraryManager {
             description: 'Klassenbibliothek zur Verwendung im Abitur Niedersachsen',
             id: 'niedersachsen'
         },
+        {
+            identifier: 'Scratch for Java',
+            description: 'Scratch-artige Klassenbibliothek (Stage, Sprite, Costumes) — Port von org.openpatch.scratch',
+            id: 'scratch'
+        },
     ];
 
     libraryIds: string[] = [];
@@ -46,6 +52,8 @@ export class JavaLibraryManager implements LibraryManager {
                 case "nrw": additionalModules.push(new NRWModule());
                     break;
                 case "niedersachsen": additionalModules.push(new NiedersachsenModule());
+                    break;
+                case "scratch": additionalModules.push(new ScratchModule());
                     break;
             }
         }
