@@ -1,89 +1,66 @@
 import { ClassDiagram } from "../main/gui/diagrams/classdiagram/ClassDiagram";
+import Dexie from "dexie";
+
+declare global {
+  interface Window {
+    hyperbook: {
+      store: {
+        onlineide: Dexie.Table;
+      };
+    };
+  }
+}
 
 export class EmbeddedIndexedDB {
+  private db: Dexie.Table;
 
-    private db: IDBDatabase;
+  public open(successCallback: () => void) {
+    try {
+      // Access the existing Dexie table
+      this.db = window.hyperbook.store.onlineide;
 
-    public open(successCallback: () => void) {
+      // Verify the table is available and ready
+      if (this.db) {
+        // Dexie table is already initialized, just call the callback
+        successCallback();
+      } else {
+        console.log("Dexie table not available at window.store.onlineide");
+      }
+    } catch (error) {
+      console.log("Couldn't access Dexie table: " + error);
+    }
+  }
 
-        if (window.indexedDB) {
+  public writeScript(scriptId: string, script: string) {
+    this.db
+      .put({
+        scriptId: scriptId,
+        script: script,
+      })
+      .catch((error) => {
+        console.error("Error writing script: ", error);
+      });
+  }
 
-            let request: IDBOpenDBRequest = window.indexedDB.open("LearnJ", 1);
+  public removeScript(scriptId: string) {
+    this.db.delete(scriptId).catch((error) => {
+      console.error("Error removing script: ", error);
+    });
+  }
 
-            let that = this;
-
-            request.onerror = function (this: IDBRequest<IDBDatabase>, ev: Event) {
-                console.log("Couldn't open IndexedDB: " + ev.type);
-            };
-
-            request.onsuccess = function (this: IDBRequest<IDBDatabase>, ev: Event) {
-                that.db = request.result;
-                that.db.onerror = function(event) {
-                    // Allgemeine Fehlerbehandlung, die für alle Anfragen an die Datenbank gilt.
-                    // @ts-ignore
-                    console.log("Datenbankfehler: " + event.target.error.message);
-                  };
-                  successCallback();
-            };
-
-            request.onupgradeneeded = function(ev: Event){
-                // @ts-ignore
-                that.db = ev.target.result;
-                let objectStore = that.db.createObjectStore("scripts", { keyPath: "scriptId", autoIncrement: false});
-
-
-                objectStore.transaction.oncomplete = function(event) {
-
-                }
-
-            }
-
+  public getScript(scriptId: string, callback: (script: string) => void) {
+    this.db
+      .get(scriptId)
+      .then((result) => {
+        if (result == null) {
+          callback(null);
         } else {
-            console.log("IndexedDB not available.");
+          callback(result.script);
         }
-
-    }
-
-
-    public writeScript(scriptId: string, script: string){
-
-        let scriptObjectStore = this.db.transaction("scripts", "readwrite").objectStore("scripts");
-
-        scriptObjectStore.put({
-            scriptId: scriptId,
-            script: script
-        });
-
-    }
-
-    public removeScript(scriptId: string){
-
-        let scriptObjectStore = this.db.transaction("scripts", "readwrite").objectStore("scripts");
-
-        scriptObjectStore.delete(scriptId);
-
-    }
-
-
-    public getScript(scriptId: string, callback: (script: string) => void){
-
-        let scriptObjectStore = this.db.transaction("scripts", "readwrite").objectStore("scripts");
-
-        let request = scriptObjectStore.get(scriptId);
-
-        request.onerror = (event) => {
-            callback(null);
-        }
-
-        request.onsuccess = (event) => {
-            if(request.result == null){
-                callback(null);
-            } else {
-                callback(request.result.script);
-            }
-        }
-
-    }
-
-
+      })
+      .catch((error) => {
+        console.error("Error getting script: ", error);
+        callback(null);
+      });
+  }
 }
