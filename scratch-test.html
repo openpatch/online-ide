@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>Scratch-Test</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script type="module" src="/src/client/embedded/EmbeddedStarter.ts"></script>
+</head>
+<body>
+    <h1>Scratch for Java — test</h1>
+    <div class="java-online" style="width: calc(100% - 10px); height: 560px; margin-left: 5px" data-java-online="{
+        'id': 'scratchtest',
+        'speed': 'max',
+        'withFileList': true,
+        'hideEditor': false,
+        'hideStartPanel': false,
+        'libraries': ['scratch']
+    }">
+        <script type="text/plain" title="MyStage.java" data-type="java">
+new PenBuehne();
+
+class PenBuehne extends Stage {
+      public PenBuehne() {
+      super(480, 360);
+      this.setColor(150);
+
+      // 1) a plain pen: three strokes of different width and colour
+      Zeichner d = new Zeichner();
+      this.add(d);
+      d.zeichne();
+
+      // 2) a big opaque sprite the stamps are layered against
+      Marke marke = new Marke();
+      this.add(marke);
+      marke.setPosition(0, -50);
+      marke.setSize(260);
+
+      // 3) stamps: the left one is a background stamp and must vanish behind the
+      //    bunny, the right one is a foreground stamp and must cover it
+      Stempel hinten = new Stempel();
+      this.add(hinten);
+      hinten.setSize(70);
+      hinten.setPosition(-55, -50);
+      hinten.stamp();
+      hinten.setPosition(-215, 150);
+
+      Stempel vorne = new Stempel();
+      this.add(vorne);
+      vorne.setSize(70);
+      vorne.setPosition(55, -50);
+      vorne.stamp(Layer.FOREGROUND);
+      vorne.setPosition(215, 150);
+    }
+
+}
+
+class Zeichner extends Sprite {
+    public void whenAddedToStage() {
+      this.addCostume("bunny1_stand");
+      this.setSize(30);
+    }
+
+    void zeichne() {
+      // thin red line across the top
+      this.getPen().setColor(255, 0, 0);
+      this.getPen().setSize(2);
+      this.setPosition(-200, 140);
+      this.getPen().down();
+      this.setPosition(200, 140);
+      this.getPen().up();
+
+      // thick blue line below it
+      this.getPen().setColor(0, 0, 255);
+      this.getPen().setSize(12);
+      this.setPosition(-200, 105);
+      this.getPen().down();
+      this.setPosition(200, 105);
+      this.getPen().up();
+
+      // half-transparent black zig-zag (opacity is 0..255 upstream)
+      this.getPen().setColor(0, 0, 0);
+      this.getPen().setSize(8);
+      this.getPen().setTransparency(128);
+      this.setPosition(-200, 40);
+      this.getPen().down();
+      this.setPosition(-100, 75);
+      this.setPosition(0, 40);
+      this.setPosition(100, 75);
+      this.setPosition(200, 40);
+      this.getPen().up();
+      this.getPen().setTransparency(255);
+
+      this.setPosition(-210, 150);
+    }
+}
+
+class Marke extends Sprite {
+    public void whenAddedToStage() {
+      this.addCostume("bunny1_stand");
+    }
+}
+
+class Stempel extends Sprite {
+    public void whenAddedToStage() {
+      this.addCostume("carrot");
+    }
+}
+
+        </script>
+    </div>
+</body>
+</html>
