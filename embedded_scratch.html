@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'>
+    <title>Scratch-Test</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script type="module" src="/src/client/embedded/EmbeddedStarter.ts"></script>
+</head>
+<body>
+    <h1>Scratch for Java — test</h1>
+    <div class="java-online" style="width: calc(100% - 10px); height: 560px; margin-left: 5px" data-java-online="{
+        'id': 'scratchtest',
+        'speed': 'max',
+        'withFileList': true,
+        'hideEditor': false,
+        'hideStartPanel': false,
+        'libraries': ['scratch']
+    }">
+        <script type="text/plain" title="MyStage.java" data-type="java">
+new Level1();
+
+// Two stages in one program. Bühne 2 is built right away but waits off screen
+// until transitionToStage() fades over to it; while it waits, nothing on it runs.
+class Level1 extends Stage {
+    Level2 zwei;
+    Laeufer laeufer;
+    boolean gewechselt = false;
+
+    public Level1() {
+        super(480, 360);
+        this.setColor(0, 0, 180);
+        this.laeufer = new Laeufer();
+        this.add(this.laeufer);
+        this.laeufer.setPosition(-80, 0);
+        Text t = new Text("Bühne 1", -220, 160, 200);
+        this.add(t);
+        t.showText("Bühne 1");
+        this.zwei = new Level2(this.laeufer);
+        print("Bühne 1 ist aktiv: " + (Window.getInstance().getStage() == this));
+        print("Laeufer kennt seine Bühne: " + (this.laeufer.getStage() == this));
+    }
+
+    public void run() {
+        if (!this.gewechselt && Timer.millis() > 2500) {
+            this.gewechselt = true;
+            print("Schritte auf Bühne 1 beim Wechsel: " + this.laeufer.schritte);
+            Window.getInstance().transitionToStage(this.zwei, 150);
+        }
+    }
+}
+
+class Level2 extends Stage {
+    Laeufer alter;
+    Karotte karotte;
+    boolean gemeldet = false;
+
+    public Level2(Laeufer alter) {
+        super(480, 360);
+        this.alter = alter;
+        this.setColor(255, 140, 0);
+        this.karotte = new Karotte();
+        this.add(this.karotte);
+        Text t = new Text("Bühne 2", -220, 160, 200);
+        this.add(t);
+        t.showText("Bühne 2");
+    }
+
+    public void run() {
+        this.karotte.turnRight(4);
+        if (!this.gemeldet && Timer.millis() > 4500) {
+            this.gemeldet = true;
+            print("Bühne 2 ist aktiv: " + (Window.getInstance().getStage() == this));
+            print("Schritte auf Bühne 1 danach (soll gleich sein): " + this.alter.schritte);
+            print("Karotte kennt ihre Bühne: " + (this.karotte.getStage() == this));
+        }
+    }
+}
+
+class Laeufer extends Sprite {
+    public int schritte = 0;
+
+    public void whenAddedToStage() {
+        this.addCostume("bunny1_stand");
+        this.setSize(120);
+    }
+
+    public void run() {
+        this.schritte = this.schritte + 1;
+        this.turnRight(3);
+    }
+}
+
+class Karotte extends Sprite {
+    public void whenAddedToStage() {
+        this.addCostume("carrot");
+        this.setSize(200);
+    }
+}
+
+        </script>
+    </div>
+</body>
+</html>
