@@ -133,6 +133,7 @@ import { RandomClass } from "./javalang/RandomClass.ts";
 import { RunnableInterface } from "./javalang/RunnableInterface.ts";
 import { RuntimeExceptionClass } from "./javalang/RuntimeException.ts";
 import { SemaphoreClass } from "./javalang/SemaphoreClass.ts";
+import { IOClass } from "./javalang/IOClass.ts";
 import { PrintStreamClass, SystemClass } from "./javalang/SystemClass.ts";
 import { ThreadClass, ThreadStateClass as ThreadStateEnum } from "./javalang/ThreadClass.ts";
 import { ThrowableClass } from "./javalang/ThrowableClass.ts";
@@ -200,7 +201,7 @@ export class SystemModule extends JavaLibraryModule {
 
             //additional system classes
             KeyClass, LocalDateTimeClass, DayOfWeekEnum, PositionClass, BigIntegerClass,
-            ConsoleClass, Vector2Class, MathToolsClass, PrintStreamClass, SystemClass,
+            ConsoleClass, Vector2Class, MathToolsClass, PrintStreamClass, SystemClass, IOClass,
             GamepadClass, KeyListenerInterface, SystemToolsClass, InputClass, SoundClass, FilesClass,
 
             // Functional
