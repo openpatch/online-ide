@@ -199,48 +199,56 @@ export class JavaCompiledModule extends JavaBaseModule {
     }
 
     hasMainProgram(): boolean {
-        return this.getClassWithStartableMainMethod() != null;
+        return this.getStartableMainMethod() != null;
 
     }
 
     getClassWithStartableMainMethod(): JavaClass | undefined {
-        if (this.mainClass) {
-            let mainMethod = this.mainClass.methods.find(m => m.identifier == JavaCompilerStringConstants.mainMethodIdentifier)
+        return this.getStartableMainMethod()?.klass;
+    }
 
-            if (mainMethod) {
-                let statements = mainMethod.statement as ASTBlockNode;
-                if (statements.statements.length > 1) return this.mainClass.resolvedType;
-            }
+    /**
+     * Determines what to execute when the user starts this module:
+     *  - the compiler-generated $main method holding all statements written outside of any class or
+     *  - a main method declared outside of any class (Java 25 compact source file: "void main(){...}") or
+     *  - a main method declared inside one of the classes of this module
+     */
+    getStartableMainMethod(): { klass: JavaClass, method: JavaMethod } | undefined {
+        let mainClassType = this.mainClass?.resolvedType;
+        if (mainClassType) {
+            let syntheticMainMethodNode = this.mainClass!.methods.find(m => m.identifier == JavaCompilerStringConstants.mainMethodIdentifier);
 
+            // first statement is always TokenType.firstMainProgramStatement, so we need more than one statement:
+            let hasStatementsOutsideOfClasses = syntheticMainMethodNode != null &&
+                (syntheticMainMethodNode.statement as ASTBlockNode).statements.length > 1;
+
+            let method = hasStatementsOutsideOfClasses ? mainClassType.getSyntheticMainMethod() : mainClassType.getDeclaredMainMethod();
+            if (method) return { klass: mainClassType, method: method };
         }
 
         if (!this.ast) return undefined;
 
         for (let innerType of this.ast.innerTypes) {
             if (innerType.kind != TokenType.keywordClass || innerType.isMainClass || !innerType.resolvedType) continue;
-            if (innerType.resolvedType.getMainMethod()) return innerType.resolvedType;
+            let method = innerType.resolvedType.getDeclaredMainMethod();
+            if (method) return { klass: innerType.resolvedType, method: method };
         }
 
         return undefined;
     }
 
     startMainProgram(thread: Thread, setOneTimeBreakpointAtFirstVisibleLine: boolean): boolean {
-        let startableMainClass = this.getClassWithStartableMainMethod();
-        if (!startableMainClass) return false;
-        let mainRuntimeClass: Klass = startableMainClass.runtimeClass;
+        let startableMainMethod = this.getStartableMainMethod();
+        if (!startableMainMethod) return false;
+
+        let mainRuntimeClass: Klass = startableMainMethod.klass.runtimeClass;
         if (!mainRuntimeClass) return false;
 
-        let mainMethod = startableMainClass.getMainMethod();
+        let mainMethod = startableMainMethod.method;
+        let internalMethodName = mainMethod.getInternalNameWithGenericParameterIdentifiers("java");
 
-        if (!mainMethod) return false;
-
-        let methodStub = mainRuntimeClass[mainMethod.getInternalNameWithGenericParameterIdentifiers("java")];
-        if (!methodStub) return false;
-
-        let THIS = mainRuntimeClass;
-
-        methodStub.call(THIS, thread, thread.s);
-        if (setOneTimeBreakpointAtFirstVisibleLine) {
+        let setBreakpointIfNecessary = () => {
+            if (!setOneTimeBreakpointAtFirstVisibleLine) return;
             let programState = thread.programStack[thread.programStack.length - 1];
             if (programState) {
                 let firstVisibleStep = programState.currentStepList.find(s => s.range.startLineNumber >= 0);
@@ -248,6 +256,50 @@ export class JavaCompiledModule extends JavaBaseModule {
                     firstVisibleStep.setBreakpoint(firstVisibleStep.range.startLineNumber, true);
                 }
             }
+        }
+
+        if (mainMethod.isStatic) {
+            let methodStub = mainRuntimeClass[internalMethodName];
+            if (!methodStub) return false;
+
+            // calling convention of static methods: (thread, ...parameters)
+            if (mainMethod.parameters.length > 0) {
+                methodStub.call(mainRuntimeClass, thread, []);   // main(String[] args) gets an empty array of arguments
+            } else {
+                methodStub.call(mainRuntimeClass, thread);
+            }
+
+            setBreakpointIfNecessary();
+            return true;
+        }
+
+        // Java 25 (JEP 512) allows a non-static main method. In this case the class gets
+        // instantiated with its parameterless constructor before main is called.
+        if (!mainRuntimeClass.prototype[internalMethodName]) return false;
+
+        let constructor = startableMainMethod.klass.methods.find(m => m.isConstructor && m.parameters.length == 0 && !m.hasOuterClassParameter);
+        if (!constructor) return false;
+
+        let mainObject = new mainRuntimeClass();
+
+        let callMainMethod = () => {
+            // calling convention of non-static methods: (thread, callback, ...parameters)
+            if (mainMethod.parameters.length > 0) {
+                mainObject[internalMethodName](thread, undefined, []);   // main(String[] args) gets an empty array of arguments
+            } else {
+                mainObject[internalMethodName](thread, undefined);
+            }
+            setBreakpointIfNecessary();
+        }
+
+        if (constructor.hasImplementationWithNativeCallingConvention) {
+            mainObject[constructor.getInternalName("native")]();
+            callMainMethod();
+        } else {
+            mainObject[constructor.getInternalName("java")](thread, () => {
+                thread.s.pop();     // constructors return the newly created object
+                callMainMethod();
+            });
         }
 
         return true;
