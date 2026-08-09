@@ -5,10 +5,16 @@ import { activeScratchStage } from './ScratchStages';
  * The stage's drawing layers.
  *
  * Everything the camera moves lives inside `camera`, in this order:
- *   backdrop → pen → backgroundStamps → sprites → foregroundStamps
+ *   backdrop → pen → backgroundStamps → sprites → texts → foregroundStamps
  * The `ui` layer sits outside it, so UI sprites and UI stamps stay put when the
  * camera pans or zooms — the same split upstream makes when it draws the main
  * buffer with the camera transform and the UI pass without it.
+ *
+ * Texts have a layer of their own above the sprites because upstream draws them
+ * that way: its main buffer is every sprite and then every text. Sharing the
+ * sprites' layer put a text behind any sprite added after it, and made
+ * Text.goToBackLayer() mean something else here than it means there — where it
+ * orders a text against the other texts.
  *
  * Giving each kind of content its own container is what keeps the order stable.
  * Before this, everything that wanted to be at the back competed for child
@@ -16,7 +22,7 @@ import { activeScratchStage } from './ScratchStages';
  * stamps piled up in reverse.
  */
 export type ScratchLayerName = "root" | "camera" | "backdrop" | "pen" | "backgroundStamps" | "sprites"
-    | "foregroundStamps" | "debugWorld" | "ui" | "debugScreen";
+    | "texts" | "foregroundStamps" | "debugWorld" | "ui" | "uiTexts" | "debugScreen";
 
 export type ScratchLayers = Record<ScratchLayerName, PIXI.Container>;
 
@@ -25,7 +31,7 @@ export type ScratchLayers = Record<ScratchLayerName, PIXI.Container>;
  * outlines sit over the sprites they belong to, and it is inside the camera
  * because upstream draws the per-sprite debug with the camera transform applied.
  */
-const INSIDE_CAMERA: ScratchLayerName[] = ["backdrop", "pen", "backgroundStamps", "sprites", "foregroundStamps", "debugWorld"];
+const INSIDE_CAMERA: ScratchLayerName[] = ["backdrop", "pen", "backgroundStamps", "sprites", "texts", "foregroundStamps", "debugWorld"];
 
 /**
  * Build a set of layers for one stage.
@@ -42,14 +48,18 @@ export function createScratchLayers(parent: PIXI.Container): ScratchLayers {
         pen: new PIXI.Container(),
         backgroundStamps: new PIXI.Container(),
         sprites: new PIXI.Container(),
+        texts: new PIXI.Container(),
         foregroundStamps: new PIXI.Container(),
         debugWorld: new PIXI.Container(),
         ui: new PIXI.Container(),
+        uiTexts: new PIXI.Container(),
         debugScreen: new PIXI.Container(),
     };
     layers.root.addChild(layers.camera);
     for (const name of INSIDE_CAMERA) layers.camera.addChild(layers[name]);
     layers.root.addChild(layers.ui);
+    // and above the UI sprites, the same way texts sit above the sprites
+    layers.root.addChild(layers.uiTexts);
     // outside the camera: the crosshair, FPS and camera readout are in screen
     // space, and this must cover everything else
     layers.root.addChild(layers.debugScreen);
@@ -103,4 +113,9 @@ export function scratchLayerOf(context: any, name: ScratchLayerName): PIXI.Conta
 /** Where a sprite's own display object belongs: UI sprites ignore the camera. */
 export function spriteLayerOf(context: any, isUI: boolean): PIXI.Container | undefined {
     return scratchLayerOf(context, isUI ? "ui" : "sprites");
+}
+
+/** Where a text belongs: above the sprites, and UI texts above the UI sprites. */
+export function textLayerOf(context: any, isUI: boolean): PIXI.Container | undefined {
+    return scratchLayerOf(context, isUI ? "uiTexts" : "texts");
 }

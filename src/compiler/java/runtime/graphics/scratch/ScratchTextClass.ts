@@ -6,7 +6,7 @@ import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
 import { IWorld } from "../IWorld";
 import { ScratchColorClass } from "./ScratchColorClass";
-import { scratchLayerOf } from "./ScratchLayers";
+import { textLayerOf } from "./ScratchLayers";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { TextAlign, TextAlignEnum } from "./TextAlignEnum";
 import { TextStyle, TextStyleEnum } from "./TextStyleEnum";
@@ -16,6 +16,10 @@ import { SRC } from "./ScratchLibraryComments";
 const DEFAULT_FONT = "UbuntuMono, monospace";
 /** Upstream's Text.fontSize. It read 24 here, so every text came out too big. */
 const DEFAULT_FONT_SIZE = 14;
+/** The gap upstream leaves between a frame and the words inside it. */
+const PAD = 8;
+/** Upstream's Text.SPEAK_BUBBLE_MAX_LIMIT: how wide a bubble may grow. */
+const SPEAK_BUBBLE_MAX_LIMIT = 330;
 
 /**
  * On-stage text, mirroring org.openpatch.scratch.Text (core subset).
@@ -71,6 +75,12 @@ export class ScratchTextClass extends ObjectClass {
 
         { type: "method", signature: "void remove()", native: ScratchTextClass.prototype._remove, comment: SRC.textRemoveComment },
 
+        // which of several overlapping texts is on top, as on Sprite
+        { type: "method", signature: "void goToFrontLayer()", native: ScratchTextClass.prototype._goToFrontLayer, comment: SRC.textGoToFrontLayerComment },
+        { type: "method", signature: "void goToBackLayer()", native: ScratchTextClass.prototype._goToBackLayer, comment: SRC.textGoToBackLayerComment },
+        { type: "method", signature: "void goLayersForwards(int number)", native: ScratchTextClass.prototype._goLayersForwards, comment: SRC.textGoLayersForwardsComment },
+        { type: "method", signature: "void goLayersBackwards(int number)", native: ScratchTextClass.prototype._goLayersBackwards, comment: SRC.textGoLayersBackwardsComment },
+
         // UI texts ignore the camera, like UI sprites
         { type: "method", signature: "boolean isUI()", native: ScratchTextClass.prototype._isUI, comment: SRC.textIsUIComment },
         { type: "method", signature: "void setIsUI(boolean isUI)", native: ScratchTextClass.prototype._setIsUI, comment: SRC.textSetIsUIComment },
@@ -117,7 +127,12 @@ export class ScratchTextClass extends ObjectClass {
     private text: string = "";
     private tx: number = 0;         // Scratch coords: centre origin, y up
     private ty: number = 0;
-    private boxWidth: number = 200;
+    /**
+     * Where the words wrap. Upstream's Text() leaves it at 0, which means they
+     * do not wrap at all - it read 200 here, so a plain text broke into lines
+     * the desktop kept on one.
+     */
+    private boxWidth: number = 0;
     private textSize: number = ScratchTextClass.defaultFontSizes[0];
     /**
      * Centred on its position, as upstream centres every Text: a sprite put at
@@ -141,7 +156,7 @@ export class ScratchTextClass extends ObjectClass {
     private hideTimeout?: any;
 
     _cj$_constructor_$Text$(t: Thread, callback: CallbackParameter) {
-        this._cj$_constructor_$Text$string$double$double$double(t, callback, "", 0, 0, 200);
+        this._cj$_constructor_$Text$string$double$double$double(t, callback, "", 0, 0, 0);
     }
 
     _cj$_constructor_$Text$string$double$double$double(
@@ -175,6 +190,11 @@ export class ScratchTextClass extends ObjectClass {
 
     // ---- rendering ----
     private redraw() {
+        // Where the old one sat among the other texts. Redrawing builds a new
+        // container, and a new child goes on top: without this, saying anything
+        // - or moving the text, or recolouring it - would undo goToBackLayer().
+        const wasIn = this.container && !this.container.destroyed ? this.container.parent ?? undefined : undefined;
+        const wasAt = wasIn ? wasIn.getChildIndex(this.container!) : undefined;
         if (this.container && !this.container.destroyed) this.container.destroy({ children: true });
         this.container = undefined;
         if (!this.visible || !this.text || !this.world) return;
@@ -186,33 +206,36 @@ export class ScratchTextClass extends ObjectClass {
             // `leading` is the gap BETWEEN lines, which is what Processing's
             // textLeading(textSize + 4) means upstream
             leading: 4,
-            wordWrap: true,
-            wordWrapWidth: Math.max(20, this.boxWidth),
             align: this.align === TextAlign.CENTER ? "center" : this.align === TextAlign.RIGHT ? "right" : "left",
         });
+        const wrapAt = this.wrapWidth(style);
+        if (wrapAt !== undefined) {
+            style.wordWrap = true;
+            style.wordWrapWidth = wrapAt;
+        }
         const label = new PIXI.Text({ text: this.text, style });
-        const pad = 8;
 
-        // PLAIN is upstream's default: no frame, just the text. It translates to
-        // (x, -y) and draws at (8, 8), so the label sits below/right of the
-        // anchor rather than being centred on it like the framed styles.
+        // PLAIN is upstream's default: no frame, just the text. It is centred on
+        // its position, the way a sprite put there is - the eight pixels of
+        // padding belong to the framed styles, which need them between their
+        // border and their words. Adding them here moved a centred label off
+        // the thing it labelled.
         if (this.style === TextStyle.PLAIN) {
             const x = this.world.width / 2 + this.tx;
             const y = this.world.height / 2 - this.ty;
-            let offset = 0;
-            if (this.align === TextAlign.CENTER) offset = -label.width / 2;
-            else if (this.align === TextAlign.RIGHT) offset = -label.width;
+            let offset = -label.width / 2;
+            if (this.align === TextAlign.RIGHT) offset = -label.width;
+            else if (this.align !== TextAlign.CENTER) offset = 0;
             const plain = new PIXI.Container();
             plain.addChild(label);
-            label.position.set(pad + offset, pad);
+            label.position.set(offset, -label.height / 2);
             plain.position.set(x, y);
-            (scratchLayerOf(this, this.ui ? "ui" : "sprites") ?? this.world.app.stage).addChild(plain);
-            this.container = plain;
+            this.attach(plain, wasIn, wasAt);
             return;
         }
 
-        const bw = Math.max(label.width, 0) + pad * 2;
-        const bh = label.height + pad * 2;
+        const bw = Math.max(label.width, 0) + PAD * 2;
+        const bh = label.height + PAD * 2;
         // Upstream rounds every framed style by 16 (Text#drawBox, #drawBubble).
         // Its BOX leaves the bottom two corners square, which only shows when
         // the box sits on an edge; a floating one is rounded all round here.
@@ -236,7 +259,7 @@ export class ScratchTextClass extends ObjectClass {
             g.circle(7, bh + 7, 3).fill(fill).stroke(stroke);
             g.circle(0, bh + 10, 2).fill(fill).stroke(stroke);
         }
-        label.position.set(pad, pad);
+        label.position.set(PAD, PAD);
 
         const box = new PIXI.Container();
         box.addChild(g, label);
@@ -253,8 +276,53 @@ export class ScratchTextClass extends ObjectClass {
 
         // texts scroll with the world, like the sprites they label
         // UI texts sit outside the camera container, so they do not scroll
-        (scratchLayerOf(this, this.ui ? "ui" : "sprites") ?? this.world.app.stage).addChild(box);
-        this.container = box;
+        this.attach(box, wasIn, wasAt);
+    }
+
+    /**
+     * Puts a rebuilt text into its layer, and back to the place among the other
+     * texts the old one had.
+     */
+    private attach(node: PIXI.Container, wasIn?: PIXI.Container, wasAt?: number) {
+        const layer = textLayerOf(this, this.ui) ?? this.world.app.stage;
+        layer.addChild(node);
+        // Only where it is the same layer: setIsUI() moves a text to another
+        // one, where the old place means nothing.
+        if (wasIn === layer && wasAt !== undefined) {
+            layer.setChildIndex(node, Math.min(wasAt, layer.children.length - 1));
+        }
+        this.container = node;
+    }
+
+    /**
+     * The width to wrap the words at, or none at all.
+     *
+     * <p>Upstream wraps plain words only where it was given a width, so a text
+     * built with 0 keeps them on one line; a frame falls back to the width of
+     * the stage and a bubble to the width a bubble may be.
+     *
+     * <p>A width with no room for even one letter is not a width to wrap at
+     * either - there is no line it could make, so it makes a column of single
+     * letters instead. `new Text("42", x, y, 1)` asks for one, and it drew a 4
+     * above a 2.
+     */
+    private wrapWidth(style: PIXI.TextStyle): number | undefined {
+        let width = this.boxWidth;
+        if (width <= 0) {
+            if (this.style === TextStyle.PLAIN) return undefined;
+            width = this.style === TextStyle.BOX
+                ? this.world.width - PAD * 2
+                : SPEAK_BUBBLE_MAX_LIMIT;
+        }
+        // A letter is never much wider than the size it is written at, so
+        // anything that roomy wraps without measuring.
+        if (width >= this.textSize * 1.5) return width;
+        for (const letter of new Set(this.text.replace(/\n/g, ""))) {
+            if (PIXI.CanvasTextMetrics.measureText(letter, style).width > width) {
+                return undefined;
+            }
+        }
+        return width;
     }
 
     _showText(text: string) {
@@ -326,6 +394,24 @@ export class ScratchTextClass extends ObjectClass {
         this.container = undefined;
         this.visible = false;
     }
+
+    // ---- layering ----
+    // Texts are drawn above the sprites, so these order a text against the other
+    // texts - the same as upstream, where the stage draws its texts after its
+    // sprites and these move it within that list.
+    private get siblings(): PIXI.Container | undefined {
+        return this.container && !this.container.destroyed ? this.container.parent ?? undefined : undefined;
+    }
+    _goToFrontLayer() { const p = this.siblings; if (p) p.setChildIndex(this.container!, p.children.length - 1); }
+    _goToBackLayer() { const p = this.siblings; if (p) p.setChildIndex(this.container!, 0); }
+    private moveLayers(delta: number) {
+        const p = this.siblings;
+        if (!p) return;
+        const index = p.getChildIndex(this.container!);
+        p.setChildIndex(this.container!, Math.max(0, Math.min(p.children.length - 1, index + delta)));
+    }
+    _goLayersForwards(n: number) { this.moveLayers(n); }
+    _goLayersBackwards(n: number) { this.moveLayers(-n); }
 
     // ---- UI flag ----
     private ui: boolean = false;

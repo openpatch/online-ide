@@ -2050,6 +2050,22 @@ export class SRC {
         "de": "Entfernt den Text von der Bühne",
         "en": "Removes the text from the stage",
     });
+    static textGoToFrontLayerComment = () => lm({
+        "de": "Bringt den Text vor die anderen Texte",
+        "en": "Brings the text in front of the other texts",
+    });
+    static textGoToBackLayerComment = () => lm({
+        "de": "Schiebt den Text hinter die anderen Texte",
+        "en": "Sends the text behind the other texts",
+    });
+    static textGoLayersForwardsComment = () => lm({
+        "de": "Bringt den Text um die angegebene Anzahl Ebenen nach vorne",
+        "en": "Brings the text forward by the given number of layers",
+    });
+    static textGoLayersBackwardsComment = () => lm({
+        "de": "Schiebt den Text um die angegebene Anzahl Ebenen nach hinten",
+        "en": "Sends the text back by the given number of layers",
+    });
     static textIsUIComment = () => lm({
         "de": "Gibt genau dann true zurück, wenn der Text zur Benutzeroberfläche gehört",
         "en": "Returns true exactly when the text belongs to the interface",

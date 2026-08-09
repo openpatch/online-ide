@@ -388,6 +388,11 @@ class ApiCheck extends Sprite {
         t.setIsUI(true);
         if (t.isUI()) t.setPosition(0, 0);
         Stage st = t.getStage();
+        // which of several overlapping texts is on top, as on Sprite
+        t.goToFrontLayer();
+        t.goToBackLayer();
+        t.goLayersForwards(2);
+        t.goLayersBackwards(2);
     }
 }
 
