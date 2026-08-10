@@ -29,6 +29,12 @@ export class EmbeddedFullpageController {
     onWholeWindowButtonClicked(state: number) {
         switch (state) {
             case 0:
+                // Leaving through the button in the top right corner does not
+                // go through the toolbar button, which is what would otherwise
+                // flip it back: it kept showing "leave fullscreen" and the next
+                // click on it toggled to state 0 again, so once a reader had
+                // been to fullscreen and back, the button did nothing.
+                this.primaryButton.state = 0;
                 this.mainEmbedded.rightDiv.wholeWindowButton.setVisible(true);
                 this.mainEmbedded.horizontalSlider?.restorePosition();
                 this.mainEmbedded.verticalSlider?.restorePosition();
