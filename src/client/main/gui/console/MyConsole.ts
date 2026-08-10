@@ -6,6 +6,7 @@ import { copyTextToClipboard } from "../../../../tools/HtmlTools.js";
 import { Tab, TabManager } from "../../../../tools/TabManager.js";
 import { MainBase } from "../../MainBase.js";
 import { Helper } from "../Helper.js";
+import { ThemeManager } from "../ThemeManager.js";
 import { ConsoleEntry } from "./ConsoleEntry.js";
 import * as monaco from 'monaco-editor'
 import jQuery from 'jquery';
@@ -145,7 +146,7 @@ export class MyConsole {
                 vertical: 'hidden',
                 horizontal: 'hidden'
             },
-            theme: "myCustomThemeDark",
+            theme: ThemeManager.currentMonacoTheme,
 
             acceptSuggestionOnEnter: "on"
 
