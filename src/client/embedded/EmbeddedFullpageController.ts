@@ -34,6 +34,7 @@ export class EmbeddedFullpageController {
                 this.mainEmbedded.verticalSlider?.restorePosition();
                 this.additionalButtonTopRight.remove();
                 document.body.classList.remove('joeCssFence');
+                this.mainEmbedded.themeManager.removeRootElement(this.wholeWindowElement);
                 transferElements(this.wholeWindowElement, this.mainDiv);
                 break;
             case 1:
@@ -49,6 +50,9 @@ export class EmbeddedFullpageController {
                 this.mainEmbedded.verticalSlider?.savePosition();
                 document.body.classList.add('joeCssFence');
                 this.wholeWindowElement = DOM.makeDiv(document.body, 'jo_wholeWindow', 'jo_wholeWindow_embeddedFullpage');
+                // it hangs off document.body, so it is outside the div this IDE
+                // was themed on and has to be given the colours itself
+                this.mainEmbedded.themeManager.addRootElement(this.wholeWindowElement);
                 transferElements(this.mainDiv, this.wholeWindowElement);
                 break;
         }

@@ -23,10 +23,39 @@ export class ThemeManager {
     themes: Theme[] = [];
     currentTheme: Theme;
 
-    constructor(private rootElement: HTMLDivElement) {
+    /** Every element the theme's CSS custom properties are written to. */
+    private rootElements: HTMLElement[] = [];
+
+    constructor(rootElement: HTMLDivElement) {
         this.initThemes();
         this.initEditorThemes();
         this.currentTheme = this.themes[0];
+        this.rootElements.push(rootElement);
+    }
+
+    /**
+     * Colour `element` as well, and keep it in step with later theme switches.
+     *
+     * The full-window buttons hang their container off document.body, outside
+     * the div the IDE was themed on, so the custom properties set there no
+     * longer reach what is moved into it. Without this, going fullscreen falls
+     * back to the dark defaults `.joeCssFence` carries in editor.css — black
+     * panels around an otherwise light IDE.
+     */
+    addRootElement(element: HTMLElement) {
+        if (this.rootElements.indexOf(element) < 0) this.rootElements.push(element);
+        this.applyCssColors(element, this.currentTheme);
+    }
+
+    removeRootElement(element: HTMLElement) {
+        const index = this.rootElements.indexOf(element);
+        if (index >= 0) this.rootElements.splice(index, 1);
+    }
+
+    private applyCssColors(element: HTMLElement, theme: Theme) {
+        for (const key of Object.keys(theme.cssColors)) {
+            element.style.setProperty(key, theme.cssColors[key]);
+        }
     }
 
     switchTheme(name: string) {
@@ -43,11 +72,8 @@ export class ThemeManager {
         ThemeManager.currentMonacoTheme = theme.monacoTheme;
 
         // let root = document.documentElement;
-        for (const key of Object.keys(theme.cssColors)) {
-            const value = theme.cssColors[key]
-
-            this.rootElement.style.setProperty(key, value);
-
+        for (const element of this.rootElements) {
+            this.applyCssColors(element, theme);
         }
 
         this.currentTheme = theme;
