@@ -215,8 +215,17 @@ export class Thread {
     }
 
     #handleSystemException(exception: any, step: Step, currentProgramState: ProgramState) {
+        // A step is only known when the exception came out of one. A native
+        // method called from somewhere else - an act() method, an event handler -
+        // leaves it undefined, and reading codeAsString off it threw a second
+        // exception right here. That one escaped Thread.run, and with it
+        // Scheduler.run, LoadController.tick and the PIXI ticker callback that
+        // drives them: a ticker whose listener throws never asks for another
+        // animation frame, so the program stopped stepping and the canvas froze
+        // on its last picture, with no error shown anywhere.
+        if (!step) step = currentProgramState?.lastExecutedStep!;
         console.log(exception);
-        console.log(step!.codeAsString);
+        if (step) console.log(step.codeAsString);
         //@ts-ignore
         this.#throwException(new SystemException("SystemException", InterpreterMessages.SystemException() + exception), step!);
     }
@@ -284,7 +293,9 @@ export class Thread {
     #throwException(exception: Exception & IThrowable, step: Step) {
 
         exception.file = this.currentProgramState.program.module.file;
-        exception.range = exception.range || step.getValidRangeOrUndefined();
+        // step is unknown for an exception raised outside a step; the exception
+        // is then reported without a position rather than not at all
+        exception.range = exception.range || step?.getValidRangeOrUndefined();
         exception.thread = this;
 
         let classNames = exception.getExtendedImplementedIdentifiers().slice();
