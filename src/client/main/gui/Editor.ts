@@ -5,6 +5,7 @@ import { GUIFile } from '../../workspace/File.js';
 import { Workspace } from "../../workspace/Workspace.ts";
 import { Main } from "../Main.ts";
 import { MainBase } from "../MainBase.ts";
+import { ThemeManager } from "./ThemeManager.ts";
 import { FileTypeManager } from "../../../compiler/common/module/FileTypeManager.ts";
 import * as monaco from 'monaco-editor'
 import { JavaCompiledModule, JavaMethodCallPosition } from '../../../compiler/java/module/JavaCompiledModule.ts';
@@ -135,7 +136,7 @@ export class Editor {
                 vertical: 'auto',
                 horizontal: 'auto'
             },
-            theme: "myCustomThemeDark",
+            theme: ThemeManager.currentMonacoTheme,
             wrappingIndent: "same",
             // automaticLayout: true
 

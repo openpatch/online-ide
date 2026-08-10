@@ -1,7 +1,6 @@
 
 import jQuery from 'jquery';
 import * as PIXI from 'pixi.js';
-import { ThemeManager } from "../main/gui/ThemeManager.js";
 import { MainEmbedded } from "./MainEmbedded.js";
 import { languages, setLanguageId } from "../../tools/language/LanguageManager.js";
 
@@ -176,8 +175,9 @@ export class EmbeddedStarter {
         });
 
         for (let dws of divsWithScriptLists) {
-            new ThemeManager(<HTMLDivElement>dws[0][0]).switchTheme("dark");
-
+            // the theme used to be forced to "dark" here, before anything had
+            // read the div's configuration; MainEmbedded applies it now, so that
+            // the `theme` option can choose between dark and light
             await this.initDiv(dws[0], dws[1]);
         }
 
