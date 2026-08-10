@@ -10,6 +10,8 @@ export class EmbeddedFullpageController {
     wholeWindowElement: HTMLElement;
     primaryButton: IconButtonComponent;
     additionalButtonTopRight: IconButtonComponent;
+    /** Bound while the IDE is fullscreen; see onWholeWindowButtonClicked. */
+    private escapeListener?: (event: KeyboardEvent) => void;
 
     constructor(private mainEmbedded: MainEmbedded, private mainDiv: HTMLElement, controlsDiv: HTMLElement) {
         this.primaryButton = new IconButtonComponent(controlsDiv,
@@ -46,6 +48,7 @@ export class EmbeddedFullpageController {
                 // left behind, every trip to fullscreen and back stacked another
                 // one over the page
                 this.wholeWindowElement.remove();
+                this.stopListeningForEscape();
                 break;
             case 1:
                 this.additionalButtonTopRight = new IconButtonComponent(this.mainEmbedded.rightDiv.tabManager.tabheadingRightDiv,
@@ -64,8 +67,33 @@ export class EmbeddedFullpageController {
                 // was themed on and has to be given the colours itself
                 this.mainEmbedded.themeManager.addRootElement(this.wholeWindowElement);
                 transferElements(this.mainDiv, this.wholeWindowElement);
+                this.startListeningForEscape();
                 break;
         }
+    }
+
+    /**
+     * Escape leaves fullscreen, which is what the browser's own fullscreen does
+     * and therefore what a reader expects of a view that fills the window.
+     *
+     * The listener is on document rather than on the IDE so that it works
+     * wherever the focus happens to be; while the editor has it, monaco sees the
+     * key first and may act on it (closing a completion popup, say), so this
+     * does not take Escape away from anything that was already using it.
+     */
+    private startListeningForEscape() {
+        this.stopListeningForEscape();
+        this.escapeListener = (event: KeyboardEvent) => {
+            if (event.key != "Escape") return;
+            this.onWholeWindowButtonClicked(0);
+        };
+        document.addEventListener("keydown", this.escapeListener);
+    }
+
+    private stopListeningForEscape() {
+        if (!this.escapeListener) return;
+        document.removeEventListener("keydown", this.escapeListener);
+        this.escapeListener = undefined;
     }
 
 }
