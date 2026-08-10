@@ -11,6 +11,17 @@
         height: 100%;
         background-color: var(--backgroundDark);
         z-index: 10000;
+
+        /*
+         * Going fullscreen moves the IDE's panels out of .joe_javaOnlineDiv and
+         * into this element, so everything that element passed down by
+         * inheritance has to be repeated here. Without it the panels took the
+         * font of the page the IDE is embedded in - a hyperbook's body font is
+         * a serif, so the whole IDE changed typeface on the way to fullscreen.
+         */
+        color: var(--fontColorNormal);
+        font-family: 'Roboto', sans-serif;
+        font-size: 10pt;
     }
     
     .jo_wholeWindow_embeddedFullpage {
