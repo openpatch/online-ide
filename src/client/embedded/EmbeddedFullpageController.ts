@@ -42,6 +42,10 @@ export class EmbeddedFullpageController {
                 document.body.classList.remove('joeCssFence');
                 this.mainEmbedded.themeManager.removeRootElement(this.wholeWindowElement);
                 transferElements(this.wholeWindowElement, this.mainDiv);
+                // the emptied container is still a fixed, full-window element:
+                // left behind, every trip to fullscreen and back stacked another
+                // one over the page
+                this.wholeWindowElement.remove();
                 break;
             case 1:
                 this.additionalButtonTopRight = new IconButtonComponent(this.mainEmbedded.rightDiv.tabManager.tabheadingRightDiv,
