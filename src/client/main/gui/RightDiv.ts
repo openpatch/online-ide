@@ -76,7 +76,10 @@ export class RightDiv {
             (<MainEmbedded>this.main).embeddedFullpageController.primaryButton.setVisible(false);
             }
             this.wholeWindowElement = DOM.makeDiv(document.body, 'jo_wholeWindow');
-            
+            // outside the themed div (see ThemeManager.addRootElement), so it
+            // would otherwise come up in the dark defaults from editor.css
+            this.main.themeManager?.addRootElement(this.wholeWindowElement);
+
             transferElements(this.rightDivElement, this.wholeWindowElement);
             transferElements(this.originalControlsContainer, this.newControlsContainer);
             
@@ -89,6 +92,7 @@ export class RightDiv {
             transferElements(this.wholeWindowElement, this.rightDivElement);
             transferElements(this.newControlsContainer, this.originalControlsContainer);
 
+            this.main.themeManager?.removeRootElement(this.wholeWindowElement);
             this.wholeWindowElement.remove();
 
             jQuery('.jo_graphics').trigger('sizeChanged');
