@@ -669,10 +669,27 @@ export class JavaClass extends IJavaClass {
         return new GenericVariantOfJavaClass(this, typeMap);
     }
 
-    getMainMethod(): JavaMethod | undefined {
-        let method: JavaMethod | undefined = this.methods.find(m => m.identifier == JavaCompilerStringConstants.mainMethodIdentifier);
-        if (method) return method;
-        return this.methods.find(m => m.isStatic && m.identifier == 'main' && m.getSignature().toLocaleLowerCase() == 'void main(string[])')
+    /**
+     * The compiler-generated method of a $MainClass which holds all statements
+     * written outside of any class declaration.
+     */
+    getSyntheticMainMethod(): JavaMethod | undefined {
+        return this.methods.find(m => m.identifier == JavaCompilerStringConstants.mainMethodIdentifier);
+    }
+
+    /**
+     * A main method written by the user. Since Java 25 (JEP 512) not only
+     * "public static void main(String[] args)" may serve as entry point but any
+     * non-private method "void main()" or "void main(String[] args)", static or not.
+     * If the method isn't static then the class gets instantiated before calling it.
+     */
+    getDeclaredMainMethod(): JavaMethod | undefined {
+        let candidates = this.methods.filter(m => m.identifier == 'main' && !m.isAbstract && m.visibility != TokenType.keywordPrivate &&
+            (m.getSignature().toLocaleLowerCase() == 'void main(string[])' || m.getSignature().toLocaleLowerCase() == 'void main()'));
+
+        // Java's launch protocol prefers static over instance methods and methods with String[]-parameter over parameterless ones:
+        let priority = (m: JavaMethod) => (m.isStatic ? 2 : 0) + (m.parameters.length > 0 ? 1 : 0);
+        return candidates.sort((a, b) => priority(b) - priority(a))[0];
     }
 
     getCompletionItems(visibilityUpTo: Visibility, leftBracketAlreadyThere: boolean, identifierAndBracketAfterCursor: string,
