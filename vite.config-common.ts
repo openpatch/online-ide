@@ -37,7 +37,15 @@ export default {
         sourcemap: true,
         emptyOutDir: true,
         chunkSizeWarningLimit: 4912,
-        assetsInlineLimit: 10 * 1024
+        /**
+         * Assets below 10 kB are inlined as data URLs — except audio: the Scratch
+         * library imports 266 OGG files, two thirds of them under that limit, and
+         * inlining them would add 1.3 MB of base64 to the bundle that every user
+         * downloads whether or not a program plays a sound. They stay separate
+         * files, fetched when a sound is first played, like the costume atlases.
+         */
+        assetsInlineLimit: (filePath: string, content: Buffer) =>
+            /\.(ogg|mp3|wav)$/i.test(filePath) ? false : content.length < 10 * 1024
     },
     define: {
         'APP_VERSION': JSON.stringify(pkg.version),
