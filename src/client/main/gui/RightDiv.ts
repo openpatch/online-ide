@@ -82,7 +82,8 @@ export class RightDiv {
 
             transferElements(this.rightDivElement, this.wholeWindowElement);
             transferElements(this.originalControlsContainer, this.newControlsContainer);
-            
+            this.startListeningForEscape();
+
             jQuery('.jo_graphics').trigger('sizeChanged');
         } else {
             if(this.main.isEmbedded()){
@@ -94,10 +95,35 @@ export class RightDiv {
 
             this.main.themeManager?.removeRootElement(this.wholeWindowElement);
             this.wholeWindowElement.remove();
+            this.stopListeningForEscape();
 
             jQuery('.jo_graphics').trigger('sizeChanged');
         }
 
+    }
+
+    /**
+     * Escape leaves the full-window view, as it does in the browser's own
+     * fullscreen. The listener sits on document so that it works wherever the
+     * focus is; monaco sees the key first while the editor has focus, so
+     * nothing that already used Escape loses it.
+     */
+    private escapeListener?: (event: KeyboardEvent) => void;
+
+    private startListeningForEscape() {
+        this.stopListeningForEscape();
+        this.escapeListener = (event: KeyboardEvent) => {
+            if (event.key != "Escape") return;
+            this.wholeWindowButton.state = 0;
+            this.onWholeWindowButtonClicked(0);
+        };
+        document.addEventListener("keydown", this.escapeListener);
+    }
+
+    private stopListeningForEscape() {
+        if (!this.escapeListener) return;
+        document.removeEventListener("keydown", this.escapeListener);
+        this.escapeListener = undefined;
     }
 
     adjustWidthToWorld() {
