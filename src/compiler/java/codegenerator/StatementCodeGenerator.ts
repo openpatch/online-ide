@@ -1194,8 +1194,21 @@ export abstract class StatementCodeGenerator extends TermCodeGenerator {
             step.finallyBlockIndex = finallyBlockLabel?.stepIndex;
         });
 
+        // The try block and each catch block are branches, exactly as the two
+        // halves of an if/else are. Without saying so, a `return` inside one of
+        // them counted as a return of the method itself, so a method whose last
+        // statement fell off the end got no `__t.return()` step appended after
+        // it: its final step was the bare jump label, that step returned no next
+        // index, and the thread then read step `undefined` and threw. Inside the
+        // act loop that killed the PIXI ticker, which is what stopped a program
+        // dead the first time it came back from ask().
+        this.missingStatementManager.openBranch();
         let tryBlockStatements = this.compileStatementOrTerm(node.tryStatement);
-        if (!tryBlockStatements) return undefined;
+        this.missingStatementManager.closeBranch(this.module.errors);
+        if (!tryBlockStatements) {
+            this.missingStatementManager.endBranching();
+            return undefined;
+        }
 
         if (tryBlockStatements instanceof CodeSnippetContainer) tryBlockStatements.removeNextStepBeforeSnippetMark();
 
@@ -1220,7 +1233,9 @@ export abstract class StatementCodeGenerator extends TermCodeGenerator {
             let storeExceptionVariableStatement = new StringCodeSnippet(`${Helpers.threadStack}[${StepParams.stackBase} + ${exceptionVariable.stackframePosition}] = ${Helpers.getExceptionAndTrimStack}(true);\n`);
             snippetContainer.addParts(storeExceptionVariableStatement);
 
+            this.missingStatementManager.openBranch();
             let statement = this.compileStatementOrTerm(catchCase.statement);
+            this.missingStatementManager.closeBranch(this.module.errors);
 
             if (statement) {
                 if (statement instanceof CodeSnippetContainer) statement.removeNextStepBeforeSnippetMark();
@@ -1230,6 +1245,12 @@ export abstract class StatementCodeGenerator extends TermCodeGenerator {
             snippetContainer.addParts(labelAfterLastCatchBlock.getJumpToSnippet());
 
         }
+
+        // The method returns on every path only when the try block and every
+        // catch block do. A finally that returns would make it certain whatever
+        // the others do; that is left out here, and erring towards emitting the
+        // return step costs nothing but one step that is never reached.
+        this.missingStatementManager.endBranching();
 
         finallyBlockLabel = new LabelCodeSnippet();
         snippetContainer.addNextStepMark();
