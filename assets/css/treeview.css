@@ -71,7 +71,7 @@
         flex-grow: 1;
 
         border-bottom-style: solid;
-        border-color: #474747;
+        border-color: var(--menuitemsdivider);
         border-width: 1px;
 
     }
@@ -163,23 +163,23 @@
     }
 
     .jo_treeviewNode.jo_treeview_selected {
-        background-color: #114c74c0;
+        background-color: var(--file-active);
     }
 
     .jo_treeviewNode.jo_treeview_focus {
-        background-color: #114c74c0;
-        border-color: #66b6ecab;
+        background-color: var(--file-active);
+        border-color: var(--file-active-border);
         border-width: 1px;
         border-style: solid;
     }
 
     .jo_treeviewNode:hover {
-        background-color: #50505057;
+        background-color: var(--file-hover);
     }
 
     .jo_treeviewNode:hover.jo_treeview_focus,
     .jo_treeviewNode:hover.jo_treeview_selected {
-        background-color: #2a4658c0;
+        background-color: var(--file-active-hover);
     }
 
     .jo_treeviewChildren {
@@ -205,7 +205,7 @@
     }
 
     .jo_treeview_nodediv:hover .jo_treeviewChildrenLineDiv {
-        border-left-color: #555;
+        border-left-color: var(--menuitemsdivider);
     }
 
     .jo_treeviewNode_caption {
