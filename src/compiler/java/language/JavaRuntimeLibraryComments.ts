@@ -4473,6 +4473,39 @@ rectMode(RADIUS) also uses the first two parameters as the x- and y-coordinates 
     })
 
     /**
+     * class IO
+     */
+    static IOClassComment = () => lm({
+        "de": "Klasse mit statischen Methoden zur einfachen Ein- und Ausgabe von Text (seit Java 25).",
+        "en": "Class with static methods for simple textual input and output (since Java 25).",
+    })
+
+    static IOPrintComment = () => lm({
+        "de": "Gibt den Wert aus.",
+        "en": "Prints given value.",
+    })
+
+    static IOPrintlnComment = () => lm({
+        "de": "Gibt den Wert aus und macht anschließend einen Zeilenumbruch.",
+        "en": "Prints given value followed by a line break.",
+    })
+
+    static IOPrintlnComment2 = () => lm({
+        "de": "Gibt einen Zeilenumbruch aus.",
+        "en": "Prints a line break.",
+    })
+
+    static IOReadlnComment = () => lm({
+        "de": "Erwartet vom Benutzer die Eingabe einer Textzeile und gibt diese zurück.",
+        "en": "Reads a line of text entered by the user and returns it.",
+    })
+
+    static IOReadlnWithPromptComment = () => lm({
+        "de": "Gibt die Aufforderung prompt aus und erwartet dann vom Benutzer die Eingabe einer Textzeile, die zurückgegeben wird.",
+        "en": "Prints given prompt and then reads a line of text entered by the user and returns it.",
+    })
+
+    /**
      * class Input
      */
     static InputClassComment = () => lm({
