@@ -183,6 +183,13 @@ export class ThemeManager {
                 "--junit-expected-color": "#2fed4f",
                 "--junit-actual-color": "#e06d4d",
 
+                // icons: the sprites are drawn for this theme already, so this
+                // is a no-op - but it has to be a filter function rather than
+                // `none`, which is not allowed in a list and would make
+                // `none grayscale()` invalid and drop the whole declaration
+                "--icon-filter": "brightness(1)",
+                "--icon-filter-hover": "brightness(150%)",
+
             }
         });
 
@@ -288,6 +295,15 @@ export class ThemeManager {
                 "--junit-details-color": "#6d6c6c",
                 "--junit-expected-color": "#1a8f2e",
                 "--junit-actual-color": "#964731",
+
+                // The icon sprites are light glyphs meant for a dark panel and
+                // there are no light-theme counterparts for most of them, so
+                // they are darkened here instead: enough contrast on white for
+                // the plain grey ones, and saturation put back so the green
+                // start arrow and the blue stepping arrows stay themselves.
+                // Highlighting goes darker rather than brighter on white.
+                "--icon-filter": "brightness(0.45) saturate(1.6)",
+                "--icon-filter-hover": "brightness(0.75)",
 
             }
         });
