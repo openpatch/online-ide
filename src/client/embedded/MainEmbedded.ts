@@ -43,6 +43,7 @@ import { GUIFile } from "../workspace/File.js";
 import { Workspace } from "../workspace/Workspace.js";
 import { ExportedWorkspace, WorkspaceExporter } from "../workspace/WorkspaceImporterExporter.js";
 import { EmbeddedFileExplorer } from "./EmbeddedFileExplorer.js";
+import { ThemeManager } from "../main/gui/ThemeManager.js";
 import { EmbeddedFullpageController } from "./EmbeddedFullpageController.js";
 import { EmbeddedIndexedDB } from "./EmbeddedIndexedDB.js";
 import { OnlineIDEAccessImpl, type OnRunExitListener } from "./EmbeddedInterface.js";
@@ -77,11 +78,26 @@ type JavaOnlineConfig = {
 
     programmingLanguage?: string,
 
+    /**
+     * "dark" (the default) or "light" — the same two themes the full IDE offers
+     * under Einstellungen. Anything else falls back to "dark".
+     *
+     * Everything but the editor is themed through CSS custom properties set on
+     * this IDE's own div, so two embedded IDEs on one page can differ. Monaco's
+     * own theme is global to the page, though (monaco.editor.setTheme), so where
+     * a page holds several IDEs, the editors all end up in the theme of the one
+     * that was initialised last.
+     */
+    theme?: "dark" | "light",
+
 }
 
 export class MainEmbedded implements MainBase {
 
     config: JavaOnlineConfig;
+
+    /** Owns this IDE's colours; see the `theme` config option. */
+    themeManager: ThemeManager;
 
     editor: Editor;
 
@@ -141,6 +157,12 @@ export class MainEmbedded implements MainBase {
 
     async init(scriptList: JOScript[]) {
         this.readConfig(this.$outerDiv);
+
+        // after readConfig, because which theme this is comes out of the config;
+        // before initGUI, so the elements it builds are never painted in the
+        // wrong colours first
+        this.themeManager = new ThemeManager(<HTMLDivElement>this.$outerDiv[0]);
+        this.themeManager.switchTheme(this.config.theme!);
 
         this.initGUI(this.$outerDiv);
 
@@ -303,6 +325,9 @@ export class MainEmbedded implements MainBase {
         if (this.config.speed == null || (typeof this.config.speed === 'number' && this.config.speed < 0)) this.config.speed = "max";
         if (this.config.libraries == null) this.config.libraries = [];
         if (this.config.jsonFilename == null) this.config.jsonFilename = "workspace.json";
+
+        // a misspelt theme should leave the IDE readable rather than half-styled
+        if (this.config.theme != "light") this.config.theme = "dark";
 
     }
 
