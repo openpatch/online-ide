@@ -201,6 +201,16 @@
         position: absolute;
         width: fit-content;
         height: fit-content;
+        /*
+         * The canvas keeps the stage's aspect ratio, so it rarely fills the
+         * width it is given and was left sitting against the left edge. That is
+         * hard to see where the output panel is about as wide as the stage, and
+         * obvious in fullscreen, where the stage ended up in the corner of a
+         * very wide black area. Centring is safe for input: the mouse position
+         * is read as an offset within this element, not from the page.
+         */
+        left: 50%;
+        transform: translateX(-50%);
     }
 
     /* .jo_graphics>div>div {
