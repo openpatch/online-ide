@@ -44,6 +44,7 @@ import { Tab } from "../../tools/TabManager.js";
 import { base64ToBytes } from "../../tools/Base64.js";
 import { Settings } from "../settings/Settings.js";
 import { ThemeManager } from "../main/gui/ThemeManager.js";
+import { followPageTheme, PageTheme, pageTheme } from "./PageTheme.js";
 import { EmbeddedFullpageController } from "./EmbeddedFullpageController.js";
 import { SettingValues } from "../settings/SettingsMetadata.js";
 import { ProgrammingLanguageManager } from "../../compiler/common/programminglanguage/ProgrammingLanguageManager.js";
@@ -79,8 +80,13 @@ type JavaOnlineConfig = {
     programmingLanguage?: string,
 
     /**
-     * "dark" (the default) or "light" — the same two themes the full IDE offers
-     * under Einstellungen. Anything else falls back to "dark".
+     * "dark" or "light" — the same two themes the full IDE offers under
+     * Einstellungen.
+     *
+     * Left out, the IDE takes the theme from the page: a hyperbook has a
+     * `<dark-mode-toggle>` its reader can flip, and the IDE follows it, live
+     * (see PageTheme.ts). A page without such a toggle says nothing about its
+     * colours, and the IDE stays dark, as embedded IDEs have always been.
      *
      * Everything but the editor is themed through CSS custom properties set on
      * this IDE's own div, so two embedded IDEs on one page can differ. Monaco's
@@ -88,7 +94,7 @@ type JavaOnlineConfig = {
      * a page holds several IDEs, the editors all end up in the theme of the one
      * that was initialised last.
      */
-    theme?: "dark" | "light",
+    theme?: PageTheme,
 
 }
 
@@ -98,6 +104,8 @@ export class MainEmbedded implements MainBase {
 
     /** Owns this IDE's colours; see the `theme` config option. */
     themeManager: ThemeManager;
+    /** True while no theme was configured, so the page's toggle decides. */
+    private themeFollowsPage: boolean = false;
 
     editor: Editor;
 
@@ -234,6 +242,7 @@ export class MainEmbedded implements MainBase {
         // wrong colours first
         this.themeManager = new ThemeManager(<HTMLDivElement>$outerDiv[0]);
         this.themeManager.switchTheme(this.config.theme!);
+        if (this.themeFollowsPage) followPageTheme(theme => this.applyTheme(theme));
 
         this.initGUI($outerDiv);
 
@@ -396,9 +405,19 @@ export class MainEmbedded implements MainBase {
         if (this.config.libraries == null) this.config.libraries = [];
         if (this.config.jsonFilename == null) this.config.jsonFilename = "workspace.json";
 
-        // a misspelt theme should leave the IDE readable rather than half-styled
-        if (this.config.theme != "light") this.config.theme = "dark";
+        // A theme named in the config wins; otherwise the page says which one it
+        // is in and the IDE follows. A misspelt name counts as "not named" — that
+        // leaves the IDE readable rather than half-styled.
+        this.themeFollowsPage = this.config.theme != "light" && this.config.theme != "dark";
+        if (this.themeFollowsPage) this.config.theme = pageTheme() ?? "dark";
 
+    }
+
+    /** Re-theme on the fly when the reader flips the page's dark-mode toggle. */
+    private applyTheme(theme: PageTheme) {
+        if (theme == this.config.theme) return;
+        this.config.theme = theme;
+        this.themeManager.switchTheme(theme);
     }
 
     setFileActive(file: GUIFile) {
