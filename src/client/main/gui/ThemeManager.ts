@@ -8,6 +8,18 @@ export type Theme = {
 
 export class ThemeManager {
 
+    /**
+     * The monaco theme the most recent switchTheme() chose.
+     *
+     * monaco.editor.create() takes a theme and applies it to every editor on the
+     * page, so an editor built after a theme switch used to drag them all back
+     * to the name hardcoded at its call site — which is why an embedded IDE
+     * configured as `'theme': 'light'` came up with light surroundings around a
+     * dark editor. Static, because monaco keeps one theme per page, not one per
+     * editor.
+     */
+    static currentMonacoTheme: string = "myCustomThemeDark";
+
     themes: Theme[] = [];
     currentTheme: Theme;
 
@@ -28,6 +40,7 @@ export class ThemeManager {
 
     internalSwitchTheme(theme: Theme) {
         monaco.editor.setTheme(theme.monacoTheme);
+        ThemeManager.currentMonacoTheme = theme.monacoTheme;
 
         // let root = document.documentElement;
         for (const key of Object.keys(theme.cssColors)) {
