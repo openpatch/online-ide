@@ -1,4 +1,43 @@
 .joeCssFence {
+   /*
+    * Every "-dark" icon is a light glyph drawn for a dark background - the
+    * plain grey ones are #c5c5c5, which on the light theme's white panels is
+    * all but invisible, and there are no light-theme counterparts for most of
+    * them. The theme hands down a filter that darkens them instead, keeping
+    * the coloured ones (the green start arrow, the blue stepping arrows)
+    * recognisable. The dark theme's filter is a no-op, so nothing changes
+    * there - it has to be `brightness(1)` rather than `none`, because `none`
+    * is not allowed alongside other functions and would make the composed
+    * values below invalid, dropping the declaration entirely.
+    */
+   [class*="img_"][class*="-dark"],
+   .img_open-file {
+      filter: var(--icon-filter, brightness(1));
+   }
+
+   /*
+    * The same icons are also .jo_button or .jo_iconButton, and those set
+    * `filter` themselves for hover and for the disabled state. A filter
+    * replaces rather than adds, so without repeating the theme's here the
+    * icons snapped back to their unreadable grey the moment the pointer
+    * touched them, and the buttons that are disabled until a program runs -
+    * pause, stop, restart, step out - never darkened at all.
+    *
+    * These selectors are deliberately more specific than the button rules, so
+    * they win wherever the two meet, whatever order the files are loaded in.
+    * On a white panel "highlighted" means darker rather than brighter, which
+    * is why the hover step is the theme's to choose too.
+    */
+   [class*="img_"][class*="-dark"]:hover,
+   .img_open-file:hover {
+      filter: var(--icon-filter, brightness(1)) var(--icon-filter-hover, brightness(150%));
+   }
+
+   [class*="img_"][class*="-dark"].jo_button:not(.jo_active),
+   .img_open-file.jo_button:not(.jo_active) {
+      filter: var(--icon-filter, brightness(1)) grayscale();
+   }
+
    .img_flag-german {
       width: 16px;
       height: 16px;
