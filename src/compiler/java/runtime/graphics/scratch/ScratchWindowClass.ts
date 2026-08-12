@@ -3,6 +3,7 @@ import { Thread } from "../../../../common/interpreter/Thread";
 import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass, StringClass } from "../../system/javalang/ObjectClassStringClass";
+import { IWorld } from "../IWorld";
 import { ScratchStageClass } from "./ScratchStageClass";
 import { setActiveScratchStage, transitionToScratchStage } from "./ScratchStages";
 import { currentScratchStage, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
@@ -12,10 +13,11 @@ import { SRC } from "./ScratchLibraryComments";
 /**
  * The application window, mirroring org.openpatch.scratch.Window.
  *
- * In the browser the output panel owns the canvas, so a Window here is a handle
- * on the program's stages rather than a real OS window. Everything about
- * switching stages works: setStage() and transitionToStage() put another stage
- * on screen, and getStage() answers with the one showing.
+ * In the browser the output panel owns the canvas, so a Window here is not a
+ * real OS window — but it is still what decides how large the picture is, the
+ * way upstream's constructors build the Applet. Everything about switching
+ * stages works too: setStage() and transitionToStage() put another stage on
+ * screen, and getStage() answers with the one showing.
  *
  * What genuinely has no browser equivalent — fullscreen, the splash logo and
  * texture sampling — reports itself through the desktop-only notice instead of
@@ -25,10 +27,10 @@ export class ScratchWindowClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", signature: "class Window extends Object", comment: SRC.windowClassComment },
 
-        { type: "method", signature: "Window()", native: ScratchWindowClass.prototype._c0, comment: SRC.windowConstructorComment },
-        { type: "method", signature: "Window(string assets)", native: ScratchWindowClass.prototype._c1, comment: SRC.windowConstructor2Comment },
-        { type: "method", signature: "Window(int width, int height)", native: ScratchWindowClass.prototype._c2, comment: SRC.windowConstructor3Comment },
-        { type: "method", signature: "Window(int width, int height, string assets)", native: ScratchWindowClass.prototype._c3, comment: SRC.windowConstructor4Comment },
+        { type: "method", signature: "Window()", java: ScratchWindowClass.prototype._cj$_constructor_$Window$, comment: SRC.windowConstructorComment },
+        { type: "method", signature: "Window(string assets)", java: ScratchWindowClass.prototype._cj$_constructor_$Window$string, comment: SRC.windowConstructor2Comment },
+        { type: "method", signature: "Window(int width, int height)", java: ScratchWindowClass.prototype._cj$_constructor_$Window$int$int, comment: SRC.windowConstructor3Comment },
+        { type: "method", signature: "Window(int width, int height, string assets)", java: ScratchWindowClass.prototype._cj$_constructor_$Window$int$int$string, comment: SRC.windowConstructor4Comment },
 
         { type: "method", signature: "static Window getInstance()", native: ScratchWindowClass.getInstance, comment: SRC.windowGetInstanceComment },
 
@@ -69,14 +71,50 @@ export class ScratchWindowClass extends ObjectClass {
     private requestedHeight: number = 360;
     private debugEnabled: boolean = false;
 
-    _c0() { return this._c3(480, 360, ""); }
-    _c1(assets: string) { return this._c3(480, 360, assets); }
-    _c2(width: number, height: number) { return this._c3(width, height, ""); }
-    _c3(width: number, height: number, _assets: string) {
+    // Upstream every constructor ends up in `new Applet(width, height, …)`, the
+    // no-argument one with 480x360 — building a window is what gives the program
+    // its picture and its size. So the constructors here build the World, and the
+    // first Stage then finds it and shares it, exactly as upstream's Stage only
+    // creates a window when there is none yet.
+    _cj$_constructor_$Window$(t: Thread, callback: CallbackParameter) {
+        this._cj$_constructor_$Window$int$int(t, callback, 480, 360);
+    }
+
+    /** The assets folder has no browser equivalent; Stage ignores it the same way. */
+    _cj$_constructor_$Window$string(t: Thread, callback: CallbackParameter, _assets: string) {
+        this._cj$_constructor_$Window$int$int(t, callback, 480, 360);
+    }
+
+    _cj$_constructor_$Window$int$int$string(
+        t: Thread, callback: CallbackParameter, width: number, height: number, _assets: string,
+    ) {
+        this._cj$_constructor_$Window$int$int(t, callback, width, height);
+    }
+
+    _cj$_constructor_$Window$int$int(t: Thread, callback: CallbackParameter, width: number, height: number) {
         this.requestedWidth = width;
         this.requestedHeight = height;
         ScratchWindowClass.instance = this;
-        return this;
+
+        const interpreter = t.scheduler.interpreter;
+        const done = () => {
+            t.s.push(this);
+            if (callback) callback();
+        };
+
+        // A stage built before the window already opened one. Upstream refuses a
+        // second window outright; here the program simply keeps the one it has,
+        // because resizing it now would leave every sprite the stage has already
+        // placed sitting in the wrong spot.
+        if (interpreter.retrieveObject("WorldClass") as IWorld) {
+            done();
+            return;
+        }
+
+        new t.classes["World"]()._cj$_constructor_$World$int$int(t, () => {
+            t.s.pop();      // the World its constructor pushed; the program wants the Window
+            done();
+        }, width, height);
     }
 
     static getInstance(): ScratchWindowClass {
