@@ -263,9 +263,20 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      * Only the stage on screen steps. Upstream reaches exactly one stage's render
      * loop per frame, and holds even that one still while a transition fades the
      * outgoing picture away.
+     *
+     * <p>run() must not be reached before the subclass constructor has finished.
+     * The stage goes on screen from the base constructor — that is where upstream
+     * puts the first stage of a program too — so between that moment and the end
+     * of `new MyStage()` there is a stage on screen whose fields the program has
+     * not assigned yet, and a run() touching one of them fails with a
+     * NullPointerException. It showed up on the second run of a program, once the
+     * costumes were in the cache and the constructor no longer waited for them.
+     * listenersRegistered says the constructor is through: the compiler calls
+     * _registerListeners once it is (TermCodeGenerator.invokeConstructor), and
+     * where there is no subclass the base constructor does it itself.
      */
     _mj$act$void$(t: Thread, callback: CallbackParameter): void {
-        if (!this.isActive() || !scratchStagesRunning()) {
+        if (!this.listenersRegistered || !this.isActive() || !scratchStagesRunning()) {
             if (callback) callback();
             return;
         }
