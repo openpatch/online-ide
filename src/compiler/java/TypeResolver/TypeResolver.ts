@@ -86,6 +86,12 @@ export class TypeResolver {
         
         for (let module of this.dirtyModules) {
             if (!module.ast) continue;
+            // Seed the module with the standard imports so that later stages (code generation
+            // above all) resolve a simple name to the same type this resolver picks. Explicit
+            // import statements are applied afterwards and therefore win.
+            this.globallyImportedTypesMap.forEach((type, identifier) => {
+                module.importedTypes.set(identifier, type as NonPrimitiveType);
+            });
             for (let importStatement of module.ast.importStatements) {
                 module.imports.push(importStatement.importedPath);
                 let types = this.libraryModuleManager.typestore.getTypesMatchingImportPath(importStatement.importedPath, module, importStatement.pathRanges);
