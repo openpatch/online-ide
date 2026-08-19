@@ -29,6 +29,9 @@ import { SpritesheetData } from "../spritemanager/SpritesheetData.js";
 import { GUIFile } from "../workspace/File.js";
 import { Workspace } from "../workspace/Workspace.js";
 import { ExportedWorkspace, WorkspaceExporter } from "../workspace/WorkspaceImporterExporter.js";
+import { configFromURLParameters, sharedWorkspaceIdFromURL } from "./EmbeddedURLConfig.js";
+import { showURLParametersPanel } from "./EmbeddedURLParametersPanel.js";
+import { EmbeddedMessages } from "./EmbeddedMessages.js";
 import { EmbeddedFileExplorer } from "./EmbeddedFileExplorer.js";
 import { EmbeddedIndexedDB } from "./EmbeddedIndexedDB.js";
 import { Slider } from "../../tools/components/Slider.js";
@@ -58,7 +61,7 @@ import { LoginMessages } from "../main/language/MainLanguage.js";
  * Configuration options for the Java Online IDE in embedded mode.
  * https://learnj.de/doku.php?id=onlineide:integration:start#bedeutung_der_konfigurationsparameter
  */
-type JavaOnlineConfig = {
+export type JavaOnlineConfig = {
     withFileList?: boolean,
     withPCode?: boolean,
     withConsole?: boolean,
@@ -76,6 +79,24 @@ type JavaOnlineConfig = {
     settings?: SettingValues,
     workspaceURLParameterName?: string,
     cacheUserEdits?: boolean
+
+    /**
+     * Take the configuration from the page's URL as well (see EmbeddedURLConfig).
+     * A parameter in the URL wins over the same option in this attribute, which is
+     * what makes a playground link able to say which libraries it wants.
+     *
+     * Off unless asked for: a page that hosts several IDEs of its own configures
+     * each of them itself and should not have them all change under a stray
+     * query parameter.
+     */
+    urlConfig?: boolean,
+
+    /**
+     * Base URL of a json store (https://json.openpatch.org) to share workspaces
+     * through. Given one, the IDE grows a share button that uploads the workspace
+     * and hands back a link, and it opens `#json=<id>` links on startup.
+     */
+    jsonStore?: string,
 
     programmingLanguage?: string,
 
@@ -101,6 +122,9 @@ type JavaOnlineConfig = {
 export class MainEmbedded implements MainBase {
 
     config: JavaOnlineConfig;
+
+    /** Set when the files came out of a `#json=` link rather than out of the page. */
+    loadedSharedWorkspace: boolean = false;
 
     /** Owns this IDE's colours; see the `theme` config option. */
     themeManager: ThemeManager;
@@ -350,6 +374,8 @@ export class MainEmbedded implements MainBase {
 
         await this.tryLoadingWorkspaceFromURL();
 
+        await this.tryLoadingSharedWorkspace();
+
         this.initWorkspace(this.scriptList);
 
         if (this.config.withFileList) {
@@ -372,6 +398,13 @@ export class MainEmbedded implements MainBase {
             this.config = JSON.parse(configJson.split("'").join('"'));
         } else {
             this.config = {}
+        }
+
+        // The URL is layered over the div's configuration, not under it: the div
+        // states what the page wants by default, the link states what this reader
+        // asked for. Only the options the URL actually names are touched.
+        if (this.config.urlConfig) {
+            Object.assign(this.config, configFromURLParameters());
         }
 
         if (typeof this.config.cacheUserEdits !== "boolean") {
@@ -478,7 +511,10 @@ export class MainEmbedded implements MainBase {
         let that = this;
 
         this.indexedDB.getScript(this.config.id, (scriptListJSon) => {
-            if (scriptListJSon == null) {
+            // A link that carries a workspace shows that workspace, not what this
+            // browser last edited under the same id - from here on the edits are
+            // cached again, so a reload keeps what the reader makes of it.
+            if (scriptListJSon == null || that.loadedSharedWorkspace) {
                 setTimeout(() => {
                     setInterval(() => {
                         that.saveScripts();
@@ -676,6 +712,22 @@ export class MainEmbedded implements MainBase {
         $buttonSave.on('click', () => { that.saveWorkspaceToFile() });
 
         $controlsDiv.append($buttonOpen, $buttonSave);
+
+        if (this.config.jsonStore) {
+            let $buttonShare = jQuery('<div class="img_copy-dark jo_button jo_active"' +
+                'style="margin-right: 8px;" title="' + EmbeddedMessages.ShareWorkspaceTooltip() + '"></div>');
+            $buttonShare.on('click', () => { that.shareWorkspace($buttonShare) });
+            $controlsDiv.append($buttonShare);
+        }
+
+        // Only where the link is actually read: elsewhere the panel would list
+        // parameters that do nothing.
+        if (this.config.urlConfig) {
+            let $buttonURLHelp = jQuery('<div class="joe_urlHelpButton jo_button jo_active"' +
+                'style="margin-right: 8px;" title="' + EmbeddedMessages.URLParametersTooltip() + '">?</div>');
+            $buttonURLHelp.on('click', () => { showURLParametersPanel(that.$outerDiv) });
+            $controlsDiv.append($buttonURLHelp);
+        }
 
 
 
@@ -930,6 +982,79 @@ export class MainEmbedded implements MainBase {
         let ws = this.currentWorkspace;
         let exportedWorkspace = await WorkspaceExporter.exportWorkspace(ws);
         downloadFile(exportedWorkspace, filename)
+    }
+
+    /**
+     * Uploads the workspace and hands back a link to it.
+     *
+     * The link keeps the page's own query parameters, so it reproduces the whole
+     * playground - libraries, theme, which panels are shown - and not just the
+     * files: the query says what the IDE is, the fragment says what is in it.
+     */
+    async shareWorkspace($button?: JQuery<HTMLElement>) {
+        let jsonStore = this.config.jsonStore;
+        if (!jsonStore) return;
+
+        $button?.removeClass('jo_active').attr('title', EmbeddedMessages.ShareWorkspaceUploading());
+
+        try {
+            let exportedWorkspace = await WorkspaceExporter.exportWorkspace(this.currentWorkspace);
+
+            let response = await fetch(`${jsonStore.replace(/\/$/, "")}/api/v2/post`, {
+                method: "POST",
+                mode: "cors",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(exportedWorkspace)
+            });
+            if (!response.ok) throw new Error("json store answered " + response.status);
+
+            let id = (await response.json()).id;
+            let link = location.origin + location.pathname + location.search + "#json=" + encodeURIComponent(id);
+
+            // The clipboard is the convenient way and is not always allowed to be
+            // used, so the link is shown either way, in something the reader can
+            // copy out of by hand.
+            let copied = await navigator.clipboard?.writeText(link).then(() => true, () => false);
+            prompt(EmbeddedMessages.ShareWorkspaceDone() +
+                (copied ? " (" + EmbeddedMessages.ShareWorkspaceCopied() + ")" : ""), link);
+        } catch (error) {
+            console.error(error);
+            alert(EmbeddedMessages.ShareWorkspaceFailed());
+        } finally {
+            $button?.addClass('jo_active').attr('title', EmbeddedMessages.ShareWorkspaceTooltip());
+        }
+    }
+
+    /**
+     * Opens the workspace a `#json=<id>` link points at, by turning it into the
+     * script list the page would otherwise have supplied - so everything that
+     * follows sets the IDE up in the one way it knows.
+     */
+    async tryLoadingSharedWorkspace() {
+        let jsonStore = this.config.jsonStore;
+        let id = sharedWorkspaceIdFromURL();
+        if (!jsonStore || !id) return;
+
+        try {
+            let response = await fetch(`${jsonStore.replace(/\/$/, "")}/api/v2/${encodeURIComponent(id)}`, {
+                method: "GET",
+                mode: "cors"
+            });
+            if (!response.ok) throw new Error("json store answered " + response.status);
+
+            let exportedWorkspace: ExportedWorkspace = await response.json();
+            if (Array.isArray(exportedWorkspace)) exportedWorkspace = exportedWorkspace[0];
+            if (!exportedWorkspace?.modules) throw new Error("no workspace in the shared document");
+
+            this.scriptList = exportedWorkspace.modules.map(module => ({
+                title: module.name,
+                text: module.text
+            }));
+            this.loadedSharedWorkspace = true;
+        } catch (error) {
+            console.error(error);
+            alert(EmbeddedMessages.LoadSharedWorkspaceFailed());
+        }
     }
 
     loadWorkspaceFromFile(file: globalThis.File) {

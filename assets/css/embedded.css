@@ -7,7 +7,6 @@
     font-family: 'Roboto', sans-serif;
     /* font-weight: 500; */
     font-size: 10pt;
-    margin: 1em 0 2em 0;
     background-image: url("data:image/svg+xml,%3Csvg width='105' height='105' viewBox='0 0 105 105' xmlns='http://www.w3.org/2000/svg' fill='%23fff'%3E%3Ccircle cx='12.5' cy='12.5' r='12.5'%3E%3Canimate attributeName='fill-opacity' begin='0s' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='12.5' cy='52.5' r='12.5' fill-opacity='.5'%3E%3Canimate attributeName='fill-opacity' begin='100ms' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='52.5' cy='12.5' r='12.5'%3E%3Canimate attributeName='fill-opacity' begin='300ms' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='52.5' cy='52.5' r='12.5'%3E%3Canimate attributeName='fill-opacity' begin='600ms' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='92.5' cy='12.5' r='12.5'%3E%3Canimate attributeName='fill-opacity' begin='800ms' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='92.5' cy='52.5' r='12.5'%3E%3Canimate attributeName='fill-opacity' begin='400ms' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='12.5' cy='92.5' r='12.5'%3E%3Canimate attributeName='fill-opacity' begin='700ms' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='52.5' cy='92.5' r='12.5'%3E%3Canimate attributeName='fill-opacity' begin='500ms' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3Ccircle cx='92.5' cy='92.5' r='12.5'%3E%3Canimate attributeName='fill-opacity' begin='200ms' dur='1s' values='1;.2;1' calcMode='linear' repeatCount='indefinite' /%3E%3C/circle%3E%3C/svg%3E%0A");
     background-repeat: no-repeat;
     background-position: center;
@@ -278,5 +277,119 @@
 
     regular-table table {
         border-collapse: separate !important;
+    }
+
+    .joe_urlHelpButton {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        font-size: 13px;
+        font-weight: bold;
+        line-height: 1;
+        user-select: none;
+        color: var(--fontColorNormal);
+    }
+
+    .joe_urlHelpButton:hover {
+        color: var(--fontColorLight);
+    }
+
+    /* the panel behind the "?" button, listing what the link may carry */
+    .joe_urlHelpBackdrop {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .joe_urlHelp {
+        display: flex;
+        flex-direction: column;
+        max-width: min(52em, calc(100% - 2em));
+        max-height: calc(100% - 2em);
+        overflow: auto;
+        padding: 0 1em 1em 1em;
+        border: 1px solid var(--menuitemsdivider);
+        border-radius: 4px;
+        background-color: var(--backgroundLight);
+        color: var(--fontColorNormal);
+        box-shadow: 0 4px 20px 2px rgba(0, 0, 0, 0.5);
+        outline: none;
+    }
+
+    .joe_urlHelpHeading {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1em;
+        padding: 0.7em 0 0.5em 0;
+        background-color: var(--backgroundLight);
+        color: var(--fontColorLight);
+        font-size: 12pt;
+        font-weight: bold;
+    }
+
+    .joe_urlHelpClose {
+        cursor: pointer;
+        padding: 0 0.3em;
+        font-size: 14pt;
+        line-height: 1;
+        opacity: 0.7;
+    }
+
+    .joe_urlHelpClose:hover {
+        opacity: 1;
+    }
+
+    .joe_urlHelpIntro {
+        padding: 0.2em 0 0.7em 0;
+        line-height: 1.5;
+    }
+
+    .joe_urlHelpTable {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    .joe_urlHelpTable th {
+        padding: 0.3em 0.8em 0.3em 0;
+        border-bottom: 1px solid var(--menuitemsdivider);
+        text-align: left;
+        color: var(--fontColorLight);
+    }
+
+    .joe_urlHelpTable td {
+        padding: 0.35em 0.8em 0.35em 0;
+        border-bottom: 1px solid var(--menuitemsdivider);
+        vertical-align: top;
+        line-height: 1.4;
+    }
+
+    .joe_urlHelpName code {
+        font-family: 'Consolas', monospace;
+        white-space: nowrap;
+        color: var(--fontColorLight);
+    }
+
+    .joe_urlHelpValues {
+        white-space: nowrap;
+    }
+
+    /* what this very link says: shown under the name, and the row lifted a little */
+    .joe_urlHelpSet {
+        background-color: var(--backgroundSelected);
+    }
+
+    .joe_urlHelpValue {
+        font-family: 'Consolas', monospace;
+        overflow-wrap: anywhere;
+        color: var(--file-active-border);
     }
 }

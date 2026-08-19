@@ -122,16 +122,18 @@ export class EmbeddedStarter {
     /**
      * Chooses the language the GUI and the library tooltips speak.
      *
-     * An embedded page has no `?lang=` parameter and nobody logged in, which are
-     * the only two things that ever set the language, so the IDE always came up
-     * in German. A `data-lang` on the div wins; otherwise the page says what it
-     * is written in, and the IDE follows it.
+     * An embedded page has nobody logged in, which used to be one of the only two
+     * things that ever set the language, so the IDE always came up in German. A
+     * `data-lang` on the div wins, being what the page's author said about this
+     * one IDE; then `?lang=`, which is what the reader of this link asked for;
+     * otherwise the page says what it is written in, and the IDE follows it.
      */
     applyLanguage() {
         const fromDiv = jQuery('.java-online[data-lang]').first().attr('data-lang');
+        const fromURL = new URLSearchParams(window.location.search).get('lang');
         const fromPage = document.documentElement.getAttribute('lang');
         // "en-GB" and "en" are the same language as far as we are concerned
-        const wanted = (fromDiv ?? fromPage ?? "").toLowerCase().split("-")[0];
+        const wanted = (fromDiv ?? fromURL ?? fromPage ?? "").toLowerCase().split("-")[0];
         if (wanted && languages.some(language => language.id == wanted)) {
             setLanguageId(wanted);
         }
