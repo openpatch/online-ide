@@ -846,6 +846,7 @@ export class JCM {
     */
 
     static importedTypesNotFound = (importedTypes: string) => le({
+        "id": "importedTypesNotFound",
         "de": `Die importierten Typen ${importedTypes} konnten nicht gefunden werden.`,
         "en": `Imported types ${importedTypes} not found.`,
         "fr": `Les types importés ${importedTypes} n'ont pas été trouvés.`,

@@ -45,6 +45,7 @@ export class LibraryDeclarationParser extends LibraryDeclarationLexer {
     currentDeclaration: string = "";
     currentClassIdentifier: string = "";
     currentClass: NonPrimitiveType | undefined = undefined;
+    currentModule: JavaBaseModule | undefined = undefined;
 
     currentTypeStore: JavaTypeStore = new JavaTypeStore();
     genericParameterMapStack: Record<string, GenericTypeParameter>[] = [];
@@ -91,6 +92,8 @@ export class LibraryDeclarationParser extends LibraryDeclarationLexer {
         let identifier: string = path[path.length - 1] || "";
 
         this.currentClassIdentifier = identifier;
+        this.currentClass = undefined;      // the type this declaration describes doesn't exist yet
+        this.currentModule = module;
 
 
         let npt: NonPrimitiveType;
@@ -141,6 +144,8 @@ export class LibraryDeclarationParser extends LibraryDeclarationLexer {
     parseClassOrInterfaceDeclarationGenericsAndExtendsImplements(klass: Klass & LibraryKlassType, typestore: JavaTypeStore, module: JavaBaseModule) {
 
         this.currentClassIdentifier = klass.name;
+        this.currentClass = klass.type;
+        this.currentModule = module;
 
         this.currentTypeStore = typestore;
 
@@ -202,6 +207,8 @@ export class LibraryDeclarationParser extends LibraryDeclarationLexer {
         if (npt instanceof JavaClass && !npt.getExtends() && npt.identifier != "Object") {
             npt.setExtends(<JavaClass>this.currentTypeStore.getType("Object"));
         }
+
+        this.currentClass = undefined;
 
     }
 
@@ -372,6 +379,26 @@ export class LibraryDeclarationParser extends LibraryDeclarationLexer {
             if (type) return type;
         }
 
+        // Classes of one package see each other by their simple name, as in Java. Without this
+        // every cross-reference inside a packaged library would have to be fully qualified.
+        let packagePath = this.currentClass?.pathAndIdentifierAsArray.slice(0, -1);
+        if (packagePath && packagePath.length > 0) {
+            type = this.currentTypeStore.getType(packagePath.concat(id.split(".")));
+            if (type) return type;
+        }
+
+        // ... and a name from another package through the module's standard imports, which are
+        // the library's equivalent of the import statements a desktop source file carries.
+        if (this.currentModule instanceof JavaLibraryModule) {
+            for (let importPath of this.currentModule.getStandardImports()) {
+                let last = importPath[importPath.length - 1];
+                if (last != "*" && last != id) continue;
+                let path = last == "*" ? importPath.slice(0, -1).concat(id.split(".")) : importPath;
+                type = this.currentTypeStore.getType(path);
+                if (type) return type;
+            }
+        }
+
         type = this.currentTypeStore.getType(id);
         if (type) return type;
 
@@ -516,6 +543,7 @@ export class LibraryDeclarationParser extends LibraryDeclarationLexer {
 
         this.currentClassIdentifier = klass.name;
         this.currentClass = klass.type;
+        this.currentModule = module;
 
         for (let decl of javaClassDeclaration.filter(cd => cd.type == "field" || cd.type == "method")) {
             this.initTokens(decl.signature);

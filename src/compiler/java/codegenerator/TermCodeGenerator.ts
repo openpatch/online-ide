@@ -752,7 +752,10 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
         }
 
         // second try: class identifier?
-        let type = this.libraryTypestore.getType(node.identifier);
+        // Imported types come first, mirroring TypeResolver.findPrimaryTypeByIdentifier: a
+        // packaged type that an import brings into scope shadows a top-level one of the same name.
+        let type: JavaType | undefined = this.module.importedTypes.get(node.identifier);
+        if (!type) type = this.libraryTypestore.getType(node.identifier);
         if (!type) type = this.compiledTypesTypestore.getType(node.identifier);
 
         if (!type && this.currentSymbolTable.classContext) {
@@ -768,7 +771,7 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
                 this.registerUsagePosition(type, node.range);
     
                 let staticType = type.staticType;
-                return new StringCodeSnippet(`${Helpers.classes}["${type.identifier}"]`, node.range, staticType);
+                return new StringCodeSnippet(`${Helpers.classes}["${type.pathAndIdentifierAsDotSeparatedString}"]`, node.range, staticType);
             } else if (type instanceof JavaPackage){
                 this.module.addTypePosition(Range.getEndPosition(node.range), type);
                 this.pushError(JCM.packageCannotBeUsedAsType(type.identifier), "error", node);
