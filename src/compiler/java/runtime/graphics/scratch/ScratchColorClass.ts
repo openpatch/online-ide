@@ -11,7 +11,7 @@ import { Thread } from "../../../../common/interpreter/Thread";
  */
 export class ScratchColorClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Color extends Object", comment: SRC.colorClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Color extends Object", comment: SRC.colorClassComment },
 
         { type: "method", signature: "Color()", native: ScratchColorClass.prototype._c0, comment: SRC.colorConstructorComment },
         { type: "method", signature: "Color(string hexCode)", native: ScratchColorClass.prototype._cHex, comment: SRC.colorConstructor2Comment },

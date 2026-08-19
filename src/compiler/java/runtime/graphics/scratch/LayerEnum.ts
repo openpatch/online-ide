@@ -13,7 +13,7 @@ export enum Layer { BACKGROUND, FOREGROUND, UI }
 
 export class LayerEnum extends EnumClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "enum Layer", comment: SRC.layerClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "enum Layer", comment: SRC.layerClassComment },
     ];
 
     static type: NonPrimitiveType;

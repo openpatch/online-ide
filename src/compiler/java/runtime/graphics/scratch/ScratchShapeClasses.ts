@@ -25,7 +25,7 @@ const CURVE_SEGMENTS = 32;
  */
 export class ScratchShapeClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Shape extends Object", comment: SRC.shapeClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Shape extends Object", comment: SRC.shapeClassComment },
 
         { type: "method", signature: "boolean contains(double x, double y)", native: ScratchShapeClass.prototype._contains, comment: SRC.shapeContainsComment },
         { type: "method", signature: "boolean intersects(Shape other)", native: ScratchShapeClass.prototype._intersects, comment: SRC.shapeIntersectsComment },
@@ -147,7 +147,7 @@ export class ScratchShapeClass extends ObjectClass {
 /** Circle(x, y, radius) — x and y are the CENTRE, as upstream. */
 export class ScratchCircleClass extends ScratchShapeClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Circle extends Shape", comment: SRC.circleClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Circle extends Shape", comment: SRC.circleClassComment },
         { type: "method", signature: "Circle(double x, double y, double radius)", native: ScratchCircleClass.prototype._c3, comment: SRC.circleConstructorComment },
     ];
     static type: NonPrimitiveType;
@@ -161,7 +161,7 @@ export class ScratchCircleClass extends ScratchShapeClass {
 /** Rectangle(x, y, width, height) — x and y are the TOP-LEFT corner. */
 export class ScratchRectangleClass extends ScratchShapeClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Rectangle extends Shape", comment: SRC.rectangleClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Rectangle extends Shape", comment: SRC.rectangleClassComment },
         { type: "method", signature: "Rectangle(double x, double y, double width, double height)", native: ScratchRectangleClass.prototype._c4, comment: SRC.rectangleConstructorComment },
     ];
     static type: NonPrimitiveType;
@@ -177,7 +177,7 @@ export class ScratchRectangleClass extends ScratchShapeClass {
 /** Ellipse(x, y, width, height) — x and y are the bounding box's top-left. */
 export class ScratchEllipseClass extends ScratchShapeClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Ellipse extends Shape", comment: SRC.ellipseClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Ellipse extends Shape", comment: SRC.ellipseClassComment },
         { type: "method", signature: "Ellipse(double x, double y, double width, double height)", native: ScratchEllipseClass.prototype._c4, comment: SRC.ellipseConstructorComment },
     ];
     static type: NonPrimitiveType;
@@ -190,7 +190,7 @@ export class ScratchEllipseClass extends ScratchShapeClass {
 
 export class ScratchTriangleClass extends ScratchShapeClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Triangle extends Shape", comment: SRC.triangleClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Triangle extends Shape", comment: SRC.triangleClassComment },
         { type: "method", signature: "Triangle(double x1, double y1, double x2, double y2, double x3, double y3)", native: ScratchTriangleClass.prototype._c6, comment: SRC.triangleConstructorComment },
     ];
     static type: NonPrimitiveType;
@@ -203,7 +203,7 @@ export class ScratchTriangleClass extends ScratchShapeClass {
 
 export class ScratchPolygonClass extends ScratchShapeClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Polygon extends Shape", comment: SRC.polygonClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Polygon extends Shape", comment: SRC.polygonClassComment },
         { type: "method", signature: "Polygon()", native: ScratchPolygonClass.prototype._c0, comment: SRC.polygonConstructorComment },
         { type: "method", signature: "Polygon(double[] xPoints, double[] yPoints)", native: ScratchPolygonClass.prototype._c2, comment: SRC.polygonConstructor2Comment },
         { type: "method", signature: "void addPoint(double x, double y)", native: ScratchPolygonClass.prototype._addPoint, comment: SRC.polygonAddPointComment },

@@ -25,7 +25,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchWindowClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Window extends Object", comment: SRC.windowClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Window extends Object", comment: SRC.windowClassComment },
 
         { type: "method", signature: "Window()", java: ScratchWindowClass.prototype._cj$_constructor_$Window$, comment: SRC.windowConstructorComment },
         { type: "method", signature: "Window(string assets)", java: ScratchWindowClass.prototype._cj$_constructor_$Window$string, comment: SRC.windowConstructor2Comment },

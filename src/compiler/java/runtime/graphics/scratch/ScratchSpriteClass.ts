@@ -54,7 +54,7 @@ type ScratchStageLike = {
  */
 export class ScratchSpriteClass extends ShapeClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Sprite extends Actor", comment: SRC.spriteClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Sprite extends Actor", comment: SRC.spriteClassComment },
 
         { type: "method", signature: "Sprite()", java: ScratchSpriteClass.prototype._cj$_constructor_$Sprite$, comment: SRC.spriteConstructorComment },
         { type: "method", signature: "Sprite(string name, string imagePath)", java: ScratchSpriteClass.prototype._cj$_constructor_$Sprite$string$string, comment: SRC.spriteConstructor2Comment },

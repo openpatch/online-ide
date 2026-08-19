@@ -11,7 +11,7 @@ import { Thread } from "../../../../common/interpreter/Thread";
  */
 export class ScratchBoundsClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Bounds extends Object", comment: SRC.boundsClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Bounds extends Object", comment: SRC.boundsClassComment },
 
         { type: "method", signature: "Bounds(double x, double y, double width, double height)", native: ScratchBoundsClass.prototype._c4, comment: SRC.boundsConstructorComment },
         { type: "method", signature: "double x()", template: "§1.bx", comment: SRC.boundsXComment },

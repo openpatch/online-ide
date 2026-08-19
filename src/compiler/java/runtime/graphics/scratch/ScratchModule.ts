@@ -42,10 +42,10 @@ import { TextureSamplingEnum } from "./TextureSamplingEnum";
  * (https://scratch4j.openpatch.org). Public class/method signatures match the
  * desktop library so student code copy-pastes between the two.
  *
- * Because the IDE's Java subset has no packages, the Scratch classes share the
- * global namespace with the always-on graphics classes. When this library is
- * enabled the workspace is Scratch-only, so `prepareSystemModule` removes the
- * base classes whose names Scratch reuses (see NRWModule for the same pattern).
+ * The classes sit in the same packages as upstream, so a file copied from a
+ * desktop project keeps its `import org.openpatch.scratch.*;` and still compiles.
+ * `getStandardImports` imports all of them implicitly as well, so a program that
+ * writes no import at all works just as it did before the packages existed.
  */
 export class ScratchModule extends JavaLibraryModule {
 
@@ -60,7 +60,7 @@ export class ScratchModule extends JavaLibraryModule {
             ScratchColorClass, ScratchVector2Class, ScratchTimerClass, ScratchCameraClass,
             ScratchBoundsClass, ScratchHitboxClass,
             // geometry for custom hitboxes; these names also exist in the
-            // always-on graphics module, and Scratch's win (see the note below)
+            // always-on graphics module, and Scratch's win (see getStandardImports)
             ScratchShapeClass, ScratchCircleClass, ScratchRectangleClass,
             ScratchEllipseClass, ScratchTriangleClass, ScratchPolygonClass,
             ScratchWindowClass,
@@ -82,11 +82,27 @@ export class ScratchModule extends JavaLibraryModule {
         return [];
     }
 
-    // NOTE on name collisions: Scratch redefines names that also exist in the always-on
-    // SystemModule (Color, Vector2, Timer, Sprite, Text). Additional modules compile AFTER
-    // SystemModule and JavaTypeStore.addType is last-write-wins by identifier, so the Scratch
-    // versions win automatically. We deliberately do NOT override prepareSystemModule to
-    // remove the base classes: removal would risk unresolved-type errors for any base class
-    // that still references a removed name, and "only Scratch runs when Scratch is enabled".
+    /**
+     * Upstream's package layout, so that every `import org.openpatch.scratch...` a desktop
+     * file carries resolves here too. Importing them all as standard imports keeps the
+     * simple names available without an import — and it is what makes the Scratch classes
+     * shadow the always-on graphics classes of the same name (Color, Timer, Sprite, Text,
+     * Circle, Rectangle, ...): TypeResolver looks in the imported types before it looks in
+     * the type store, so no base class has to be removed for Scratch's version to win.
+     */
+    getStandardImports(): string[][] {
+        return [
+            ["org", "openpatch", "scratch", "*"],
+            ["org", "openpatch", "scratch", "extensions", "camera", "*"],
+            ["org", "openpatch", "scratch", "extensions", "fs", "*"],
+            ["org", "openpatch", "scratch", "extensions", "pixels", "*"],
+            ["org", "openpatch", "scratch", "extensions", "recorder", "*"],
+            ["org", "openpatch", "scratch", "extensions", "shader", "*"],
+            ["org", "openpatch", "scratch", "extensions", "sorting", "*"],
+            ["org", "openpatch", "scratch", "extensions", "tiled", "*"],
+            // Stage.waitUntil takes a java.util.function.BooleanSupplier
+            ["java", "util", "function", "*"],
+        ];
+    }
 
 }

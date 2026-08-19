@@ -16,7 +16,7 @@ export enum TextStyle { BOX, SPEAK, THINK, PLAIN }
 
 export class TextStyleEnum extends EnumClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "enum TextStyle", comment: SRC.textStyleClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "enum TextStyle", comment: SRC.textStyleClassComment },
     ];
 
     static type: NonPrimitiveType;

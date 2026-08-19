@@ -14,7 +14,7 @@ export enum RotationStyle { LEFT_RIGHT, DONT, ALL_AROUND }
 
 export class RotationStyleEnum extends EnumClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "enum RotationStyle", comment: SRC.rotationStyleClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "enum RotationStyle", comment: SRC.rotationStyleClassComment },
     ];
 
     static type: NonPrimitiveType;
