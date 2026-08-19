@@ -19,7 +19,7 @@ export class ScratchExceptionClass extends RuntimeExceptionClass {
     stacktrace: Stacktrace = [];
 
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class ScratchException extends RuntimeException", comment: SRC.exceptionClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class ScratchException extends RuntimeException", comment: SRC.exceptionClassComment },
         { type: "method", signature: "public ScratchException(String message)", native: ThrowableClass.prototype._constructor_m, comment: SRC.exceptionConstructorComment },
         { type: "method", signature: "public String toString()", native: ThrowableClass.prototype._toString, comment: SRC.exceptionToStringComment },
     ];

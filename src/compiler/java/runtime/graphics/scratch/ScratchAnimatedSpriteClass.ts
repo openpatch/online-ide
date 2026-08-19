@@ -21,7 +21,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchAnimatedSpriteClass extends ScratchSpriteClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class AnimatedSprite extends Sprite", comment: SRC.animatedSpriteClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class AnimatedSprite extends Sprite", comment: SRC.animatedSpriteClassComment },
 
         { type: "method", signature: "AnimatedSprite()", java: ScratchAnimatedSpriteClass.prototype._cj$_constructor_$AnimatedSprite$, comment: SRC.animatedSpriteConstructorComment },
         { type: "method", signature: "AnimatedSprite(AnimatedSprite other)", java: ScratchAnimatedSpriteClass.prototype._cj$_constructor_$AnimatedSprite$AnimatedSprite, comment: SRC.animatedSpriteConstructor2Comment },

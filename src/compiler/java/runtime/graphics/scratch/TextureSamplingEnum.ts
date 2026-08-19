@@ -8,7 +8,7 @@ export enum TextureSampling { POINT, LINEAR, BILINEAR, TRILINEAR }
 /** Mirrors org.openpatch.scratch.TextureSampling; the modes are Processing's. */
 export class TextureSamplingEnum extends EnumClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "enum TextureSampling", comment: SRC.textureSamplingClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "enum TextureSampling", comment: SRC.textureSamplingClassComment },
         { type: "method", signature: "int getMode()", native: TextureSamplingEnum.prototype._getMode, comment: SRC.textureSamplingGetModeComment },
     ];
 

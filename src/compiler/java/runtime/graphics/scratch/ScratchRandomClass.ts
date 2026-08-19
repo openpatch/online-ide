@@ -62,7 +62,7 @@ class JavaRandom {
  */
 export class ScratchRandomClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Random extends Object", comment: SRC.randomClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Random extends Object", comment: SRC.randomClassComment },
 
         { type: "method", signature: "static double noise(double x)", native: ScratchRandomClass._noise1, comment: SRC.randomNoiseComment },
         { type: "method", signature: "static double noise(double x, double y)", native: ScratchRandomClass._noise2, comment: SRC.randomNoise2Comment },

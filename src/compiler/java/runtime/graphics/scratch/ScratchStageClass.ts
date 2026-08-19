@@ -51,7 +51,7 @@ const DISPLAY_FONT_SIZE = 14;
  */
 export class ScratchStageClass extends ActorClass implements InternalMouseListener, IScratchStageLike {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Stage extends Actor", comment: SRC.stageClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Stage extends Actor", comment: SRC.stageClassComment },
 
         { type: "method", signature: "Stage()", java: ScratchStageClass.prototype._cj$_constructor_$Stage$, comment: SRC.stageConstructorComment },
         { type: "method", signature: "Stage(int width, int height)", java: ScratchStageClass.prototype._cj$_constructor_$Stage$int$int, comment: SRC.stageConstructor2Comment },

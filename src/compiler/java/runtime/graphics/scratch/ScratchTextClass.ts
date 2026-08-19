@@ -29,7 +29,7 @@ const SPEAK_BUBBLE_MAX_LIMIT = 330;
  */
 export class ScratchTextClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Text extends Object", comment: SRC.textClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Text extends Object", comment: SRC.textClassComment },
 
         { type: "method", signature: "Text()", java: ScratchTextClass.prototype._cj$_constructor_$Text$, comment: SRC.textConstructorComment },
         { type: "method", signature: "Text(string text, double x, double y, double width)", java: ScratchTextClass.prototype._cj$_constructor_$Text$string$double$double$double, comment: SRC.textConstructor2Comment },

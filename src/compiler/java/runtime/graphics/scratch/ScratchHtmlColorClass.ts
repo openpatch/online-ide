@@ -11,7 +11,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchHtmlColorClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class HtmlColor extends Object", comment: SRC.htmlColorClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class HtmlColor extends Object", comment: SRC.htmlColorClassComment },
 
         { type: "field", signature: "static Color ALICE_BLUE" },
         { type: "field", signature: "static Color ANTIQUE_WHITE" },

@@ -17,7 +17,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchUISpriteClass extends ScratchSpriteClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class UISprite extends Sprite", comment: SRC.uISpriteClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class UISprite extends Sprite", comment: SRC.uISpriteClassComment },
 
         { type: "method", signature: "UISprite()", java: ScratchUISpriteClass.prototype._cj$_constructor_$UISprite$, comment: SRC.uISpriteConstructorComment },
 

@@ -11,7 +11,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchCameraClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Camera extends Object", comment: SRC.cameraClassComment },
+        { type: "declaration", package: "org.openpatch.scratch.extensions.camera", signature: "class Camera extends Object", comment: SRC.cameraClassComment },
 
         { type: "method", signature: "Camera()", native: ScratchCameraClass.prototype._c0, comment: SRC.cameraConstructorComment },
 

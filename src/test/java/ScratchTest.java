@@ -460,3 +460,70 @@ class Portal extends Sprite {
 }
 
 print("compiled");
+
+/**::
+ * Desktop imports resolve: import org.openpatch.scratch.*
+ * {"libraries": ["scratch"], "expectedOutput": "importiert"}
+ */
+// A file copied from a desktop project keeps its imports. They have to resolve
+// here, and the classes have to be the Scratch ones, not the always-on graphics
+// classes that share these names.
+import org.openpatch.scratch.*;
+
+Vector2 v = new Vector2(3, 4);
+assertEquals(5.0, v.length(), "Vector2 comes from org.openpatch.scratch");
+assertEquals(1.0, Operators.sinOf(90), "static call on an imported class");
+
+Color c = new Color(255, 0, 0);
+assertEquals(255.0, c.getRed(), "Color comes from org.openpatch.scratch, not the graphics module");
+
+// the shapes shadow the graphics classes of the same name: Circle(x, y, radius)
+// is Scratch's signature, the graphics Circle takes no such constructor
+Circle circle = new Circle(0, 0, 10);
+assertEquals(true, circle.contains(0, 0), "Circle comes from org.openpatch.scratch");
+
+print("importiert");
+
+/**::
+ * Desktop imports resolve: single types out of the extension packages
+ * {"libraries": ["scratch"], "expectedOutput": "erweitert"}
+ */
+import org.openpatch.scratch.extensions.camera.Camera;
+import org.openpatch.scratch.extensions.fs.File;
+import org.openpatch.scratch.extensions.recorder.GifRecorder;
+import java.util.function.BooleanSupplier;
+
+Camera cam = new Camera();
+cam.setPosition(40, -20);
+assertEquals(40.0, cam.getX(), "Camera comes from extensions.camera");
+
+File f = new File("save.txt");
+assertEquals(false, f.exists(), "File comes from extensions.fs");
+
+GifRecorder rec = new GifRecorder("out.gif");
+assertEquals(false, rec.isRecording(), "GifRecorder comes from extensions.recorder");
+
+BooleanSupplier immerWahr = () -> true;
+assertEquals(true, immerWahr.getAsBoolean(), "BooleanSupplier comes from java.util.function");
+
+print("erweitert");
+
+/**::
+ * A fully qualified name works without any import
+ * {"libraries": ["scratch"], "expectedOutput": "qualifiziert"}
+ */
+org.openpatch.scratch.Vector2 v = new org.openpatch.scratch.Vector2(3, 4);
+assertEquals(5.0, v.length(), "fully qualified type and constructor");
+// NOTE: this works wherever a TYPE is expected. A qualified name inside an
+// expression (org.openpatch.scratch.HtmlColor.BLUE) is not supported by the
+// compiler - it reports "package name can't be used as type". Import instead.
+
+print("qualifiziert");
+
+/**::
+ * An import that names nothing is an error
+ * {"libraries": ["scratch"], "expectedCompilationError": { "id": "importedTypesNotFound", "line": 5 }}
+ */
+import org.openpatch.scratch.gibtesnicht.*;
+
+print("egal");

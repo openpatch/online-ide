@@ -11,7 +11,7 @@ export enum TextAlign { DEFAULT, CENTER, RIGHT, LEFT }
 
 export class TextAlignEnum extends EnumClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "enum TextAlign", comment: SRC.textAlignClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "enum TextAlign", comment: SRC.textAlignClassComment },
     ];
 
     static type: NonPrimitiveType;

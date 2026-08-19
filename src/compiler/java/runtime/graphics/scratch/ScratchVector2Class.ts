@@ -11,7 +11,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchVector2Class extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Vector2 extends Object", comment: SRC.vector2ClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Vector2 extends Object", comment: SRC.vector2ClassComment },
 
         { type: "method", signature: "Vector2()", native: ScratchVector2Class.prototype._c0, comment: SRC.vector2ConstructorComment },
         { type: "method", signature: "Vector2(double x, double y)", native: ScratchVector2Class.prototype._c2, comment: SRC.vector2Constructor2Comment },
