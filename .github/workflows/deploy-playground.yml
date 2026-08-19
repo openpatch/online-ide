@@ -1,0 +1,71 @@
+name: Deploy Playground to GitHub Pages
+
+# The playground is the whole site: it is served as index.html, so that
+# https://openpatch.github.io/online-ide/?libraries=scratch is a link one can hand
+# out. The bundle is built with base '' and therefore only uses relative paths,
+# which is what lets it sit in a subdirectory of the Pages domain.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# What actions/deploy-pages needs. Requires "Source: GitHub Actions" under
+# Settings → Pages, once, by hand.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deployments overtake each other, but do not cancel a running one
+# halfway through a publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build playground
+        run: npm run build-playground
+
+      - name: Serve the playground as the site's index
+        run: mv dist-playground/playground.html dist-playground/index.html
+
+      - name: Remove source maps
+        run: find dist-playground -name "*.map" -type f -delete
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-playground
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

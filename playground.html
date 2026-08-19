@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset='utf-8'>
+    <title>Online-IDE Playground</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+
+    <!--
+        A full-window IDE that takes its configuration from the link it is opened
+        with, so that a playground can be handed out as a URL. Everything below is
+        a default the URL may override.
+
+        On GitHub Pages this file is published as index.html, so the link is
+        https://openpatch.github.io/online-ide/?libraries=scratch — see
+        .github/workflows/deploy-playground.yml. The "?" button in the IDE lists
+        the parameters below at run time; the table it shows lives in
+        EmbeddedURLConfig.ts, which is also what the parser goes by.
+
+        Settings (see src/client/embedded/EmbeddedURLConfig.ts):
+
+          ?libraries=scratch,nrw   which class libraries to load (gng, nrw,
+                                   niedersachsen, scratch); empty means none
+          ?lang=de|en|fr           language of the interface and the tooltips
+          ?theme=dark|light        colours; left out, the page's colour scheme decides
+          ?speed=max|<number>      steps per second the program runs at
+          ?id=<name>               key the reader's edits are cached under in the browser
+          ?withFileList=false      and likewise withConsole, withPCode, withErrorList,
+                                   withBottomPanel, withClassDiagram, hideEditor,
+                                   hideStartPanel, cacheUserEdits, enableFileAccess
+          ?spritesheetURL=<url>    a zipped spritesheet of the reader's own graphics
+          ?setting.<key>=<value>   any single IDE setting, e.g.
+                                   ?setting.compiler.shadowedSymbolErrorLevel=error
+
+        Sharing: the button next to "save workspace" uploads the workspace to
+        json.openpatch.org and hands back a link of the form
+
+          <this page>?libraries=scratch#json=<id>
+
+        - the query says which playground it is, the fragment says what is in it.
+    -->
+
+    <script type="module" src="/src/client/embedded/EmbeddedStarter.ts"></script>
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            /* the IDE covers the page; this only shows for the moment before it does */
+            background: #1e1e1e;
+        }
+
+        .jo_playground {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="java-online jo_playground" data-java-online="{
+        'id': 'playground',
+        'urlConfig': true,
+        'jsonStore': 'https://json.openpatch.org',
+        'speed': 'max',
+        'withFileList': true,
+        'withConsole': true,
+        'withErrorList': true,
+        'withPCode': false,
+        'withClassDiagram': false,
+        'hideEditor': false,
+        'hideStartPanel': false,
+        'libraries': []
+    }">
+        <script type="text/plain" title="Main.java" data-type="java">
+print("Hallo Welt!");
+        </script>
+    </div>
+</body>
+
+</html>
