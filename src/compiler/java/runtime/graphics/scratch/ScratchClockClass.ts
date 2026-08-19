@@ -9,7 +9,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchClockClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Clock extends Object", comment: SRC.clockClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Clock extends Object", comment: SRC.clockClassComment },
 
         { type: "method", signature: "static int getYear()", native: ScratchClockClass._getYear, comment: SRC.clockGetYearComment },
         { type: "method", signature: "static int getMonth()", native: ScratchClockClass._getMonth, comment: SRC.clockGetMonthComment },

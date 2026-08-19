@@ -49,7 +49,7 @@ const KEY_MAP: Record<string, string[]> = {
 
 export class KeyCodeEnum extends EnumClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "enum KeyCode", comment: SRC.keyCodeClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "enum KeyCode", comment: SRC.keyCodeClassComment },
     ];
 
     static type: NonPrimitiveType;

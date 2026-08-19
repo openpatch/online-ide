@@ -9,7 +9,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchOperatorsClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Operators extends Object", comment: SRC.operatorsClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Operators extends Object", comment: SRC.operatorsClassComment },
 
         { type: "method", signature: "static final double lerp(double start, double stop, double amt)", native: ScratchOperatorsClass._lerp, comment: SRC.operatorsLerpComment },
         { type: "method", signature: "static final double constrain(double amt, double low, double high)", native: ScratchOperatorsClass._constrainDouble, comment: SRC.operatorsConstrainComment },

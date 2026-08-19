@@ -7,11 +7,12 @@ import { SRC } from "./ScratchLibraryComments";
 
 /**
  * Stand-in for java.util.function.BooleanSupplier, which Stage.waitUntil takes.
- * There are no packages in this Java subset, so the bare name has to do.
+ * Declared in its real package, so a copied `import java.util.function.BooleanSupplier;`
+ * resolves; ScratchModule's standard imports keep the simple name usable too.
  */
 export class BooleanSupplierInterface extends InterfaceClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "interface BooleanSupplier", comment: SRC.booleanSupplierClassComment },
+        { type: "declaration", package: "java.util.function", signature: "interface BooleanSupplier", comment: SRC.booleanSupplierClassComment },
         { type: "method", signature: "boolean getAsBoolean()", java: BooleanSupplierInterface.prototype._mj$getAsBoolean$boolean$, comment: SRC.booleanSupplierGetAsBooleanComment },
     ];
 

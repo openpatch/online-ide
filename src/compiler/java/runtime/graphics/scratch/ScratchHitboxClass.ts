@@ -17,7 +17,7 @@ type Point = { x: number, y: number };
  */
 export class ScratchHitboxClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Hitbox extends Object", comment: SRC.hitboxClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Hitbox extends Object", comment: SRC.hitboxClassComment },
 
         { type: "method", signature: "Hitbox(double[] xPoints, double[] yPoints)", native: ScratchHitboxClass.prototype._c2, comment: SRC.hitboxConstructorComment },
         { type: "method", signature: "Hitbox(Shape shape)", native: ScratchHitboxClass.prototype._c1, comment: SRC.hitboxConstructor2Comment },

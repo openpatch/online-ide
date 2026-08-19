@@ -12,7 +12,7 @@ export enum MouseCode { LEFT = 0, CENTER = 1, RIGHT = 2 }
 
 export class MouseCodeEnum extends EnumClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "enum MouseCode", comment: SRC.mouseCodeClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "enum MouseCode", comment: SRC.mouseCodeClassComment },
     ];
 
     static type: NonPrimitiveType;

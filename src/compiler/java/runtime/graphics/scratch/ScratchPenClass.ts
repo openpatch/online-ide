@@ -18,7 +18,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchPenClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Pen extends Object", comment: SRC.penClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Pen extends Object", comment: SRC.penClassComment },
 
         { type: "method", signature: "Pen()", java: ScratchPenClass.prototype._cj$_constructor_$Pen$, comment: SRC.penConstructorComment },
 

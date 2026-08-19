@@ -10,7 +10,7 @@ import { SRC } from "./ScratchLibraryComments";
  */
 export class ScratchTimerClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", signature: "class Timer extends Object", comment: SRC.timerClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Timer extends Object", comment: SRC.timerClassComment },
 
         { type: "method", signature: "Timer()", native: ScratchTimerClass.prototype._constructor, comment: SRC.timerConstructorComment },
         { type: "method", signature: "void reset()", native: ScratchTimerClass.prototype._reset, comment: SRC.timerResetComment },
