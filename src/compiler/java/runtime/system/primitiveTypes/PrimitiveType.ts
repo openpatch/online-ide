@@ -75,4 +75,13 @@ export abstract class PrimitiveType extends JavaType {
         return false;
     }
 
+    /**
+     * true for byte, short and int. Values of these types are stored as
+     * 32-bit-integers in the java virtual machine, so results of arithmetic
+     * operations on them have to be wrapped around like in java.
+     */
+    isInt32(){
+        return false;
+    }
+
 }

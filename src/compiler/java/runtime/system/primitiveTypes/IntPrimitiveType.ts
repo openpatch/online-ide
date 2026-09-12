@@ -20,4 +20,8 @@ export class IntPrimitiveType extends PrimitiveType {
         return true;
     }
 
+    isInt32(){
+        return true;
+    }
+
 }

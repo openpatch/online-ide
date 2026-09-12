@@ -25,7 +25,7 @@ import { BinopCastCodeGenerator } from "./BinopCastCodeGenerator.ts";
 import { CodeSnippet, StringCodeSnippet } from "./CodeSnippet";
 import { CodeSnippetContainer } from "./CodeSnippetKinds";
 import { SnippetFramer } from "./CodeSnippetTools";
-import { CodeTemplate, OneParameterTemplate, ParametersJoinedTemplate, SeveralParameterTemplate, TwoParameterTemplate } from "./CodeTemplate";
+import { CodeTemplate, isInt32Type, OneParameterTemplate, ParametersJoinedTemplate, SeveralParameterTemplate, TwoParameterTemplate } from "./CodeTemplate";
 import { JavaLocalVariable } from "./JavaLocalVariable";
 import { JavaSymbolTable } from "./JavaSymbolTable";
 import { JumpToLabelCodeSnippet, LabelCodeSnippet } from "./LabelManager.ts";
@@ -1071,6 +1071,15 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
 
             if (!this.isNumberPrimitiveType(operand.type)) {
                 this.pushError(JCM.plusPlusMinusMinusOnlyForTypes(), "error", ast);
+            }
+
+            // "i++" of type byte, short or int overflows, so compute it as "(i = (i + 1) | 0) - 1 | 0".
+            // Subtracting 1 afterwards yields the old value of i even if the increment overflowed.
+            if (isInt32Type(operand.type) && operand.isPureTerm()) {
+                let increment = ast.operator == TokenType.plusPlus ? "+" : "-";
+                let decrement = ast.operator == TokenType.plusPlus ? "-" : "+";
+                return new OneParameterTemplate(`(((§1 = ((§1 ${increment} 1) | 0)) ${decrement} 1) | 0)`)
+                    .applyToSnippet(operand.type, ast.range, operand);
             }
 
             let template: CodeTemplate = ast.operator == TokenType.plusPlus ? new OneParameterTemplate("§1++") : new OneParameterTemplate("§1--");
