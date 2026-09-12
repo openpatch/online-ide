@@ -20,6 +20,29 @@ export abstract class CodeTemplate {
 
 }
 
+/**
+ * Values of type byte, short and int are stored as 32-bit-integers in the java
+ * virtual machine, so results of arithmetic operations on them overflow.
+ * Javascript computes with doubles, therefore we have to wrap such results
+ * around by appending "| 0".
+ */
+export function isInt32Type(type: JavaType | undefined): boolean {
+    return type instanceof PrimitiveType && type.isInt32();
+}
+
+export function wrapAsInt32(term: string, type: JavaType | undefined): string {
+    return isInt32Type(type) ? `((${term}) | 0)` : term;
+}
+
+export function wrapValueAsInt32(value: ConstantValue, type: JavaType | undefined): ConstantValue {
+    return isInt32Type(type) && typeof value == "number" ? value | 0 : value;
+}
+
+/**
+ * operators whose result overflows if the operands are of type byte, short or int
+ */
+const overflowingOperators: string[] = ["+", "-", "*", "/", "%"];
+
 export class OneParameterTemplate extends CodeTemplate {
 
     constructor(private templateString: string) {
@@ -261,6 +284,12 @@ export class BinaryOperatorTemplate extends CodeTemplate {
             return this.foldConstants(snippets[0], snippets[1], this.operator, _resultType, _range);
         }
 
+        // Results of +, -, *, / and % overflow if they are of type byte, short or int.
+        // "| 0" wraps them around like the java virtual machine does; as it truncates
+        // towards zero as well it also does the job of Math.trunc for the / operator.
+        let overflows: boolean = overflowingOperators.indexOf(this.operator) >= 0 && isInt32Type(_resultType);
+        let wrap = (term: string) => overflows ? `((${term}) | 0)` : term;
+
         if (snippet0IsPure && snippet1IsPure) {
             let snippet: StringCodeSnippet;
 
@@ -268,7 +297,7 @@ export class BinaryOperatorTemplate extends CodeTemplate {
                 let prefix: string = "";
                 let suffix: string = "";
 
-                if (this.operator == "/") {
+                if (this.operator == "/" && !overflows) {
                     let bothTypesAreShortByteIntLong: boolean = snippets[0].type instanceof PrimitiveType && snippets[0].type.isByteShortIntLong() && snippets[1].type instanceof PrimitiveType && snippets[1].type.isByteShortIntLong();
                     if (bothTypesAreShortByteIntLong) {
                         prefix = "Math.trunc( ";
@@ -277,17 +306,17 @@ export class BinaryOperatorTemplate extends CodeTemplate {
                 }
 
                 if (snippet1IsConstant && snippets[1].getConstantValue() != 0) {
-                    snippet = new StringCodeSnippet(prefix + snippets[0].getPureTerm() + " " + this.operator + " " + snippets[1].getPureTerm() + suffix,
+                    snippet = new StringCodeSnippet(wrap(prefix + snippets[0].getPureTerm() + " " + this.operator + " " + snippets[1].getPureTerm() + suffix),
                         _range, _resultType);
                 } else {
-                    snippet = new StringCodeSnippet(prefix + snippets[0].getPureTerm() + " " + this.operator + " (" + snippets[1].getPureTerm() +
-                        `|| ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${_range.startLineNumber}, ${_range.startColumn}, ${_range.endLineNumber}, ${_range.endColumn}))` + suffix,
+                    snippet = new StringCodeSnippet(wrap(prefix + snippets[0].getPureTerm() + " " + this.operator + " (" + snippets[1].getPureTerm() +
+                        `|| ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${_range.startLineNumber}, ${_range.startColumn}, ${_range.endLineNumber}, ${_range.endColumn}))` + suffix),
                         _range, _resultType);
                 }
 
 
             } else {
-                snippet = new StringCodeSnippet(snippets[0].getPureTerm() + " " + this.operator + " " + snippets[1].getPureTerm(), _range, _resultType);
+                snippet = new StringCodeSnippet(wrap(snippets[0].getPureTerm() + " " + this.operator + " " + snippets[1].getPureTerm()), _range, _resultType);
             }
             snippet.takeEmitToStepListenersFrom(snippets);
             return snippet;
@@ -302,10 +331,10 @@ export class BinaryOperatorTemplate extends CodeTemplate {
             let lastPart0 = snippets[0].lastPartOrPop();
             let lastPart1 = snippets[1].lastPartOrPop();
 
-            if(this.operator == '/' && snippets[0].type instanceof PrimitiveType && snippets[0].type.isByteShortIntLong() && snippets[1].type instanceof PrimitiveType && snippets[1].type.isByteShortIntLong() ){
+            if(this.operator == '/' && !overflows && snippets[0].type instanceof PrimitiveType && snippets[0].type.isByteShortIntLong() && snippets[1].type instanceof PrimitiveType && snippets[1].type.isByteShortIntLong() ){
                 snippetContainer.addStringPart(`Math.trunc(${lastPart0.emit()} ${this.operator} ${lastPart1.emit()})`, _range, _resultType, [lastPart0, lastPart1]);
             } else {
-                snippetContainer.addStringPart(`${lastPart0.emit()} ${this.operator} ${lastPart1.emit()}`, _range, _resultType, [lastPart0, lastPart1]);
+                snippetContainer.addStringPart(wrap(`${lastPart0.emit()} ${this.operator} ${lastPart1.emit()}`), _range, _resultType, [lastPart0, lastPart1]);
             }
 
             snippetContainer.finalValueIsOnStack = false;
@@ -320,13 +349,13 @@ export class BinaryOperatorTemplate extends CodeTemplate {
             snippetContainer.addParts(snippets[1]);
 
             switch (this.operator) {
-                case '-': snippetContainer.addStringPart(`-${StepParams.stack}.pop() + ${StepParams.stack}.pop()`, _range, _resultType); break;
+                case '-': snippetContainer.addStringPart(wrap(`-${StepParams.stack}.pop() + ${StepParams.stack}.pop()`), _range, _resultType); break;
                 case '/':
                     let bothTypesAreShortByteIntLong: boolean = snippets[0].type instanceof PrimitiveType && snippets[0].type.isByteShortIntLong() && snippets[1].type instanceof PrimitiveType && snippets[1].type.isByteShortIntLong();
-                    if (bothTypesAreShortByteIntLong) {
+                    if (bothTypesAreShortByteIntLong && !overflows) {
                         snippetContainer.addStringPart(`Math.trunc( 1/(${StepParams.stack}.pop() || ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${_range.startLineNumber}, ${_range.startColumn}, ${_range.endLineNumber}, ${_range.endColumn})) * ${StepParams.stack}.pop() )`, _range, _resultType);
                     } else {
-                        snippetContainer.addStringPart(`1/(${StepParams.stack}.pop() || ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${_range.startLineNumber}, ${_range.startColumn}, ${_range.endLineNumber}, ${_range.endColumn})) * ${StepParams.stack}.pop()`, _range, _resultType);
+                        snippetContainer.addStringPart(wrap(`1/(${StepParams.stack}.pop() || ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${_range.startLineNumber}, ${_range.startColumn}, ${_range.endLineNumber}, ${_range.endColumn})) * ${StepParams.stack}.pop()`), _range, _resultType);
                     }
                     break;
                 case '<': snippetContainer.addStringPart(`${StepParams.stack}.pop() > ${StepParams.stack}.pop()`, _range, _resultType); break;
@@ -346,9 +375,9 @@ export class BinaryOperatorTemplate extends CodeTemplate {
         snippetContainer.addParts(snippets[1]);
         snippetContainer.addParts(snippets[0]);
         if (this.operator == '%') {
-            snippetContainer.addStringPart(`${StepParams.stack}.pop() ${this.operator} (${StepParams.stack}.pop() || ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${_range.startLineNumber}, ${_range.startColumn}, ${_range.endLineNumber}, ${_range.endColumn}))`, _range, _resultType);
+            snippetContainer.addStringPart(wrap(`${StepParams.stack}.pop() ${this.operator} (${StepParams.stack}.pop() || ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${_range.startLineNumber}, ${_range.startColumn}, ${_range.endLineNumber}, ${_range.endColumn}))`), _range, _resultType);
         } else {
-            snippetContainer.addStringPart(`${StepParams.stack}.pop() ${this.operator} ${StepParams.stack}.pop()`, _range, _resultType);
+            snippetContainer.addStringPart(wrap(`${StepParams.stack}.pop() ${this.operator} ${StepParams.stack}.pop()`), _range, _resultType);
         }
 
         snippetContainer.finalValueIsOnStack = false;
@@ -411,6 +440,9 @@ export class BinaryOperatorTemplate extends CodeTemplate {
             case ">>>": result = value0 >>> value1; break;
 
         }
+
+        // results of +, -, *, / and % of type byte, short or int overflow like in the java virtual machine:
+        if (overflowingOperators.indexOf(operator) >= 0) result = wrapValueAsInt32(result, resultType);
 
         let resultAsCode = typeof result == "string" ? `"${this.escapeString(result)}"` : result + "";
 
