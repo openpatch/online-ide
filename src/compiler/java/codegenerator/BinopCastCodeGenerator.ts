@@ -23,7 +23,7 @@ import { StaticNonPrimitiveType } from "../types/StaticNonPrimitiveType";
 import { CodeSnippet, ConstantValue, StringCodeSnippet } from "./CodeSnippet";
 import { CodeSnippetContainer } from "./CodeSnippetKinds";
 import { SnippetFramer } from "./CodeSnippetTools";
-import { BinaryOperatorTemplate, OneParameterTemplate, TwoParameterTemplate } from "./CodeTemplate";
+import { BinaryOperatorTemplate, OneParameterTemplate, TwoParameterTemplate, isInt32Type } from "./CodeTemplate";
 import { JavaLocalVariable } from "./JavaLocalVariable.ts";
 import { JavaSymbolTable } from "./JavaSymbolTable.ts";
 import { LabelCodeSnippet } from "./LabelManager";
@@ -481,6 +481,20 @@ export abstract class BinopCastCodeGenerator {
             return leftSnippet;
         }
 
+        // Results of byte-, short- and int-operations overflow, so e.g. "a += b" has to be
+        // computed as "a = (a + b) | 0". This needs the left snippet twice, which only works
+        // if it is a pure term (which it is for variables, fields and array elements with
+        // pure index terms).
+        if (isInt32Type(leftSnippet.type) && leftSnippet.isPureTerm()) {
+            let arithmeticOperator = operatorAsString.substring(0, operatorAsString.length - 1);   // "+=" -> "+"
+            let rightTerm = "§2";
+            if (operator == TokenType.divisionAssignment || operator == TokenType.moduloAssignment) {
+                rightTerm = `(§2 || ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${wholeRange.startLineNumber}, ${wholeRange.startColumn}, ${wholeRange.endLineNumber}, ${wholeRange.endColumn}))`;
+            }
+            return new TwoParameterTemplate(`§1 = ((§1 ${arithmeticOperator} ${rightTerm}) | 0)`)
+                .applyToSnippet(leftSnippet.type!, wholeRange, leftSnippet, rightSnippet);
+        }
+
         if (operator == TokenType.divisionAssignment && leftTypeIndex >= nByte && leftTypeIndex <= nLong) {
             return new TwoParameterTemplate(`§1 = Math.trunc(§1/(§2 || ${Helpers.throwArithmeticException}("${JCM.divideByZero()}", ${wholeRange.startLineNumber}, ${wholeRange.startColumn}, ${wholeRange.endLineNumber}, ${wholeRange.endColumn})))`)
                 .applyToSnippet(leftSnippet.type!, wholeRange, leftSnippet, rightSnippet);
@@ -631,17 +645,20 @@ export abstract class BinopCastCodeGenerator {
         }
 
 
+        // Narrowing a value to byte, short or int means keeping only its lowest 8, 16 or 32 bits
+        // and interpreting them as a two's complement number. The bit operators <<, >> and | do
+        // exactly that in javascript; they truncate values with fractional part towards zero on
+        // the way, so casting from float/double works with the same terms.
         if (snippet.isConstant()) {
             let value: number = <number>snippet.getConstantValue();
-            let result: number;
+            let result: number = value;
 
             switch (castToTypeIndex) {
-                case nByte: result = snippetTypeIndex <= nLong ? ((value + 128) % 256 - 128) : ((Math.trunc(value) + 128) % 256 - 128);
+                case nByte: result = value << 24 >> 24;
                     break;
-                case nShort: result = snippetTypeIndex <= nLong ? ((value + 0x8000) % 0x10000 - 0x8000) : ((Math.trunc(value) + 0x8000) % 0x10000 - 0x8000);
+                case nShort: result = value << 16 >> 16;
                     break;
-                // case nInteger: result = snippetTypeIndex <= nLong ? ((value + 0x80000000) % 0x100000000 - 0x80000000) : ((Math.trunc(value) + 0x80000000) % 0x100000000 - 0x80000000);
-                case nInteger: result = snippetTypeIndex <= nLong ? value | 0 : Math.trunc(value) | 0;
+                case nInteger: result = value | 0;
                     break;
                 case nLong: result = Math.trunc(value);
                     break;
@@ -649,18 +666,17 @@ export abstract class BinopCastCodeGenerator {
                     break;
             }
 
-            return new StringCodeSnippet("" + value, snippet.range!, castTo, value);
+            return new StringCodeSnippet("" + result, snippet.range!, castTo, result);
 
         } else {
             let template: OneParameterTemplate | undefined;
 
             switch (castToTypeIndex) {
-                case nByte: template = snippetTypeIndex <= nLong ? new OneParameterTemplate('((§1 + 128) % 256 - 128)') : new OneParameterTemplate('((Math.trunc(§1) + 128) % 256 - 128)');
+                case nByte: template = new OneParameterTemplate('((§1) << 24 >> 24)');
                     break;
-                case nShort: template = snippetTypeIndex <= nLong ? new OneParameterTemplate('((§1 + 0x8000) % 0x10000 - 0x8000)') : new OneParameterTemplate('((Math.trunc(§1) + 0x80000000) % 0x100000000 - 0x80000000)');
+                case nShort: template = new OneParameterTemplate('((§1) << 16 >> 16)');
                     break;
-                // case nInteger: template = snippetTypeIndex <= nLong ? new OneParameterTemplate('((§1 + 0x80000000) % 0x100000000 - 0x80000000)') : new OneParameterTemplate('((Math.trunc(§1) + 0x80000000) % 0x100000000 - 0x80000000)');
-                case nInteger: template = snippetTypeIndex <= nLong ? new OneParameterTemplate('((§1) | 0)') : new OneParameterTemplate('(Math.trunc(§1) | 0)');
+                case nInteger: template = new OneParameterTemplate('((§1) | 0)');
                     break;
                 case nLong: template = new OneParameterTemplate('Math.trunc(§1)');
                     break;
@@ -894,6 +910,11 @@ export abstract class BinopCastCodeGenerator {
                 return;
             }
             if (primitiveIndex >= nByte && primitiveIndex <= nDouble) {
+                // "++i" of type byte, short or int overflows, so compute it as "i = (i + 1) | 0":
+                if (isInt32Type(operand.type) && operand.isPureTerm()) {
+                    let arithmeticOperator = operator == TokenType.plusPlus ? "+" : "-";
+                    return new OneParameterTemplate(`(§1 = ((§1 ${arithmeticOperator} 1) | 0))`).applyToSnippet(operand.type!, operand.range!, operand);
+                }
                 return new OneParameterTemplate(operatorAsString + "§1").applyToSnippet(operand.type!, operand.range!, operand);
             }
             this.pushError(JCM.operatorNotUsableForOperands(operatorAsString, operand.type!.identifier), "error", operand.range!);
@@ -902,6 +923,10 @@ export abstract class BinopCastCodeGenerator {
 
         if ([TokenType.minus, TokenType.plus].indexOf(operator) >= 0) {
             if (primitiveIndex >= nByte && primitiveIndex <= nDouble) {
+                // -Integer.MIN_VALUE overflows to Integer.MIN_VALUE:
+                if (operator == TokenType.minus && isInt32Type(operand.type)) {
+                    return this.applyUnaryOperatorConsideringConstantFolding("-", operand.type!, operand.range!, operand, true);
+                }
                 return this.applyUnaryOperatorConsideringConstantFolding(operatorAsString, operand.type!, operand.range!, operand);
             }
             this.pushError(JCM.operatorNotUsableForOperands(operatorAsString, operand.type!.identifier), "error", operand.range!);
@@ -919,7 +944,7 @@ export abstract class BinopCastCodeGenerator {
 
     }
 
-    applyUnaryOperatorConsideringConstantFolding(operator: string, resultType: JavaType, range: IRange, snippet: CodeSnippet): CodeSnippet {
+    applyUnaryOperatorConsideringConstantFolding(operator: string, resultType: JavaType, range: IRange, snippet: CodeSnippet, resultOverflows: boolean = false): CodeSnippet {
         if (snippet.isConstant()) {
             let operand = snippet.getConstantValue()!;
             let result!: ConstantValue;
@@ -931,11 +956,14 @@ export abstract class BinopCastCodeGenerator {
                 case "!": result = !operand; break;
             }
 
+            if (resultOverflows && typeof result == "number") result = result | 0;
+
             return new StringCodeSnippet("" + result, range, resultType, result);
 
         } else {
 
-            return new OneParameterTemplate(operator + "(§1)").applyToSnippet(resultType, range, snippet);
+            let template = resultOverflows ? `((${operator}(§1)) | 0)` : operator + "(§1)";
+            return new OneParameterTemplate(template).applyToSnippet(resultType, range, snippet);
 
         }
 
