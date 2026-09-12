@@ -202,7 +202,6 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             // go with it
             const firstStageOfRun = beginScratchStages(world);
             if (firstStageOfRun) {
-                ScratchTimerClass.resetProgramStart();
                 beginScratchProgram(interpreter);
             }
             this.scratchLayers = createScratchLayers(world.app.stage);
@@ -218,6 +217,13 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             // Sounds need no loading step: their URLs come from the bundler, and the
             // OGG files are fetched when a sound is first played.
             Promise.all([ScratchCostumes.load(), loadScratchFont()]).then(() => {
+                // The clock starts where the program does, which is here and not
+                // where the loading began: the thread is parked until the
+                // spritesheets are there, and a clock started before that wait
+                // counts it, so Timer.millis() is already that old in the program's
+                // first frame. How much depends on what the browser had cached -
+                // nothing on a cold load, which is where it was measured at 7s.
+                if (firstStageOfRun) ScratchTimerClass.resetProgramStart();
                 t.state = oldState;
                 t.s.push(this);
                 this.registerIfNobodyElseWill(t, callback);
