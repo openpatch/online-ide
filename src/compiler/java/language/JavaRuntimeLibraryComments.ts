@@ -1729,6 +1729,11 @@ export class JRC {
         "en": "Creates a new Bitmap. pointsX and pointsY are it's resolution, (left, top) is it's top-left corner.",
     })
 
+    static BitmapUrlConstructorComment = () => lm({
+        "de": "Lädt ein Bild von einer URL. (left, top) sind die Koordinaten der linken oberen Ecke. Für externe Server muss CORS erlaubt sein.",
+        "en": "Loads an image from a URL. (left, top) is its top-left corner. External servers must allow CORS.",
+    })
+
     static BitmapCopyComment = () => lm({
         "de": "Erzeugt eine Kopie dieser Bitmap.",
         "en": "Creates a copy of this bitmap.",
@@ -6354,5 +6359,4 @@ rectMode(RADIUS) also uses the first two parameters as the x- and y-coordinates 
         "fr": `Renvoie le tableau sous forme de liste.`,
     })
 }
-
 

@@ -2,6 +2,7 @@ import * as PIXI from 'pixi.js';
 import { CallbackParameter } from '../../../common/interpreter/CallbackParameter';
 import { CallbackFunction } from '../../../common/interpreter/StepFunction';
 import { Thread } from "../../../common/interpreter/Thread";
+import { ThreadState } from "../../../common/interpreter/ThreadState.ts";
 import { ColorHelper } from '../../lexer/ColorHelper.ts';
 import { LibraryDeclarations } from "../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../types/NonPrimitiveType";
@@ -23,6 +24,9 @@ export class BitmapClass extends ShapeClass {
             type: "method", signature: "Bitmap(int resolutionX, int resolutionY, double left, double top, double displayWidth, double displayHeight)",
             java: BitmapClass.prototype._cj$_constructor_$Bitmap$int$int$double$double$double$double, comment: JRC.BitmapConstructorComment
         },
+        { type: "method", signature: "Bitmap(string imageUrl)", java: BitmapClass.prototype._cj$_constructor_$Bitmap$string, comment: JRC.BitmapUrlConstructorComment },
+        { type: "method", signature: "Bitmap(string imageUrl, double left, double top)", java: BitmapClass.prototype._cj$_constructor_$Bitmap$string$double$double, comment: JRC.BitmapUrlConstructorComment },
+        { type: "method", signature: "Bitmap(string imageUrl, double left, double top, double displayWidth, double displayHeight)", java: BitmapClass.prototype._cj$_constructor_$Bitmap$string$double$double$double$double, comment: JRC.BitmapUrlConstructorComment },
         { type: "method", signature: "final int getResolutionX()", native: BitmapClass.prototype._getResolutionX, comment: JRC.BitmapGetResolutionXComment },
         { type: "method", signature: "final int getResolutionY()", native: BitmapClass.prototype._getResolutionY, comment: JRC.BitmapGetResolutionYComment },
         { type: "method", signature: "final void setColor(int x, int y, int color, double alpha)", native: BitmapClass.prototype._setColor, comment: JRC.BitmapSetColorComment },
@@ -81,9 +85,60 @@ export class BitmapClass extends ShapeClass {
             this.anzahlY = anzahlY;
 
             this.initBitmap(bitmapToCopy, clone);
+            if (callback) callback();
         });   // call base class constructor
 
 
+    }
+
+    _cj$_constructor_$Bitmap$string(t: Thread, callback: CallbackFunction, imageUrl: string) {
+        this.loadImage(t, callback, imageUrl, 0, 0);
+    }
+
+    _cj$_constructor_$Bitmap$string$double$double(t: Thread, callback: CallbackFunction,
+        imageUrl: string, left: number, top: number
+    ) {
+        this.loadImage(t, callback, imageUrl, left, top);
+    }
+
+    _cj$_constructor_$Bitmap$string$double$double$double$double(t: Thread, callback: CallbackFunction,
+        imageUrl: string, left: number, top: number, displayWidth: number, displayHeight: number
+    ) {
+        this.loadImage(t, callback, imageUrl, left, top, displayWidth, displayHeight);
+    }
+
+    private loadImage(t: Thread, callback: CallbackFunction, imageUrl: string, left: number, top: number,
+        displayWidth?: number, displayHeight?: number
+    ) {
+        this._cj$_constructor_$Shape$(t, () => {
+            const oldState = t.state;
+            t.state = ThreadState.waiting;
+            PIXI.Assets.load<PIXI.Texture>(imageUrl).then(texture => {
+                if (!texture) throw new Error("The response is not a supported image");
+                const sprite = new PIXI.Sprite(texture);
+                try {
+                    const extracted = this.world.app.renderer.extract.pixels(sprite);
+                    this.left = left;
+                    this.top = top;
+                    this.anzahlX = extracted.width;
+                    this.anzahlY = extracted.height;
+                    this.width = displayWidth ?? extracted.width;
+                    this.height = displayHeight ?? extracted.height;
+                    this.initBitmap();
+                    new Uint8Array(this.data.buffer).set(extracted.pixels);
+                    this.texture.source.update();
+                } finally {
+                    sprite.destroy(false);
+                }
+                t.state = oldState;
+                if (callback) callback();
+            }).catch(reason => {
+                t.state = oldState;
+                t.throwRuntimeExceptionOnLastExecutedStep(new RuntimeExceptionClass(
+                    `Bild konnte nicht geladen werden / could not load image '${imageUrl}': ${reason}`
+                ));
+            });
+        });
     }
 
     private initBitmap(bitmapToCopy?: BitmapClass, clone: boolean = false) {
