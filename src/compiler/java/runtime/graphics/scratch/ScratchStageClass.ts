@@ -84,9 +84,9 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         { type: "method", signature: "<T extends Sprite> int count(Class<T> c)", native: ScratchStageClass.prototype._count, comment: SRC.stageCountComment },
 
         // backdrops
-        { type: "method", signature: "void addBackdrop(string name)", native: ScratchStageClass.prototype._addBackdrop, comment: SRC.stageAddBackdropComment },
-        { type: "method", signature: "void addBackdrop(string name, string imagePath)", native: ScratchStageClass.prototype._addBackdrop2, comment: SRC.stageAddBackdrop2Comment },
-        { type: "method", signature: "void addBackdrop(string name, string imagePath, boolean stretch)", native: ScratchStageClass.prototype._addBackdrop3, comment: SRC.stageAddBackdrop3Comment },
+        { type: "method", signature: "void addBackdrop(string name)", java: ScratchStageClass.prototype._mj$addBackdrop$void$string, comment: SRC.stageAddBackdropComment },
+        { type: "method", signature: "void addBackdrop(string name, string imagePath)", java: ScratchStageClass.prototype._mj$addBackdrop$void$string$string, comment: SRC.stageAddBackdrop2Comment },
+        { type: "method", signature: "void addBackdrop(string name, string imagePath, boolean stretch)", java: ScratchStageClass.prototype._mj$addBackdrop$void$string$string$boolean, comment: SRC.stageAddBackdrop3Comment },
         { type: "method", signature: "void switchBackdrop(string name)", native: ScratchStageClass.prototype._switchBackdrop, comment: SRC.stageSwitchBackdropComment },
         { type: "method", signature: "void nextBackdrop()", native: ScratchStageClass.prototype._nextBackdrop, comment: SRC.stageNextBackdropComment },
         { type: "method", signature: "void previousBackdrop()", native: ScratchStageClass.prototype._previousBackdrop, comment: SRC.stagePreviousBackdropComment },
@@ -446,17 +446,36 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      */
     private backdropSprite?: PIXI.Sprite;
 
-    _addBackdrop(name: string) { this._addBackdrop3(name, name, false); }
-    _addBackdrop2(name: string, imagePath: string) { this._addBackdrop3(name, imagePath, false); }
-    _addBackdrop3(name: string, imagePath: string, stretch: boolean) {
-        if (this.backdrops.some(b => b.name === name)) return;
-        const texture = ScratchCostumes.getTexture(imagePath);
-        if (!texture) {
-            console.warn(`Scratch: unknown backdrop image '${imagePath}'`);
+    _mj$addBackdrop$void$string(t: Thread, callback: CallbackParameter, name: string) {
+        this.loadBackdrop(t, name, name, false, callback);
+    }
+
+    _mj$addBackdrop$void$string$string(t: Thread, callback: CallbackParameter, name: string, imagePath: string) {
+        this.loadBackdrop(t, name, imagePath, false, callback);
+    }
+
+    _mj$addBackdrop$void$string$string$boolean(t: Thread, callback: CallbackParameter, name: string, imagePath: string, stretch: boolean) {
+        this.loadBackdrop(t, name, imagePath, stretch, callback);
+    }
+
+    private loadBackdrop(t: Thread, name: string, imagePath: string, stretch: boolean, callback: CallbackParameter) {
+        if (this.backdrops.some(b => b.name === name)) {
+            if (callback) callback();
             return;
         }
-        this.backdrops.push({ name, texture, stretch });
-        if (this.currentBackdrop < 0) this._applyBackdropIndex(this.backdrops.length - 1);
+        const oldState = t.state;
+        t.state = ThreadState.waiting;
+        ScratchCostumes.loadTexture(imagePath).then(texture => {
+            this.backdrops.push({ name, texture, stretch });
+            if (this.currentBackdrop < 0) this._applyBackdropIndex(this.backdrops.length - 1);
+            t.state = oldState;
+            if (callback) callback();
+        }).catch(reason => {
+            t.state = oldState;
+            t.throwRuntimeExceptionOnLastExecutedStep(new RuntimeExceptionClass(
+                `Bild konnte nicht geladen werden / could not load image '${imagePath}': ${reason}`
+            ));
+        });
     }
 
     private _applyBackdropIndex(index: number) {

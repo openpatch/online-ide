@@ -33,6 +33,7 @@ export class ScratchCostumes {
     // lower-cased bare name -> sheet name (first sheet that defines it)
     private static bareNameToSheet: Map<string, string> = new Map();
     private static loadPromise: Promise<void> | undefined;
+    private static externalTextures: Map<string, Promise<PIXI.Texture>> = new Map();
 
     static load(): Promise<void> {
         if (this.loadPromise) return this.loadPromise;
@@ -79,6 +80,33 @@ export class ScratchCostumes {
 
     static has(name: string): boolean {
         return this.getTexture(name) !== undefined;
+    }
+
+    /**
+     * Resolve a bundled costume or load an image URL. External images are cached,
+     * so using the same URL for several sprites only downloads it once.
+     *
+     * The browser's normal CORS rules apply. Loading through PIXI (instead of an
+     * HTMLImageElement without CORS) also keeps the texture readable for hitboxes
+     * and other pixel based operations.
+     */
+    static async loadTexture(nameOrUrl: string): Promise<PIXI.Texture> {
+        const bundled = this.getTexture(nameOrUrl);
+        if (bundled) return bundled;
+
+        let pending = this.externalTextures.get(nameOrUrl);
+        if (!pending) {
+            pending = PIXI.Assets.load<PIXI.Texture>(nameOrUrl).then(texture => {
+                if (!texture) throw new Error("The response is not a supported image");
+                texture.source.minFilter = "linear";
+                texture.source.magFilter = "linear";
+                return texture;
+            });
+            this.externalTextures.set(nameOrUrl, pending);
+            // A temporary network problem must not poison the cache forever.
+            pending.catch(() => this.externalTextures.delete(nameOrUrl));
+        }
+        return pending;
     }
 
     private static textureFromSheet(sheetName: string, frame: string): PIXI.Texture | undefined {

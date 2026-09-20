@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import { CallbackParameter } from "../../../../common/interpreter/CallbackParameter";
 import { Thread } from "../../../../common/interpreter/Thread";
+import { ThreadState } from "../../../../common/interpreter/ThreadState";
 import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ArrayListClass } from "../../system/collections/ArrayListClass";
@@ -81,8 +82,8 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "void think(string text, int millis)", native: ScratchSpriteClass.prototype._thinkFor, comment: SRC.spriteThink2Comment },
 
         // costumes
-        { type: "method", signature: "void addCostume(string name)", native: ScratchSpriteClass.prototype._addCostume, comment: SRC.spriteAddCostumeComment },
-        { type: "method", signature: "void addCostume(string name, string imagePath)", native: ScratchSpriteClass.prototype._addCostume2, comment: SRC.spriteAddCostume2Comment },
+        { type: "method", signature: "void addCostume(string name)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string, comment: SRC.spriteAddCostumeComment },
+        { type: "method", signature: "void addCostume(string name, string imagePath)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string$string, comment: SRC.spriteAddCostume2Comment },
         { type: "method", signature: "void addCostume(string name, string spriteSheetPath, int x, int y, int width, int height)", native: ScratchSpriteClass.prototype._addCostumeFromSheet, comment: SRC.spriteAddCostume3Comment },
         { type: "method", signature: "void addCostumes(string prefix, string spriteSheet, int tileWidth, int tileHeight)", native: ScratchSpriteClass.prototype._addCostumes, comment: SRC.spriteAddCostumesComment },
         { type: "method", signature: "void switchCostume(string name)", native: ScratchSpriteClass.prototype._switchCostumeByName, comment: SRC.spriteSwitchCostumeComment },
@@ -259,10 +260,11 @@ export class ScratchSpriteClass extends ShapeClass {
     _cj$_constructor_$Sprite$string$string(t: Thread, callback: CallbackParameter, name: string, imagePath: string) {
         this._cj$_constructor_$Sprite$(t, () => {
             t.s.pop();
-            this._addCostume2(name, imagePath);
-            t.s.push(this);
-            this.registerIfNobodyElseWill(t, callback);
-            if (callback) callback();
+            this.loadCostume(t, name, imagePath, () => {
+                t.s.push(this);
+                this.registerIfNobodyElseWill(t, callback);
+                if (callback) callback();
+            });
         });
     }
 
@@ -582,7 +584,33 @@ export class ScratchSpriteClass extends ShapeClass {
     }
 
     // ---- costumes ----
-    _addCostume(name: string) { this._addCostume2(name, name); }
+    _mj$addCostume$void$string(t: Thread, callback: CallbackParameter, name: string) {
+        this.loadCostume(t, name, name, callback);
+    }
+
+    _mj$addCostume$void$string$string(t: Thread, callback: CallbackParameter, name: string, imagePath: string) {
+        this.loadCostume(t, name, imagePath, callback);
+    }
+
+    private loadCostume(t: Thread, name: string, imagePath: string, callback: CallbackParameter) {
+        if (this.costumes.some(c => c.name === name)) {
+            if (callback) callback();
+            return;
+        }
+        const oldState = t.state;
+        t.state = ThreadState.waiting;
+        ScratchCostumes.loadTexture(imagePath).then(texture => {
+            this.costumes.push({ name, texture });
+            if (this.currentCostume < 0) this._applyCostumeIndex(this.costumes.length - 1);
+            t.state = oldState;
+            if (callback) callback();
+        }).catch(reason => {
+            t.state = oldState;
+            t.throwRuntimeExceptionOnLastExecutedStep(new RuntimeExceptionClass(
+                `Bild konnte nicht geladen werden / could not load image '${imagePath}': ${reason}`
+            ));
+        });
+    }
 
     /** Cut one costume out of a larger image, like upstream's 6-argument form. */
     _addCostumeFromSheet(name: string, spriteSheetPath: string, x: number, y: number, width: number, height: number) {
