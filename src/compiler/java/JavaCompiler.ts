@@ -89,7 +89,7 @@ export class JavaCompiler implements Compiler {
             this.moduleManager.workspace = currentWorkspace;
             this.#files = currentWorkspace.getFiles()
                 .filter(file => FileTypeManager.filenameToFileType(file.name, this.main.getCurrentProgrammingLanguage()).language == 'myJava'
-                    && !file.isFolder);
+                    && !file.isFolder && !file.isAsset());
         }
 
         this.moduleManager.setupModulesBeforeCompiliation(this.#files);

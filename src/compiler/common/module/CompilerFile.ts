@@ -34,6 +34,10 @@ export class CompilerFile {
         return this.__textWhenMonacoModelAbsent;
     }
 
+    isAsset(): boolean {
+        return this.getText().startsWith("data:");
+    }
+
     setText(text: string) {
         this.__textWhenMonacoModelAbsent = text;
 

@@ -53,6 +53,7 @@ import { EmbeddedIndexedDB } from "./EmbeddedIndexedDB.js";
 import { OnlineIDEAccessImpl, type OnRunExitListener } from "./EmbeddedInterface.js";
 import { JOScript } from "./EmbeddedStarter.js";
 import { SecureJSON } from "../../tools/SecureJSON.js";
+import { isAssetFile } from "../workspace/AssetFile.js";
 import type { IThrowable } from "../../compiler/common/interpreter/ThrowableType.js";
 import { JavaLanguage } from "../../compiler/java/JavaLanguage.js";
 
@@ -429,7 +430,7 @@ export class MainEmbedded implements MainBase {
         return new Promise<void>((resolve, reject) => {
             let files = this.currentWorkspace.getFiles();
             files.forEach(f => {
-                f.getMonacoModel();
+                if (!isAssetFile(f)) f.getMonacoModel();
                 f.setSaved(true);
             })
 
@@ -471,7 +472,7 @@ export class MainEmbedded implements MainBase {
                                 script = this.eraseDokuwikiSearchMarkup(script);
 
                                 let file = new GUIFile(this, name, script);
-                                file.getMonacoModel();
+                                if (!isAssetFile(file)) file.getMonacoModel();
                                 file.setSaved(true);
                                 file.readOnly = that.isReadOnlyScript(name);
 
@@ -582,9 +583,11 @@ export class MainEmbedded implements MainBase {
 
         let that = this;
 
-        file.getMonacoModel().onDidChangeContent(() => {
-            that.considerShowingCodeResetButton();
-        });
+        if (!isAssetFile(file)) {
+            file.getMonacoModel().onDidChangeContent(() => {
+                that.considerShowingCodeResetButton();
+            });
+        }
 
         return file;
     }
@@ -1265,5 +1268,4 @@ export class MainEmbedded implements MainBase {
     }
 
 }
-
 

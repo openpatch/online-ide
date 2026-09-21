@@ -240,6 +240,16 @@ Are you sure?`
         'en': 'New file...'
     });
 
+    static uploadAsset = () => lm({
+        'de': 'Bilddatei hochladen',
+        'en': 'Upload image asset'
+    });
+
+    static assetAlreadyExists = (filename: string) => lm({
+        'de': `Eine Datei namens ${filename} existiert in diesem Ordner bereits.`,
+        'en': `A file named ${filename} already exists in this folder.`
+    });
+
     static firstChooseWorkspace = () => lm({
         'de': 'Bitte wählen Sie zuerst einen Workspace aus.',
         'en': 'Choose workspace first.'
@@ -707,4 +717,3 @@ export class WorkspaceSettingsDialogMessages {
     });
 
 }
-

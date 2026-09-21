@@ -38,6 +38,16 @@ Nach dem Checkout des Repository können Sie den dist-Ordner mit den fertigen Pr
 ## Integration in eigene Webseiten
 Die Integration der Embedded-Version in eigene Webseiten [ist hier beschrieben.](https://learnj.de/doku.php?id=onlineide:integration:start)
 
+Neben Java-Dateien können Bilder aus einer URL als Workspace-Dateien eingebunden werden:
+
+```html
+<script type="text/plain" data-type="image" title="sky.jpg" src="/images/sky.jpg"></script>
+```
+
+Im Programm ist das Bild anschließend über seinen Dateinamen verfügbar, zum Beispiel mit
+`new Bitmap("sky.jpg")`. Ohne `title` wird der Dateiname aus der URL übernommen. Bei URLs
+von einer anderen Domain muss der Server den Browserzugriff mittels CORS erlauben.
+
 Benötigt werden
   - dist/assets/fonts
   - dist/assets/graphics
@@ -45,4 +55,3 @@ Benötigt werden
   - dist/lib
   - dist/online-ide-embedded.css
   - dist/online-ide-embedded.js
-

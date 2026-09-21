@@ -3,6 +3,7 @@ import jQuery from 'jquery';
 import * as PIXI from 'pixi.js';
 import { MainEmbedded } from "./MainEmbedded.js";
 import { languages, setLanguageId } from "../../tools/language/LanguageManager.js";
+import { readBlobAsDataUrl } from "../workspace/AssetFile.js";
 
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
@@ -38,7 +39,8 @@ export type JOScript = {
     title: string,
     text: string,
     url?: string,
-    readOnly?: boolean
+    readOnly?: boolean,
+    asset?: boolean
 }
 
 function loadSpritesheet() {
@@ -163,10 +165,12 @@ export class EmbeddedStarter {
                     text: text
                 };
 
-
-                if ($script.data('type') == "hint" && !script.title.endsWith(".md")) {
+                const dataType = $script.data('type');
+                if (dataType == "hint" && !script.title.endsWith(".md")) {
                     script.title += ".md";
                 }
+
+                script.asset = dataType == "image" || dataType == "asset";
 
                 if($script.data('online-ide')){
                     let data = JSON.parse($script.data('online-ide').replaceAll("'", '"'));
@@ -174,6 +178,9 @@ export class EmbeddedStarter {
                 }
 
                 if (srcAttr != null) script.url = srcAttr;
+                if (script.asset && !script.title && srcAttr) {
+                    script.title = this.filenameFromUrl(srcAttr);
+                }
                 script.text = this.eraseDokuwikiSearchMarkup(script.text);
                 scriptList.push(script);
             });
@@ -201,13 +208,27 @@ export class EmbeddedStarter {
         return text.replace(/<span class="search\whit">(.*?)<\/span>/g, "$1");
     }
 
+    filenameFromUrl(url: string): string {
+        try {
+            const pathname = new URL(url, window.location.href).pathname;
+            return decodeURIComponent(pathname.substring(pathname.lastIndexOf("/") + 1)) || "image";
+        } catch {
+            return "image";
+        }
+    }
+
     async initDiv($div: JQuery<HTMLElement>, scriptList: JOScript[]) {
 
         $div.addClass('joeCssFence');
         for (let script of scriptList) {
             if (script.url != null) {
-                const response = await fetch(script.url)
-                script.text = await response.text()
+                const response = await fetch(script.url);
+                if (!response.ok) {
+                    throw new Error(`Could not load embedded workspace file '${script.url}': HTTP ${response.status}`);
+                }
+                script.text = script.asset
+                    ? await readBlobAsDataUrl(await response.blob())
+                    : await response.text();
             }
         }
 

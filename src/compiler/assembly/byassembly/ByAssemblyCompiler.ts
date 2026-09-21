@@ -92,7 +92,7 @@ export class ByAssemblyCompiler implements Compiler {
             if (!currentWorkspace) return;
             let files = currentWorkspace.getFiles()
                 .filter(file => FileTypeManager.filenameToFileType(file.name, this.main.getCurrentProgrammingLanguage()).language == ProgrammingLanguageData.ByAssembly.name
-                    && !file.isFolder);
+                    && !file.isFolder && !file.isAsset());
             this.setFiles(files);
 
             architectureName = currentWorkspace.settings.assemblyArchitecture;

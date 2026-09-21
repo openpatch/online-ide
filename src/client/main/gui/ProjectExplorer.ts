@@ -29,6 +29,7 @@ import { ProgrammingLanguageManager } from '../../../compiler/common/programming
 import { ProgrammingLanguage } from '../../../compiler/common/programminglanguage/ProgrammingLanguage.js';
 import { ProgrammingLanguageData } from '../../../compiler/common/programminglanguage/ProgrammingLanguageData.js';
 import { ByArchitecture } from '../../../compiler/assembly/byassembly/ByArchitecture.js';
+import { isAssetFile, readBrowserFileAsDataUrl } from '../../workspace/AssetFile.js';
 
 
 export class ProjectExplorer {
@@ -38,6 +39,7 @@ export class ProjectExplorer {
     workspaceTreeview: Treeview<Workspace, number>;
 
     synchronizedButton: IconButtonComponent;
+    assetUploadButton: IconButtonComponent;
 
     constructor(private main: Main, private $projectexplorerDiv: JQuery<HTMLElement>) {
 
@@ -259,7 +261,7 @@ export class ProjectExplorer {
 
         this.fileTreeview.nodeClickedCallback =
             (file: GUIFile) => {
-                if (!file.isFolder) {
+                if (!file.isFolder && !isAssetFile(file)) {
                     this.setFileActive(file);
                     if (this.main.currentWorkspace.settings.language == ProgrammingLanguageData.ByAssembly.name) {
                         this.main.getCompiler().forceRecompilation();
@@ -267,6 +269,9 @@ export class ProjectExplorer {
                 }
             }
 
+        this.assetUploadButton = this.fileTreeview.captionLineAddIconButton(
+            "img_image-upload-dark", "right", () => this.uploadImageAssets(), ProjectExplorerMessages.uploadAsset()
+        );
 
         this.fileTreeview.dropEventCallback =
             async (sourceTreeview, destinationNode, destinationChildIndex, dragKind) => {
@@ -310,6 +315,55 @@ export class ProjectExplorer {
 
         this.synchronizedButton.setVisible(false);
 
+    }
+
+    private async uploadImageAssets() {
+        const workspace = this.main.getCurrentWorkspace();
+        if (!workspace) {
+            alert(ProjectExplorerMessages.firstChooseWorkspace());
+            return;
+        }
+
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.multiple = true;
+        input.onchange = async () => {
+            let parentNode = this.fileTreeview.getCurrentlySelectedNodes()[0];
+            while (parentNode && !parentNode.isFolder) parentNode = parentNode.getParent();
+            const parentFolderId = parentNode && !parentNode.isRootNode() ? parentNode.externalObject.id : null;
+
+            for (const browserFile of Array.from(input.files ?? [])) {
+                const duplicate = workspace.getFiles().some(file =>
+                    file.parent_folder_id === parentFolderId && file.name === browserFile.name
+                );
+                if (duplicate) {
+                    alert(ProjectExplorerMessages.assetAlreadyExists(browserFile.name));
+                    continue;
+                }
+
+                const file = new GUIFile(this.main, browserFile.name, await readBrowserFileAsDataUrl(browserFile));
+                file.parent_folder_id = parentFolderId;
+                file.setSaved(false);
+                workspace.addFile(file);
+
+                const success = await this.main.networkManager.sendCreateFile(
+                    file, workspace, this.main.workspacesOwnerId
+                );
+                if (!success && !this.main.user.is_testuser) {
+                    workspace.removeFile(file);
+                    continue;
+                }
+                if (this.main.user.is_testuser) file.id = Math.round(Math.random() * 10000000);
+
+                this.fileTreeview.addNode(
+                    false, file.name,
+                    FileTypeManager.filenameToFileType(file.name, this.main.getCurrentProgrammingLanguage()).iconclass,
+                    file, parentFolderId
+                );
+            }
+        };
+        input.click();
     }
 
     renderHomeworkButton(file: GUIFile) {
@@ -839,6 +893,7 @@ export class ProjectExplorer {
         if (w == null) {
             this.fileTreeview.addElementsButton.setVisible(false);
             this.fileTreeview.addFolderButton.setVisible(false);
+            this.assetUploadButton.setVisible(false);
             this.main.getMainEditor().setModel(null);
             this.fileTreeview.setCaption(ProjectExplorerMessages.selectWorkspace());
             this.synchronizedButton.setVisible(false);
@@ -848,6 +903,7 @@ export class ProjectExplorer {
         }
 
         this.main.switchProgrammingLanguage(w.settings.language);
+        this.assetUploadButton.setVisible(true);
         this.renderFiles(w);
 
         if (selectElement) this.workspaceTreeview.selectElement(w, false);

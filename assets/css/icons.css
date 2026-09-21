@@ -605,11 +605,22 @@
       background-image: url('../icons/open-change-dark.svg');
    }
 
-   .img_open-file {
+   /* IconButtonComponent normalizes icon names to a -dark class. Keep the
+      plain variant for legacy label buttons and expose the normalized variant
+      for tree caption buttons. */
+   .img_open-file,
+   .img_open-file-dark {
       width: 16px;
       height: 16px;
       background-repeat: no-repeat;
       background-image: url('../icons/open-file.svg');
+   }
+
+   .img_image-upload-dark {
+      width: 16px;
+      height: 16px;
+      background-repeat: no-repeat;
+      background-image: url('../icons/image-upload-dark.svg');
    }
 
    .img_pause-dark {
