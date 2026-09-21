@@ -176,6 +176,24 @@
         overflow: auto;
     }
 
+    /* The image is positioned out of normal flow so its intrinsic dimensions
+       can never enlarge the editor's flex row. */
+    .joe_hintDiv.joe_assetPreview {
+        position: relative;
+        box-sizing: border-box;
+        width: 100%;
+        margin-left: 0;
+        overflow: hidden;
+    }
+
+    .joe_hintDiv.joe_assetPreview>img {
+        position: absolute;
+        inset: 8px;
+        width: calc(100% - 16px);
+        height: calc(100% - 16px);
+        object-fit: contain;
+    }
+
     .joe_hintDiv code {
         font-size: 14pt;
         background-color: transparent;

@@ -18,6 +18,11 @@ export class FileTypeManager {
         { name: "XML-Datei", file_type: 1, iconclass: "img_file-dark-xml", language: "xml", suffix: ".xml" },
         { name: "CSV-Datei", file_type: 1, iconclass: "img_file-dark-csv", language: "csv", suffix: ".csv" },
         { name: "Markup", file_type: 1, iconclass: "img_file-dark-md", language: "md", suffix: ".md" },
+        { name: "PNG-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".png" },
+        { name: "JPEG-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".jpg" },
+        { name: "JPEG-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".jpeg" },
+        { name: "GIF-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".gif" },
+        { name: "WebP-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".webp" },
         { name: "Assembler-Quelltext", file_type: 0, iconclass: "img_file-dark-assembly", language: ProgrammingLanguageData.ByAssembly.monacoLanguageSelector, suffix: "." + ProgrammingLanguageData.ByAssembly.fileEndingWithOutDot }
     ];
 
@@ -36,8 +41,9 @@ export class FileTypeManager {
     // }
 
     static filenameToFileType(filename: string, currentLanguage: ProgrammingLanguage): FileType {
+        const lowerCaseFilename = filename.toLowerCase();
         for (let ft of this.filetypes) {
-            if (filename.endsWith(ft.suffix)) return ft;
+            if (lowerCaseFilename.endsWith(ft.suffix)) return ft;
         }
         if (currentLanguage) {
             let ft = this.filetypes.find(ft => ft.suffix == "." + currentLanguage.fileEndingWithOutDot);

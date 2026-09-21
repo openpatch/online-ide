@@ -2,6 +2,16 @@ import { lm } from "../../tools/language/LanguageManager";
 
 export class EmbeddedMessages {
 
+    static UploadAsset = () => lm({
+    "de": "Bilddatei hochladen",
+    "en": "Upload image asset",
+    })
+
+    static AssetAlreadyExists = (filename: string) => lm({
+    "de": `Eine Datei namens ${filename} existiert bereits.`,
+    "en": `A file named ${filename} already exists.`,
+    })
+
     static NewFileName = () => lm({
     "de": "Neue Datei",
     "en": "new file",

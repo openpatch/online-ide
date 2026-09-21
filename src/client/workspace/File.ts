@@ -7,6 +7,7 @@ import { Main } from "../main/Main";
 import { Patcher } from "./Patcher";
 import { Workspace } from "./Workspace";
 import * as monaco from 'monaco-editor'
+import { isAssetDataUrl } from "./AssetFile";
 
 
 export class GUIFile extends CompilerFile {
@@ -64,7 +65,8 @@ export class GUIFile extends CompilerFile {
     }
 
     static restoreFromData(main: IMain, f: FileData): GUIFile {
-        let patched = Patcher.patch(f.text);
+        // Source migrations must never inspect or alter encoded binary assets.
+        let patched = isAssetDataUrl(f.text) ? { patchedText: f.text, modified: false } : Patcher.patch(f.text);
 
         let file = new GUIFile(main, f.name);
         file.setText(patched.patchedText);

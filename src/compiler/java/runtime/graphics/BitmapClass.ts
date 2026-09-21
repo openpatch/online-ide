@@ -14,6 +14,7 @@ import { JRC } from '../../language/JavaRuntimeLibraryComments.ts';
 import { PositionClass } from './PositionClass.ts';
 import { downloadFile } from '../../../../tools/HtmlTools.ts';
 import * as UPNG from 'upng-js'
+import { resolveWorkspaceAssetUrl } from '../../../../client/workspace/AssetFile.ts';
 
 
 export class BitmapClass extends ShapeClass {
@@ -110,10 +111,13 @@ export class BitmapClass extends ShapeClass {
     private loadImage(t: Thread, callback: CallbackFunction, imageUrl: string, left: number, top: number,
         displayWidth?: number, displayHeight?: number
     ) {
+        const resolvedImageUrl = resolveWorkspaceAssetUrl(
+            t.scheduler.interpreter.getMain()?.getCurrentWorkspace(), imageUrl
+        );
         this._cj$_constructor_$Shape$(t, () => {
             const oldState = t.state;
             t.state = ThreadState.waiting;
-            PIXI.Assets.load<PIXI.Texture>(imageUrl).then(texture => {
+            PIXI.Assets.load<PIXI.Texture>(resolvedImageUrl).then(texture => {
                 if (!texture) throw new Error("The response is not a supported image");
                 const sprite = new PIXI.Sprite(texture);
                 try {

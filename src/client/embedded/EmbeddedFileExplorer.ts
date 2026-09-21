@@ -10,6 +10,7 @@ import markdownit from 'markdown-it';
 import * as monaco from 'monaco-editor'
 import { Treeview } from "../../tools/components/treeview/Treeview.js";
 import { ProgrammingLanguageData } from "../../compiler/common/programminglanguage/ProgrammingLanguageData.js";
+import { isAssetFile, readBrowserFileAsDataUrl } from "../workspace/AssetFile.js";
 
 export class EmbeddedFileExplorer {
 
@@ -58,7 +59,7 @@ export class EmbeddedFileExplorer {
             file.setSaved(false);
             main.saveScripts();
             let fileType = FileTypeManager.filenameToFileType(newName, this.main.getCurrentProgrammingLanguage());
-            monaco.editor.setModelLanguage(file.getMonacoModel(), fileType.language);
+            if (!isAssetFile(file)) monaco.editor.setModelLanguage(file.getMonacoModel(), fileType.language);
 
             return { correctedName: newName, success: true };
         }
@@ -85,6 +86,10 @@ export class EmbeddedFileExplorer {
         this.treeview.nodeClickedCallback = (file) => {
             this.selectFile(file, true);
         }
+
+        this.treeview.captionLineAddIconButton(
+            "img_image-upload-dark", "right", () => this.uploadImageAssets(), EmbeddedMessages.UploadAsset()
+        );
 
     }
 
@@ -137,6 +142,16 @@ export class EmbeddedFileExplorer {
     selectFile(file: GUIFile, focusEditorSubsequently: boolean = true) {
 
         if (!file) return;
+
+        if (isAssetFile(file)) {
+            this.main.$monacoDiv.hide();
+            this.main.$hintDiv.addClass("joe_assetPreview").show().empty().append(
+                jQuery('<img alt="">').attr("src", file.getText()).attr("alt", file.name)
+            );
+            return;
+        }
+
+        this.main.$hintDiv.removeClass("joe_assetPreview");
 
         let type = FileTypeManager.filenameToFileType(file.name, this.main.getCurrentProgrammingLanguage());
 
@@ -201,6 +216,33 @@ export class EmbeddedFileExplorer {
 
                 break;
         }
+    }
+
+    private async uploadImageAssets() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.multiple = true;
+        input.onchange = async () => {
+            const workspace = this.main.getCurrentWorkspace();
+            for (const browserFile of Array.from(input.files ?? [])) {
+                if (workspace.getFiles().some(file => file.name === browserFile.name)) {
+                    alert(EmbeddedMessages.AssetAlreadyExists(browserFile.name));
+                    continue;
+                }
+
+                const file = this.main.addFile({
+                    title: browserFile.name,
+                    text: await readBrowserFileAsDataUrl(browserFile)
+                });
+                file.setSaved(false);
+                this.addFile(file);
+                this.main.saveScripts();
+                this.main.showResetButton();
+                this.treeview.selectElement(file, true);
+            }
+        };
+        input.click();
     }
 
     colorize(code: string[], codeMap: { [code: string]: string }, callback: () => void) {
