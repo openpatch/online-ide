@@ -458,3 +458,37 @@
     flex-wrap: wrap;
     row-gap: 4px;
 }
+
+/*
+ * Touch screens
+ */
+
+/* dragging a finger in a graphics program or on the speed control must not
+   scroll or zoom the page instead */
+.joeCssFence .jo_graphics,
+.joeCssFence .jo_speedcontrol-outer {
+    touch-action: none;
+}
+
+@media (pointer: coarse) {
+
+    /* bigger tap targets for the toolbar icons (16px wide otherwise) */
+    .joeCssFence .joe_controlsDiv .jo_button,
+    .joeCssFence .jo_tabheading-right .jo_button {
+        padding: 5px;
+        background-origin: content-box;
+    }
+
+    .joeCssFence .joe_controlsDiv {
+        align-items: center;
+        column-gap: 2px;
+    }
+
+    .joeCssFence .jo_speedcontrol-grip {
+        width: 14px;
+    }
+
+    .jo_contextmenu>div {
+        padding: 10px 14px;
+    }
+}

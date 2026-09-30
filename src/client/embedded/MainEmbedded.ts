@@ -798,7 +798,7 @@ export class MainEmbedded implements MainBase {
         $infoButton[0].title = 'Über die Online-IDE...';
         $controlsDiv.append($infoButton);
 
-        $infoButton.on('mousedown', (ev) => {
+        $infoButton.on('pointerdown', (ev) => {
             ev.preventDefault();
             ev.stopPropagation();
             openContextMenu([{
