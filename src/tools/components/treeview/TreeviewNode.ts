@@ -1,6 +1,6 @@
 import { AccordionMessages } from "../../../client/main/gui/language/GUILanguage.ts";
 import { DOM } from "../../DOM.ts";
-import { ContextMenuItem, isIPad, makeEditable, openContextMenu, preventTouchDefault } from "../../HtmlTools.ts";
+import { ContextMenuItem, isIPad, isTouchDevice, makeEditable, openContextMenu, preventTouchDefault } from "../../HtmlTools.ts";
 import { TabletConsoleLog } from "../../TabletConsoleLog.ts";
 import { ExpandCollapseComponent, ExpandCollapseListener, ExpandCollapseState } from "../ExpandCollapseComponent.ts";
 import { IconButtonComponent } from "../IconButtonComponent.ts";
@@ -402,7 +402,7 @@ export class TreeviewNode<E, K> {
         this.initDragAndDrop();
         this.initContextMenu();
 
-        if (isIPad() && !this.isRootNode()) {
+        if (isTouchDevice() && !this.isRootNode()) {
             this.addIconButton("img_ellipsis-dark", (object, node, event) => {
                 this.contextmenuHandler(event);
             }, "Kontextmenü aufrufen", true)
@@ -434,7 +434,7 @@ export class TreeviewNode<E, K> {
                     })
                 }
 
-                if (isIPad()) {
+                if (isTouchDevice()) {
                     contextMenuItems.push({
                         caption: TreeviewMessages.delete(),
                         callback: () => {

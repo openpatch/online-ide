@@ -442,6 +442,14 @@ export function isIPad() {
     return false;
 }
 
+/**
+ * true if the primary input is a finger (phones, tablets): no hover, no
+ * right-click, no delete key.
+ */
+export function isTouchDevice() {
+    return isIPad() || !!window.matchMedia?.("(pointer: coarse)").matches;
+}
+
 export function preventTouchDefault(element: HTMLElement) {
     const touchHandler = (ev: TouchEvent) => {
         if(ev.touches.length == 1){
