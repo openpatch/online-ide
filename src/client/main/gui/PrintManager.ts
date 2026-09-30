@@ -4,6 +4,7 @@ import { InputManager } from './InputManager.js';
 import { IPrintManager } from '../../../compiler/common/interpreter/IPrintManager.js';
 import { ColorClass } from '../../../compiler/java/runtime/graphics/ColorClass.js';
 import { ColorConverter } from '../../../compiler/java/runtime/graphics/ColorConverter.js';
+import { effectiveBackground, printColorAttribute, readableColor } from '../../../tools/ColorContrast.js';
 
 type PrintCommand = {
     text: string;
@@ -116,6 +117,9 @@ export class PrintManager extends IPrintManager {
         }
 
 
+        // colours chosen by the program get adjusted to the output's background
+        let background = this.printCommands.some(pc => pc.color?.startsWith("#")) ? effectiveBackground(this.$outputDiv[0]) : undefined;
+
         for (let pc of this.printCommands) {
 
             // replace spaces with &nbsp;'s
@@ -135,7 +139,11 @@ export class PrintManager extends IPrintManager {
 
             if (this.lastSpan == "" || this.color != pc.color) {
                 if (this.lastSpan != "") this.lastSpan += "</span>";      // new color => close old span
-                this.lastSpan += '<span style="color: ' + pc.color + '">';
+                if (pc.color.startsWith("#")) {
+                    this.lastSpan += '<span style="color: ' + readableColor(pc.color, background!) + '" ' + printColorAttribute + '="' + pc.color + '">';
+                } else {
+                    this.lastSpan += '<span style="color: ' + pc.color + '">';
+                }
                 if(pc.newLine && pc.text == "") this.lastSpan += "\u200b"; // makes empty lines possible; \u200b is a space with 0 width but full height.
                 this.color = pc.color;
             }
