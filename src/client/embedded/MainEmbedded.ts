@@ -177,6 +177,17 @@ export class MainEmbedded implements MainBase {
     horizontalSlider: Slider;
     verticalSlider: Slider;
 
+    /**
+     * Below this width (of the IDE, not of the window: it may sit in a narrow
+     * column of a page on a big screen) there's no room for editor and output
+     * side by side, so the output goes below the editor.
+     */
+    static readonly narrowLayoutMaxWidth = 640;
+    isNarrowLayout: boolean = false;
+    narrowLayoutSlider: Slider;
+    private centerDiv: HTMLElement;
+    private rightDivElement: HTMLElement;
+
     embeddedFullpageController: EmbeddedFullpageController;
 
     runExitListeners: OnRunExitListener[] = [];
@@ -708,6 +719,7 @@ export class MainEmbedded implements MainBase {
             this.horizontalSlider = new Slider($rightDiv[0], true, false, () => {
                 this.editor.editor.layout();
             });
+            this.initNarrowLayout($centerDiv[0], $rightDiv[0]);
         }
 
         this.actionManager = new ActionManager($div);
@@ -1182,6 +1194,49 @@ export class MainEmbedded implements MainBase {
             this.debugger.hide();
         }
 
+    }
+
+    private initNarrowLayout(centerDiv: HTMLElement, rightDiv: HTMLElement) {
+        this.centerDiv = centerDiv;
+        this.rightDivElement = rightDiv;
+
+        this.narrowLayoutSlider = new Slider(rightDiv, true, true, () => { }, centerDiv);
+        this.narrowLayoutSlider.toggleVisibility(false);
+
+        let update = () => this.updateNarrowLayout();
+        new ResizeObserver(update).observe(this.$outerDiv[0]);
+        // in fullscreen mode the panels live in an element that fills the window
+        window.addEventListener('resize', update);
+        update();
+    }
+
+    /**
+     * Called whenever the size of the IDE may have changed; switches between
+     * editor and output side by side and output below editor.
+     */
+    updateNarrowLayout() {
+        // outerDiv or - in fullscreen mode - the element that fills the window
+        let host = this.centerDiv?.parentElement;
+        if (!host) return;
+
+        let width = host.getBoundingClientRect().width;
+        if (width == 0) return;     // not visible, e.g. in a collapsed section of the page
+        let narrow = width <= MainEmbedded.narrowLayoutMaxWidth;
+
+        if (host != this.$outerDiv[0]) this.$outerDiv[0].classList.remove('joe_narrow');
+        host.classList.toggle('joe_narrow', narrow);
+
+        if (narrow == this.isNarrowLayout) return;
+        this.isNarrowLayout = narrow;
+
+        this.horizontalSlider?.toggleVisibility(!narrow);
+        this.narrowLayoutSlider.toggleVisibility(narrow);
+
+        if (!narrow) {
+            // heights set by dragging narrowLayoutSlider don't fit side-by-side layout
+            this.centerDiv.style.height = "";
+            this.rightDivElement.style.height = "";
+        }
     }
 
     setHorizontalSliderPosition(fraction: number): void {

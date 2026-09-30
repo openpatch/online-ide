@@ -411,3 +411,50 @@
         color: var(--file-active-border);
     }
 }
+
+/*
+ * Narrow layout (small screens or narrow columns): output below editor.
+ * MainEmbedded.updateNarrowLayout sets class joe_narrow on the element holding
+ * the panels - .joe_javaOnlineDiv itself (which is the .joeCssFence) or, in
+ * fullscreen mode, .jo_wholeWindow inside body.joeCssFence.
+ * !important is needed against the widths the sliders set inline.
+ */
+:is(.joeCssFence.joe_narrow, .joeCssFence .joe_narrow) {
+    flex-direction: column !important;
+}
+
+:is(.joeCssFence.joe_narrow, .joeCssFence .joe_narrow)>.joe_centerDiv {
+    flex: 1 1 0 !important;
+    min-height: 0;
+    width: auto !important;
+    height: auto;
+}
+
+:is(.joeCssFence.joe_narrow, .joeCssFence .joe_narrow)>.joe_rightDiv {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    height: 45%;
+    min-height: 100px;
+    border-left: none;
+    border-top: 1px solid gray;
+}
+
+/* the slider between editor and output: easier to hit with a finger */
+:is(.joeCssFence.joe_narrow, .joeCssFence .joe_narrow)>.joe_rightDiv>.jo_slider {
+    top: -5px !important;
+    height: 10px !important;
+}
+
+:is(.joeCssFence.joe_narrow, .joeCssFence .joe_narrow) .joe_bottomDiv {
+    height: 35%;
+    min-height: 90px;
+}
+
+:is(.joeCssFence.joe_narrow, .joeCssFence .joe_narrow) .joe_bottomDivFiles {
+    max-width: 40%;
+}
+
+:is(.joeCssFence.joe_narrow, .joeCssFence .joe_narrow) .joe_controlsDiv {
+    flex-wrap: wrap;
+    row-gap: 4px;
+}

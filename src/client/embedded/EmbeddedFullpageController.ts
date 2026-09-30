@@ -49,6 +49,7 @@ export class EmbeddedFullpageController {
                 // one over the page
                 this.wholeWindowElement.remove();
                 this.stopListeningForEscape();
+                this.mainEmbedded.updateNarrowLayout();
                 break;
             case 1:
                 this.additionalButtonTopRight = new IconButtonComponent(this.mainEmbedded.rightDiv.tabManager.tabheadingRightDiv,
@@ -68,6 +69,7 @@ export class EmbeddedFullpageController {
                 this.mainEmbedded.themeManager.addRootElement(this.wholeWindowElement);
                 transferElements(this.mainDiv, this.wholeWindowElement);
                 this.startListeningForEscape();
+                this.mainEmbedded.updateNarrowLayout();
                 break;
         }
     }
