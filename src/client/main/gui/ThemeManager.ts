@@ -179,9 +179,14 @@ export class ThemeManager {
                 "--console-fieldidentifier": "#e6e92c",
 
                 //junit
+                "--junit-methodidentifier-color": "#dcdcaa",
+                "--junit-classidentifier-color": "#3dc9b0",
+                "--junit-workspaceidentifier-color": "#b23dc9",
                 "--junit-details-color": "#a0a0a0",
                 "--junit-expected-color": "#2fed4f",
                 "--junit-actual-color": "#e06d4d",
+
+                "--stacktrace-link-color": "#b0b0b0",
 
                 // icons: the sprites are drawn for this theme already, so this
                 // is a no-op - but it has to be a filter function rather than
@@ -292,9 +297,17 @@ export class ThemeManager {
                 "--console-fieldidentifier": "#b37c35ff",
 
                 //junit
+                // at least 4.5:1 against white and against the light blue of
+                // a selected row in the test tree (WCAG AA); the dark theme's
+                // pale yellow and turquoise were all but invisible on white
+                "--junit-methodidentifier-color": "#795e26",
+                "--junit-classidentifier-color": "#1f6f86",
+                "--junit-workspaceidentifier-color": "#8e2aa3",
                 "--junit-details-color": "#6d6c6c",
-                "--junit-expected-color": "#1a8f2e",
+                "--junit-expected-color": "#137526",
                 "--junit-actual-color": "#964731",
+
+                "--stacktrace-link-color": "#5c5c5c",
 
                 // The icon sprites are light glyphs meant for a dark panel and
                 // there are no light-theme counterparts for most of them, so

@@ -3,7 +3,7 @@
     }
 
     .jo_stacktraceLink {
-        color: #b0b0b0;
+        color: var(--stacktrace-link-color, #b0b0b0);
         text-decoration: underline;
     }
 
