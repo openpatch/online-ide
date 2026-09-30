@@ -1,4 +1,5 @@
 import * as monaco from 'monaco-editor'
+import { readjustPrintColors } from '../../../tools/ColorContrast.js';
 
 export type Theme = {
     name: string,
@@ -74,6 +75,7 @@ export class ThemeManager {
         // let root = document.documentElement;
         for (const element of this.rootElements) {
             this.applyCssColors(element, theme);
+            readjustPrintColors(element);
         }
 
         this.currentTheme = theme;
@@ -119,16 +121,19 @@ export class ThemeManager {
                 "--error-filename": "#2a709e",
                 "--error-line-ative": "#094771",
                 "--error-line-hover": "rgba(96, 96, 96, 0.125)",
-                "--error-category-error": "rgba(255, 0, 0, 0.731)",
+                // Text in the dark theme is meant to reach at least 4.5:1
+                // (WCAG AA) against the background and against the blue of
+                // a selected row / highlighted error line (#094771).
+                "--error-category-error": "#ffa194",
                 "--error-category-warning": "yellow",
-                "--error-category-info": "rgb(88, 102, 221)",
-                "--treeview-errorcount": "rgb(222, 31, 31)",
+                "--error-category-info": "#aab4ff",
+                "--treeview-errorcount": "#ffa194",
                 "--debugger-index": "#b7b374",
-                "--console-error-caption": "#ff0000",
+                "--console-error-caption": "#ff6b6b",
                 "--disassembler-heading": "#51e24e",
                 "--disassembler-lambda-heading": "#d19bfa",
-                "--error-position": "#c0802d",
-                "--linecolumn": "#14c714",
+                "--error-position": "#e8b06a",
+                "--linecolumn": "#4fe04f",
                 "--reveal-error": "rgba(253, 101, 101, 0.745)",
                 "--reveal-method": "#2b2b7d2f",
                 "--reveal-errorline-background": "red",
@@ -354,11 +359,13 @@ export class ThemeManager {
                 { token: 'class', foreground: '#3DC9B0' },
                 { token: 'number', foreground: '#9ce870' },
                 { token: 'number.immediate', foreground: '#e0e0e0', fontStyle: 'italic' },
-                { token: 'type', foreground: '#a566cd' },
+                { token: 'type', foreground: '#bb8ee0' },
                 { token: 'identifier', foreground: '#668aff' },
                 { token: 'identifier.pseudodirective', foreground: '#92929294' },
                 // { token: 'identifier.tag', foreground: '#a566cd' },
-                { token: 'statement', foreground: '#ca5c5c', fontStyle: 'bold' },
+                { token: 'statement', foreground: '#e88080', fontStyle: 'bold' },
+                // vs-dark's comment colour is 4.2:1 on the editor background
+                { token: 'comment', foreground: '#7fae69' },
                 { token: 'keyword', foreground: '#f78e17' },
                 { token: 'datadirective', foreground: '#91720c93', fontStyle: 'bold' },
                 { token: 'string3', foreground: '#ff0000' },
