@@ -57,6 +57,8 @@ export class Slider {
         this.sliderDiv.style.width = this.vertHor ? "100%" : "4px";
         this.sliderDiv.style.height = this.vertHor ? "4px" : "100%";
         this.sliderDiv.style.cursor = this.vertHor ? "row-resize" : "col-resize";
+        // on touch screens: drag the slider instead of scrolling the page
+        this.sliderDiv.style.touchAction = "none";
 
         if (this.lastFirst) {
             this.sliderDiv.style.top = "0px";
@@ -82,6 +84,12 @@ export class Slider {
 
             md.stopPropagation();
             md.preventDefault();
+
+            // touch pointers are implicitly captured by sliderDiv, so pointermove
+            // events wouldn't reach the transparent overlay below
+            if (this.sliderDiv.hasPointerCapture?.(md.pointerId)) {
+                this.sliderDiv.releasePointerCapture(md.pointerId);
+            }
 
             let x = md.clientX;
             let y = md.clientY;
