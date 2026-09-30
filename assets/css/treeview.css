@@ -222,7 +222,7 @@
     }
 
     .jo_treeviewNode_errors {
-        color: rgb(222, 31, 31);
+        color: var(--treeview-errorcount, rgb(222, 31, 31));
         margin-right: 4px;
     }
 
