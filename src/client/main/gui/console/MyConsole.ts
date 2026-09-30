@@ -345,7 +345,7 @@ export class MyConsole {
         consoleTop.append(commandEntry.$consoleEntry);
 
 
-        let resultEntry = new ConsoleEntry(false, null, error.message, error.message, ConsoleMessages.error() + ":", null, true, "#ff0000");
+        let resultEntry = new ConsoleEntry(false, null, error.message, error.message, ConsoleMessages.error() + ":", null, true, "var(--console-error-caption, #ff0000)");
         this.consoleEntries.push(resultEntry);
         consoleTop.append(resultEntry.$consoleEntry);
 

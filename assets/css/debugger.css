@@ -89,7 +89,7 @@
     }
 
     .jo_debugger_index {
-        color: #b7b374;
+        color: var(--debugger-index, #b7b374);
     }
 
 

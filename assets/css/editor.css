@@ -742,15 +742,15 @@
     }
 
     .jo_warning_category {
-        color: yellow;
+        color: var(--error-category-warning, yellow);
     }
 
     .jo_info_category {
-        color: rgb(88, 102, 221);
+        color: var(--error-category-info, rgb(88, 102, 221));
     }
 
     .jo_error_category {
-        color: rgba(255, 0, 0, 0.731);
+        color: var(--error-category-error, rgba(255, 0, 0, 0.731));
     }
 
     .jo_revealWarning {
