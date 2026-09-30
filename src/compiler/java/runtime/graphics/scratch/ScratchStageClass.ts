@@ -23,7 +23,7 @@ import { scratchSpriteList } from "./ScratchLists";
 import { ScratchPenClass } from "./ScratchPenClass";
 import { IScratchEventReceiver, ScratchRuntimeManager } from "./ScratchRuntimeManager";
 import { ScratchSoundBank } from "./ScratchSounds";
-import { ScratchSpriteClass } from "./ScratchSpriteClass";
+import { isLibraryInstance, ScratchSpriteClass } from "./ScratchSpriteClass";
 import { ScratchTextClass } from "./ScratchTextClass";
 import { ScratchTimerClass } from "./ScratchTimerClass";
 import {
@@ -34,6 +34,10 @@ import { beginScratchProgram, desktopOnly, desktopOnlyValue } from "./ScratchUns
 import { BooleanSupplierInterface } from "./BooleanSupplierInterface";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
+import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
+
+/** Processing's default frame rate, which upstream never changes. */
+const SCRATCH_FRAMES_PER_SECOND = 60;
 
 /** Upstream's Text starts at 14pt, which is what display() is drawn in. */
 const DISPLAY_FONT_SIZE = 14;
@@ -183,8 +187,9 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
 
     /**
      * The assets path upstream reads images and sounds from. There is no such
-     * folder in the browser — only the built-in names — so the path is accepted
-     * and ignored, which at least lets a program written for the desktop run.
+     * folder in the browser: a program finds its files among the workspace's
+     * assets by their full path (see ScratchWorkspaceAssets), so the path is
+     * accepted and ignored.
      */
     _cj$_constructor_$Stage$int$int$string(
         t: Thread, callback: CallbackParameter, width: number, height: number, _assets: string,
@@ -203,6 +208,17 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             const firstStageOfRun = beginScratchStages(world);
             if (firstStageOfRun) {
                 beginScratchProgram(interpreter);
+                // the program's own pictures, sounds and fonts, found by the
+                // paths it would read them from on the desktop
+                // (an interpreter without an IDE around it, as in the tests, has none)
+                ScratchWorkspaceAssets.load(interpreter.getMain?.()?.getCurrentWorkspace());
+                // Upstream runs at Processing's default of 60 frames a second,
+                // and run() moves things per frame; at the World's usual 30 a
+                // sprite doing move(2) crossed the stage at half the speed.
+                // The World is built anew for every run, so other programs keep
+                // their 30.
+                const ticker = world.app?.ticker;
+                if (ticker) ticker.maxFPS = SCRATCH_FRAMES_PER_SECOND;
             }
             this.scratchLayers = createScratchLayers(world.app.stage);
             this.scratchLayers.root.visible = false;
@@ -216,7 +232,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             t.state = ThreadState.waiting;
             // Sounds need no loading step: their URLs come from the bundler, and the
             // OGG files are fetched when a sound is first played.
-            Promise.all([ScratchCostumes.load(), loadScratchFont()]).then(() => {
+            Promise.all([ScratchCostumes.load(), loadScratchFont(), ScratchWorkspaceAssets.ready()]).then(() => {
                 // The clock starts where the program does, which is here and not
                 // where the loading began: the thread is parked until the
                 // spritesheets are there, and a clock started before that wait
@@ -332,10 +348,12 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      * nothing, because the debug overlay is painted once per frame from act().
      * It cannot be done in the constructor for a subclass, because act() must
      * not reach an object whose own constructor has not finished; but where no
-     * callback came in there is no subclass constructor left to wait for.
+     * callback came in there is no subclass constructor left to wait for -
+     * unless the object is of a class the program declares, whose constructor
+     * calls super() without a callback too (see ScratchSpriteClass).
      */
     private registerIfNobodyElseWill(t: Thread, callback: CallbackParameter) {
-        if (!callback) this._registerListeners(t);
+        if (!callback && isLibraryInstance(this)) this._registerListeners(t);
     }
 
     // Called by the compiler after the constructor completes; register overridden hooks.

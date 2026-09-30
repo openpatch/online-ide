@@ -1514,6 +1514,14 @@ export class SRC {
         "de": "Setzt die Trefferfläche aus x/y-Paaren; (0/0) ist die Mitte der Figur",
         "en": "Sets the hitbox from pairs of x and y; (0/0) is the middle of the sprite",
     });
+    static spriteSetUIComment = () => lm({
+        "de": "Legt fest, ob die Figur zur Benutzeroberfläche gehört: Dann bewegt die Kamera sie nicht mit, und sie stößt mit nichts zusammen",
+        "en": "Chooses whether the sprite belongs to the interface, where the camera does not move it and it collides with nothing",
+    });
+    static spriteIsUIComment = () => lm({
+        "de": "Gibt genau dann true zurück, wenn die Figur zur Benutzeroberfläche gehört",
+        "en": "Returns true exactly when the sprite belongs to the interface",
+    });
     static spriteSetHitbox2Comment = () => lm({
         "de": "Setzt die Trefferfläche auf die angegebene Form; (0/0) ist die Mitte der Figur",
         "en": "Sets the hitbox to the given shape; (0/0) is the middle of the sprite",

@@ -1,4 +1,5 @@
 import { Howl, Howler } from "howler";
+import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 
 /**
  * The OGG files copied by src/development/scratchAssetsGenerator.js, imported as
@@ -27,11 +28,14 @@ export class ScratchSound {
     private howl?: any;
     private soundId?: number;
 
-    constructor(public name: string, private url: string) { }
+    constructor(public name: string, private url: string, private format?: string) { }
 
     private getHowl(): any {
         if (!this.howl) {
-            this.howl = new Howl({ src: [this.url], preload: true, html5: false });
+            this.howl = new Howl({
+                src: [this.url], preload: true, html5: false,
+                ...(this.format ? { format: [this.format] } : {}),
+            });
         }
         return this.howl;
     }
@@ -102,6 +106,9 @@ export class ScratchSounds {
     }
 
     static create(name: string, nameOrPath: string): ScratchSound | undefined {
+        // a sound file of the workspace, by the path the desktop would read
+        const own = ScratchWorkspaceAssets.getSound(nameOrPath);
+        if (own) return new ScratchSound(name, own.url, own.format);
         const url = this.resolveUrl(nameOrPath);
         return url ? new ScratchSound(name, url) : undefined;
     }

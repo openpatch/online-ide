@@ -626,6 +626,14 @@ export abstract class BinopCastCodeGenerator {
             if ([nByte, nShort, nInteger, nLong].indexOf(snippetTypeIndex) >= 0) {
                 return this.convertNumberToChar(snippet);
             }
+            // (char) 65.7 is (char) (int) 65.7 in Java: truncated towards zero,
+            // then the low 16 bits. `| 0` truncates, fromCharCode keeps 16 bits.
+            if ((snippetTypeIndex == nFloat || snippetTypeIndex == nDouble) && castType == "explicit") {
+                let truncated = snippet.isConstant()
+                    ? new StringCodeSnippet("" + ((<number>snippet.getConstantValue()) | 0), snippet.range!, this.intType, (<number>snippet.getConstantValue()) | 0)
+                    : new OneParameterTemplate('((§1) | 0)').applyToSnippet(this.intType, snippet.range!, snippet);
+                return this.convertNumberToChar(truncated);
+            }
             this.pushError(JCM.cantCastType(type.identifier, castTo.identifier), "error", snippet.range!);
             return snippet;
         }

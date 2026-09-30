@@ -1574,7 +1574,10 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
                 if (m.visibility == TokenType.keywordProtected) {
                     let mClassIdentifier = m.classEnumInterface.identifier;
                     if (this.classOfCurrentlyCompiledStaticInitialization) return this.classOfCurrentlyCompiledStaticInitialization.identifier == mClassIdentifier;
-                    if (this.currentSymbolTable.classContext) return this.currentSymbolTable.classContext.fastExtendsImplements(mClassIdentifier);
+                    // extendsImplements knows its types by their full name, so a
+                    // class in a package (org.openpatch.scratch.Sprite) has to be
+                    // asked for by that name
+                    if (this.currentSymbolTable.classContext) return this.currentSymbolTable.classContext.fastExtendsImplements(m.classEnumInterface.pathAndIdentifierAsDotSeparatedString);
                     return false;
                 }
             })

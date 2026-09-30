@@ -126,7 +126,11 @@ export class TypeResolver {
                     this.pushError(JCM.typenameAlreadyInUse(tdn.identifier, otherType.identifierRange, otherType.module.file.name), tdn.range, tdn.module, "error");
                     continue;
                 }
-                otherType = this.libraryModuleManager.typestore.getType(tdn.identifier);
+                // a library type in a package is still in the way when it is
+                // imported implicitly, like the robot.Robot of the robot world:
+                // the program's `new Robot()` would silently build that one
+                otherType = this.libraryModuleManager.typestore.getType(tdn.identifier)
+                    ?? this.globallyImportedTypesMap.get(tdn.identifier);
                 if (otherType) {
                     this.pushError(JCM.typenameUsedInLibrary(tdn.identifier), tdn.range, tdn.module, "error");
                     continue;

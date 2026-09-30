@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 
 // Kenney atlases imported by src/development/scratchAssetsGenerator.js.
 // Both JSON descriptor and PNG are imported as hashed asset URLs (loaded on demand);
@@ -61,8 +62,15 @@ export class ScratchCostumes {
         return this.loadPromise;
     }
 
-    /** Resolve a costume name to a texture, or undefined if unknown. */
+    /**
+     * Resolve a costume name to a texture, or undefined if unknown. An image of
+     * the workspace wins over a built-in costume, as a file next to the program
+     * does on the desktop.
+     */
     static getTexture(name: string): PIXI.Texture | undefined {
+        const own = ScratchWorkspaceAssets.getTexture(name);
+        if (own) return own;
+
         // strip an optional .png suffix students might copy from the atlas
         name = name.replace(/\.png$/i, "");
 

@@ -58,12 +58,16 @@ export class ScratchUISpriteClass extends ScratchSpriteClass {
         return super.scaleMagnitudeY();
     }
 
+    /** The stretched costume inside the container the sprite moves around. */
+    private nineSliceSprite?: PIXI.NineSliceSprite;
+
     private applyNineSliceSize() {
-        const c = this.container as any;
-        if (this.nineSlice && c) {
-            if (this.uiWidth != null) c.width = this.uiWidth;
-            if (this.uiHeight != null) c.height = this.uiHeight;
-        }
+        const ns = this.nineSliceSprite;
+        if (!this.nineSlice || !ns || ns.destroyed) return;
+        if (this.uiWidth != null) ns.width = this.uiWidth;
+        if (this.uiHeight != null) ns.height = this.uiHeight;
+        // centred in its container, which is where the sprite's position is
+        ns.position.set(-ns.width / 2, -ns.height / 2);
     }
 
     _setWidthPx(width: number) { this.uiWidth = width; this.applyNineSliceSize(); this.applyState(); }
@@ -81,11 +85,41 @@ export class ScratchUISpriteClass extends ScratchSpriteClass {
                 bottomHeight: this.nineSlice.bottom,
                 leftWidth: this.nineSlice.left,
             });
-            // NineSliceSprite has no anchor; centre it via its pivot instead.
-            ns.pivot.set(ns.width / 2, ns.height / 2);
-            return ns;
+            // NineSliceSprite has no anchor, and a pivot does not centre it:
+            // applyState() places the sprite with setFromMatrix, which moves the
+            // position to cancel the pivot out. So it is offset inside a
+            // container of its own instead.
+            const box = new PIXI.Container();
+            box.addChild(ns);
+            this.nineSliceSprite = ns;
+            ns.position.set(-ns.width / 2, -ns.height / 2);
+            return box;
         }
+        this.nineSliceSprite = undefined;
         return super.createCostumeDisplay(texture);
+    }
+
+    /**
+     * PixiJS 8.3's NineSliceSprite#destroy ends by assigning to its read-only
+     * `bounds` and throws, after it has let go of everything else. Left alone,
+     * the error aborts switchCostume() and whatever the program does after it.
+     */
+    protected destroyCostumeDisplay(display: PIXI.Container) {
+        for (const child of display.children.slice()) {
+            if (!(child instanceof PIXI.NineSliceSprite)) continue;
+            try {
+                child.destroy();
+            } catch (e) {
+                if (!(e instanceof TypeError)) throw e;
+            }
+        }
+        display.destroy();
+    }
+
+    /** A new costume keeps the size the sprite was given, as upstream. */
+    protected _applyCostumeIndex(index: number) {
+        super._applyCostumeIndex(index);
+        this.applyNineSliceSize();
     }
 
     _setNineSlice(top: number, right: number, bottom: number, left: number) {

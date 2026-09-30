@@ -13,6 +13,13 @@ assertEquals('A', c1, "Casting int to char doesn't work.");
 assertEquals('A', (char)65, "Casting int to char doesn't work.");
 assertEquals(77, (char)65 + 12, "Casting int to char doesn't work.");
 
+double d = 65.9;
+assertEquals('A', (char)d, "Casting double to char doesn't truncate.");
+assertEquals('A', (char)65.9, "Casting a double constant to char doesn't truncate.");
+assertEquals('B', (char)(d + 1), "Casting a double expression to char doesn't work.");
+float f = 66.5f;
+assertEquals('B', (char)f, "Casting float to char doesn't work.");
+
 
 /**::
  * modulo for chars

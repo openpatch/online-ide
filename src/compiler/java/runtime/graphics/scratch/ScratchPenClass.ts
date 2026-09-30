@@ -122,6 +122,15 @@ export class ScratchPenClass extends ObjectClass {
      * Putting an already-down pen down again adds nothing, as upstream only
      * begins a path when the last one was closed.
      */
+    /** Upstream's Pen(Pen p): colour, size and transparency, and down if it was. */
+    _copyFrom(other: ScratchPenClass) {
+        this.colorHue = other.colorHue;
+        this.colorInt = other.colorInt;
+        this.size = other.size;
+        this.opacity = other.opacity;
+        if (other.penDown) this._down(); else this._up();
+    }
+
     _down() {
         this.penDown = true;
         if (this.pathOpen) return;

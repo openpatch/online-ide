@@ -11,6 +11,7 @@ import { ScratchVector2Class } from "./ScratchVector2Class";
 import { TextAlign, TextAlignEnum } from "./TextAlignEnum";
 import { TextStyle, TextStyleEnum } from "./TextStyleEnum";
 import { SRC } from "./ScratchLibraryComments";
+import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 
 /** Font shipped with the Scratch library (see src/development/scratchAssetsGenerator.js). */
 const DEFAULT_FONT = "UbuntuMono, monospace";
@@ -213,6 +214,9 @@ export class ScratchTextClass extends ObjectClass {
             style.wordWrap = true;
             style.wordWrapWidth = wrapAt;
         }
+        // Processing puts textLeading(textSize + 4) from one baseline to the
+        // next; PIXI's line step is lineHeight + leading
+        if (this.style === TextStyle.PLAIN) style.lineHeight = this.textSize;
         const label = new PIXI.Text({ text: this.text, style });
 
         // PLAIN is upstream's default: no frame, just the text. It is centred on
@@ -228,7 +232,7 @@ export class ScratchTextClass extends ObjectClass {
             else if (this.align !== TextAlign.CENTER) offset = 0;
             const plain = new PIXI.Container();
             plain.addChild(label);
-            label.position.set(offset, -label.height / 2);
+            label.position.set(offset, this.plainTop(style));
             plain.position.set(x, y);
             this.attach(plain, wasIn, wasAt);
             return;
@@ -356,8 +360,30 @@ export class ScratchTextClass extends ObjectClass {
     _setStrokeColorHue(h: number) { this.strokeColor = ScratchColorClass.fromHue(h); this.redraw(); }
     _setStrokeColorObj(c: ScratchColorClass) { if (c) { this.strokeColor = c; this.redraw(); } }
 
+    /**
+     * Where the top of a PLAIN label goes, relative to the text's position.
+     *
+     * Upstream draws it with textAlign(…, CENTER), and Processing centres a
+     * block by putting the first baseline at y + (textAscent - n * leading) / 2,
+     * n being the number of line breaks. Upstream counts them after
+     * String#split, which drops trailing empty lines, so "a\nb\n" sits where
+     * "a\nb" does. PIXI draws that baseline ascent + (step - fontSize) / 2
+     * below the top of the label.
+     */
+    private plainTop(style: PIXI.TextStyle): number {
+        const metrics = PIXI.CanvasTextMetrics.measureText(this.text, style);
+        const font = metrics.fontProperties;
+        const step = metrics.lineHeight;
+        const lines = metrics.lines.slice();    // wrapped, as upstream's are
+        while (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+        const breaks = lines.length - 1;
+        const firstBaseline = (font.ascent - breaks * step) / 2;
+        return firstBaseline - font.ascent - Math.max(0, (step - font.fontSize) / 2);
+    }
+
     // ---- fonts ----
-    // The browser has no font files to load, so a "font" here is a CSS font-family.
+    // A "font" here is a CSS font-family, or the path of a font file in the
+    // workspace, which stands for the family that file was registered under.
     // "default" is always present and maps to the bundled UbuntuMono.
     // "default" follows Text.useFont(), so changing it affects new texts
     private fonts: { name: string; family: string }[] = [{ name: "default", family: ScratchTextClass.defaultFont }];
@@ -365,7 +391,8 @@ export class ScratchTextClass extends ObjectClass {
 
     _addFont(name: string, fontFamily: string) {
         if (this.fonts.some(f => f.name === name)) return;
-        this.fonts.push({ name, family: fontFamily });
+        const own = ScratchWorkspaceAssets.getFontFamily(fontFamily);
+        this.fonts.push({ name, family: own ?? fontFamily });
     }
     _switchFont(name: string) {
         const i = this.fonts.findIndex(f => f.name === name);

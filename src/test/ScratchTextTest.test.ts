@@ -70,6 +70,17 @@ function order(stage: any): string[] {
         (child: PIXI.Container) => ((child.children[0] as PIXI.Text)?.text) ?? "");
 }
 
+/** The font PIXI measures a label's text in. */
+function fontOf(label: PIXI.Text) {
+    return PIXI.CanvasTextMetrics.measureText(label.text, label.style as PIXI.TextStyle).fontProperties;
+}
+
+/** Where PIXI draws the first baseline of a label, relative to the text's position. */
+function firstBaseline(label: PIXI.Text): number {
+    const metrics = PIXI.CanvasTextMetrics.measureText(label.text, label.style as PIXI.TextStyle);
+    return label.y + metrics.fontProperties.ascent + Math.max(0, (metrics.lineHeight - metrics.fontProperties.fontSize) / 2);
+}
+
 describe('Scratch text', () => {
 
     test('a text is drawn above the sprites, in the layer of its own', () => {
@@ -156,7 +167,21 @@ describe('Scratch text', () => {
         expect(container.x).toBe(world.width / 2);
         expect(container.y).toBe(world.height / 2);
         expect(label.x).toBeCloseTo(-label.width / 2);
-        expect(label.y).toBeCloseTo(-label.height / 2);
+        // vertically as Processing's textAlign(…, CENTER): the baseline half
+        // an ascent below the position
+        expect(firstBaseline(label)).toBeCloseTo(fontOf(label).ascent / 2);
+    });
+
+    test('plain lines are centred the way Processing centres them', () => {
+        // Processing moves the first baseline up by half a leading for every
+        // line break. A trailing one does not count: upstream splits the text
+        // on "\n" first, and Java's split drops trailing empty lines
+        const world = fakeWorld();
+        const stage = stageWithLayers(world);
+        const label = labelOf(textOn(stage, world, "a\nb\nc\n"));
+        const step = 14 + 4;   // textLeading(textSize + 4), at the default 14
+        expect(PIXI.CanvasTextMetrics.measureText("a", label.style as PIXI.TextStyle).lineHeight).toBe(step);
+        expect(firstBaseline(label)).toBeCloseTo((fontOf(label).ascent - 2 * step) / 2);
     });
 
     test('a width with no room for a letter does not wrap the words', () => {

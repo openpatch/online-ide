@@ -193,6 +193,8 @@ export class ScratchSpriteClass extends ShapeClass {
 
         { type: "method", signature: "void setHitbox(double... points)", native: ScratchSpriteClass.prototype._setHitbox, comment: SRC.spriteSetHitboxComment },
         { type: "method", signature: "void setHitbox(Shape shape)", native: ScratchSpriteClass.prototype._setHitboxShape, comment: SRC.spriteSetHitbox2Comment },
+        { type: "method", signature: "protected void setUI(boolean isUI)", native: ScratchSpriteClass.prototype._setUI, comment: SRC.spriteSetUIComment },
+        { type: "method", signature: "protected boolean isUI()", native: ScratchSpriteClass.prototype._isUI, comment: SRC.spriteIsUIComment },
         { type: "method", signature: "Hitbox getHitbox()", native: ScratchSpriteClass.prototype._getHitbox, comment: SRC.spriteGetHitboxComment },
         { type: "method", signature: "void enableHitbox()", native: ScratchSpriteClass.prototype._enableHitbox, comment: SRC.spriteEnableHitboxComment },
         { type: "method", signature: "void disableHitbox()", native: ScratchSpriteClass.prototype._disableHitbox, comment: SRC.spriteDisableHitboxComment },
@@ -278,7 +280,20 @@ export class ScratchSpriteClass extends ShapeClass {
                 this.direction = other.direction;
                 this.size = other.size;
                 this.rotationStyle = other.rotationStyle;
+                this._setUI(other.ui);
+                this.hitboxEnabled = other.hitboxEnabled;
+                this.customHitboxPoints = other.customHitboxPoints?.slice();
                 if (other.currentCostume >= 0) this._applyCostumeIndex(other.currentCostume);
+                // as upstream's copy constructor: hidden stays hidden, and the
+                // pen keeps its colour, size and whether it is down
+                if (other.container && !other.container.destroyed) this.container.visible = other.container.visible;
+                if (other.penObj) {
+                    // from where the clone is, not from where its pen was made
+                    const pen = this._getPen();
+                    pen.px = this.sx;
+                    pen.py = this.sy;
+                    pen._copyFrom(other.penObj);
+                }
                 this.applyState();
             }
             t.s.push(this);
@@ -343,9 +358,15 @@ export class ScratchSpriteClass extends ShapeClass {
      * the constructor for a subclass, because act() must not reach an object
      * whose own constructor has not finished; but where no callback came in
      * there is no subclass constructor left to wait for.
+     *
+     * <p>A missing callback alone does not say that, though: a subclass
+     * constructor calls super() without one as well. Registering then would let
+     * act() call run() while the subclass constructor is still waiting for its
+     * costume - before it has set the fields run() uses. So it is left to the
+     * compiler whenever the object is of a class the program declares.
      */
     protected registerIfNobodyElseWill(t: Thread, callback: CallbackParameter) {
-        if (!callback) this._registerListeners(t);
+        if (!callback && isLibraryInstance(this)) this._registerListeners(t);
     }
 
     _registerListeners(t: Thread): void {
@@ -669,6 +690,11 @@ export class ScratchSpriteClass extends ShapeClass {
         return { w: t.width, h: t.height };
     }
 
+    /** Throw away the display object of the costume worn so far. */
+    protected destroyCostumeDisplay(display: PIXI.Container) {
+        display.destroy();
+    }
+
     /** Build the PIXI display object for a costume. UISprite overrides for nine-slice. */
     protected createCostumeDisplay(texture: PIXI.Texture): PIXI.Container {
         const sprite = new PIXI.Sprite(texture);
@@ -683,13 +709,15 @@ export class ScratchSpriteClass extends ShapeClass {
 
         const parent = this.container?.parent;
         const sprite = this.createCostumeDisplay(texture);
+        // a hidden sprite stays hidden in its next costume
+        if (this.container && !this.container.destroyed) sprite.visible = this.container.visible;
         // put the new display object exactly where the old one was, so switching
         // costume does not shuffle the sprite to the front of its layer
         if (parent) {
             const index = parent.getChildIndex(this.container);
             parent.addChildAt(sprite, index);
         }
-        if (this.container && !this.container.destroyed) this.container.destroy();
+        if (this.container && !this.container.destroyed) this.destroyCostumeDisplay(this.container);
         this.container = sprite;
 
         this.centerXInitial = 0;
@@ -888,7 +916,12 @@ export class ScratchSpriteClass extends ShapeClass {
         this._pointInDirectionV(new ScratchVector2Class(other.sx - this.sx, other.sy - this.sy));
     }
     _setDirectionV(v: ScratchVector2Class) { this._pointInDirectionV(v); }
-    _moveV(v: ScratchVector2Class) { if (v) this._setPosition(this.sx + v.x, this.sy + v.y); }
+    /** As upstream: turn to the vector's angle, then move by its length. */
+    _moveV(v: ScratchVector2Class) {
+        if (!v) return;
+        this._setDirection(v._angle());
+        this._move2(v._length());
+    }
     _goToSprite(other: ScratchSpriteClass) { if (other) this._setPosition(other.sx, other.sy); }
     _setRotationStyle(style: RotationStyleEnum) {
         this.rotationStyle = style.ordinal as RotationStyle;
@@ -994,7 +1027,24 @@ export class ScratchSpriteClass extends ShapeClass {
 
     // ---- sensing ----
     /** UISprites are interface elements and never take part in collisions (as upstream). */
-    isUI(): boolean { return false; }
+    isUI(): boolean { return this.ui; }
+
+    private ui: boolean = false;
+
+    _isUI(): boolean { return this.isUI(); }
+
+    /**
+     * Pin the sprite to the interface, where the camera does not move it and
+     * nothing collides with it — or take it back into the world.
+     */
+    _setUI(isUI: boolean) {
+        if (this.ui === isUI) return;
+        this.ui = isUI;
+        const layer = spriteLayerOf(this, this.isUI());
+        if (!layer) return;
+        if (this.container && !this.container.destroyed) layer.addChild(this.container);
+        if (this.speechBubble && !this.speechBubble.destroyed) layer.addChild(this.speechBubble);
+    }
 
     _isTouchingSprite(other: ScratchSpriteClass): boolean {
         if (!other || !other.container) return false;
@@ -1260,4 +1310,9 @@ export class ScratchSpriteClass extends ShapeClass {
         const stage = activeScratchStage<{ camera?: { x: number, y: number, zoom: number } }>();
         return stage?.camera;
     }
+}
+
+/** Whether `object` is of a library class itself rather than of a class the program declares. */
+export function isLibraryInstance(object: object): boolean {
+    return (object.constructor as any).type?.isLibraryType !== false;
 }
