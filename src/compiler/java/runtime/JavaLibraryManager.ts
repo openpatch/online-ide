@@ -29,7 +29,7 @@ export class JavaLibraryManager implements LibraryManager {
         },
         {
             identifier: 'Scratch for Java',
-            description: 'Scratch-artige Klassenbibliothek (Stage, Sprite, Costumes) — Port von org.openpatch.scratch',
+            description: 'Scratch-artige Klassenbibliothek (Stage, Sprite, Costumes) — Port von org.openpatch.scratch. Zusammen mit den Abiturklassen NRW liefern getAll, find und getTouchingSprites deren List',
             id: 'scratch'
         },
     ];
@@ -45,6 +45,11 @@ export class JavaLibraryManager implements LibraryManager {
             new DatabaseModule()
         ]
 
+        // Scratch next to the NRW classes is the NRW build of Scratch for Java: nrw.* makes
+        // a student's List the nrw List, so getAll, find and getTouchingSprites hand out
+        // that List too; with java.util.List they could not be used together at all.
+        let nrwLists = this.libraryIds.indexOf("nrw") >= 0;
+
         for (let lib of this.libraryIds) {
             switch (lib) {
                 case "gng": additionalModules.push(new GNGModule());
@@ -53,7 +58,7 @@ export class JavaLibraryManager implements LibraryManager {
                     break;
                 case "niedersachsen": additionalModules.push(new NiedersachsenModule());
                     break;
-                case "scratch": additionalModules.push(new ScratchModule());
+                case "scratch": additionalModules.push(new ScratchModule(nrwLists));
                     break;
             }
         }
