@@ -135,10 +135,10 @@ export class GenericTypeParameter extends NonPrimitiveType {
     canBeReplacedByConcreteType(gpType: JavaType): boolean {
         if (!(gpType instanceof NonPrimitiveType)) return false;
         for (let ub of this.upperBounds) {
-            if (!gpType.fastExtendsImplements(ub.identifier)) return false;
+            if (!gpType.fastExtendsImplements(ub.pathAndIdentifierAsDotSeparatedString)) return false;
         }
 
-        if (this.lowerBound && !this.lowerBound.fastExtendsImplements(gpType.identifier)) return false;
+        if (this.lowerBound && !this.lowerBound.fastExtendsImplements(gpType.pathAndIdentifierAsDotSeparatedString)) return false;
 
         return true;
     }

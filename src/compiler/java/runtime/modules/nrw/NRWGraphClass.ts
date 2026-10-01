@@ -49,6 +49,8 @@ export class NRWGraphClass extends ObjectClass {
     _constructor1(){
         this.vertices = [];
         this.edges = [];
+
+        return this;
     }
 
     _getVertices(){
