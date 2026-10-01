@@ -39,6 +39,13 @@ export interface IMain {
 
     getCurrentWorkspace(): Workspace | undefined;
 
+    /**
+     * The URL a relative asset path (an image or sound a program loads by path)
+     * starts from, standing in for the project folder. Only an embedding page
+     * can say what that is; see ScratchAssetUrls.
+     */
+    getAssetBaseUrl?(): string | undefined;
+
     adjustWidthToWorld(): void;
 
     showFile(file?: CompilerFile): void;

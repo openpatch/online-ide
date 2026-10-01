@@ -5,6 +5,7 @@ import { ThreadState } from "../../../../common/interpreter/ThreadState";
 import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 import { trackTexture } from "./ScratchTextureSampling";
+import { resolveAssetUrl } from "./ScratchAssetUrls";
 
 // Kenney atlases imported by src/development/scratchAssetsGenerator.js.
 // Both JSON descriptor and PNG are imported as hashed asset URLs (loaded on demand);
@@ -77,7 +78,7 @@ export class ScratchCostumes {
         if (own) return own;
 
         // an image URL this page has already loaded, e.g. by addCostume
-        const loaded = this.loadedTextures.get(name);
+        const loaded = this.loadedTextures.get(resolveAssetUrl(name));
         if (loaded) return loaded;
 
         // strip an optional .png suffix students might copy from the atlas
@@ -111,16 +112,18 @@ export class ScratchCostumes {
         const bundled = this.getTexture(nameOrUrl);
         if (bundled) return bundled;
 
-        let pending = this.externalTextures.get(nameOrUrl);
+        // a relative path is relative to the project folder, see ScratchAssetUrls
+        const url = resolveAssetUrl(nameOrUrl);
+        let pending = this.externalTextures.get(url);
         if (!pending) {
-            pending = PIXI.Assets.load<PIXI.Texture>(nameOrUrl).then(texture => {
+            pending = PIXI.Assets.load<PIXI.Texture>(url).then(texture => {
                 if (!texture) throw new Error("The response is not a supported image");
-                this.loadedTextures.set(nameOrUrl, texture);
+                this.loadedTextures.set(url, texture);
                 return trackTexture(texture);
             });
-            this.externalTextures.set(nameOrUrl, pending);
+            this.externalTextures.set(url, pending);
             // A temporary network problem must not poison the cache forever.
-            pending.catch(() => this.externalTextures.delete(nameOrUrl));
+            pending.catch(() => this.externalTextures.delete(url));
         }
         return pending;
     }

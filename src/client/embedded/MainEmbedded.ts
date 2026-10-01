@@ -111,6 +111,14 @@ export type JavaOnlineConfig = {
     outputWidth?: string,
 
     /**
+     * Where a program's relative paths start, e.g. `addCostume("held",
+     * "assets/held.png")`: a URL standing in for the project folder, so the same
+     * program runs with an `assets` folder next to it on the desktop and here.
+     * Left out, relative paths start from the page.
+     */
+    assetBaseUrl?: string,
+
+    /**
      * "dark" or "light" — the same two themes the full IDE offers under
      * Einstellungen.
      *
@@ -1265,6 +1273,10 @@ export class MainEmbedded implements MainBase {
     }
 
     isEmbedded(): boolean { return true; }
+
+    getAssetBaseUrl(): string | undefined {
+        return this.config.assetBaseUrl;
+    }
 
     getCompiler(): Compiler {
         return this.language.getCompiler(this);

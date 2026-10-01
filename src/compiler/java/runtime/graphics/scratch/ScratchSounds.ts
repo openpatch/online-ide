@@ -1,4 +1,5 @@
 import { Howl, Howler } from "howler";
+import { resolveAssetUrl } from "./ScratchAssetUrls";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 
 /**
@@ -93,14 +94,15 @@ export class ScratchSounds {
     /**
      * Resolve a built-in sound name or a user path/URL to a playable URL.
      * Built-in names win; anything containing a slash or a file extension other
-     * than a known built-in is treated as a path relative to the site root.
+     * than a known built-in is a path or URL; a relative path is relative to
+     * the project folder (see ScratchAssetUrls).
      */
     static resolveUrl(nameOrPath: string): string | undefined {
         const bare = nameOrPath.replace(/\.ogg$/i, "");
         const url = this.urls.get(bare.toLowerCase());
         if (url) return url;
         if (/^(https?:)?\/\//.test(nameOrPath) || nameOrPath.indexOf("/") >= 0 || /\.[a-z0-9]{2,4}$/i.test(nameOrPath)) {
-            return nameOrPath;
+            return resolveAssetUrl(nameOrPath);
         }
         return undefined;
     }

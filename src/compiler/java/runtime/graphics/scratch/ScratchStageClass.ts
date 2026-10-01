@@ -32,6 +32,7 @@ import {
 } from "./ScratchStages";
 import { beginScratchProgram, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
 import { resetTextureSamplingOnEveryRun } from "./ScratchTextureSampling";
+import { setAssetBase } from "./ScratchAssetUrls";
 import { BooleanSupplierInterface } from "./BooleanSupplierInterface";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
@@ -210,6 +211,8 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             if (firstStageOfRun) {
                 beginScratchProgram(interpreter);
                 resetTextureSamplingOnEveryRun(interpreter);
+                // relative image and sound paths start from the project folder
+                setAssetBase(interpreter.getMain?.()?.getAssetBaseUrl?.());
                 // the program's own pictures, sounds and fonts, found by the
                 // paths it would read them from on the desktop
                 // (an interpreter without an IDE around it, as in the tests, has none)
