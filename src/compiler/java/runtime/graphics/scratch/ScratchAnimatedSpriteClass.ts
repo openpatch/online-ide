@@ -30,22 +30,22 @@ export class ScratchAnimatedSpriteClass extends ScratchSpriteClass {
 
         {
             type: "method", signature: "void addAnimation(string name, string pattern, int frames)",
-            native: ScratchAnimatedSpriteClass.prototype._addAnimationPattern,
+            java: ScratchAnimatedSpriteClass.prototype._mj$addAnimation$void$string$string$int,
             comment: SRC.animatedSpriteAddAnimationComment,
         },
         {
             type: "method", signature: "void addAnimation(string name, string imagePath, int frames, int width, int height)",
-            native: ScratchAnimatedSpriteClass.prototype._addAnimationSheet,
+            java: ScratchAnimatedSpriteClass.prototype._mj$addAnimation$void$string$string$int$int$int,
             comment: SRC.animatedSpriteAddAnimation2Comment,
         },
         {
             type: "method", signature: "void addAnimation(string name, string imagePath, int frames, int width, int height, int row)",
-            native: ScratchAnimatedSpriteClass.prototype._addAnimationSheetRow,
+            java: ScratchAnimatedSpriteClass.prototype._mj$addAnimation$void$string$string$int$int$int$int,
             comment: SRC.animatedSpriteAddAnimation3Comment,
         },
         {
             type: "method", signature: "void addAnimation(string name, string imagePath, int frames, int width, int height, int column, boolean useColumns)",
-            native: ScratchAnimatedSpriteClass.prototype._addAnimationSheetColumn,
+            java: ScratchAnimatedSpriteClass.prototype._mj$addAnimation$void$string$string$int$int$int$int$boolean,
             comment: SRC.animatedSpriteAddAnimation4Comment,
         },
         {
@@ -109,6 +109,35 @@ export class ScratchAnimatedSpriteClass extends ScratchSpriteClass {
         // supports %d and zero-padded forms such as %02d
         return pattern.replace(/%(0(\d+))?d/, (_m, _pad, width) =>
             width ? String(frameNumber).padStart(parseInt(width), "0") : String(frameNumber));
+    }
+
+    // The image of an animation may also be a URL, or each frame one: the images
+    // are loaded first, as addCostume(name, url) does, then the frames are cut.
+
+    _mj$addAnimation$void$string$string$int(t: Thread, callback: CallbackParameter,
+        name: string, pattern: string, frames: number) {
+        const paths: string[] = [];
+        for (let i = 0; i < frames; i++) paths.push(this.formatFrame(pattern, i + 1));
+        ScratchCostumes.whenLoaded(t, paths, callback, () => this._addAnimationPattern(name, pattern, frames));
+    }
+
+    _mj$addAnimation$void$string$string$int$int$int(t: Thread, callback: CallbackParameter,
+        name: string, imagePath: string, frames: number, width: number, height: number) {
+        ScratchCostumes.whenLoaded(t, [imagePath], callback,
+            () => this._addAnimationSheet(name, imagePath, frames, width, height));
+    }
+
+    _mj$addAnimation$void$string$string$int$int$int$int(t: Thread, callback: CallbackParameter,
+        name: string, imagePath: string, frames: number, width: number, height: number, row: number) {
+        ScratchCostumes.whenLoaded(t, [imagePath], callback,
+            () => this._addAnimationSheetRow(name, imagePath, frames, width, height, row));
+    }
+
+    _mj$addAnimation$void$string$string$int$int$int$int$boolean(t: Thread, callback: CallbackParameter,
+        name: string, imagePath: string, frames: number, width: number, height: number,
+        column: number, useColumns: boolean) {
+        ScratchCostumes.whenLoaded(t, [imagePath], callback,
+            () => this._addAnimationSheetColumn(name, imagePath, frames, width, height, column, useColumns));
     }
 
     _addAnimationPattern(name: string, pattern: string, frames: number) {
@@ -202,9 +231,10 @@ export class ScratchAnimatedSpriteClass extends ScratchSpriteClass {
                 const produced = t.s.pop();
                 const imagePath = produced instanceof StringClass ? produced.value : String(produced);
                 const costumeName = "_animation_" + nameStr + "_" + i;
-                this._addCostumeFromName(costumeName, imagePath);
-                frameNames.push(costumeName);
-                step(i + 1);
+                ScratchCostumes.whenLoaded(t, [imagePath], () => {
+                    frameNames.push(costumeName);
+                    step(i + 1);
+                }, () => this._addCostumeFromName(costumeName, imagePath));
             }, new IntegerClass(i + 1));
         };
         step(0);

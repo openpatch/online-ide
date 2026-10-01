@@ -8,6 +8,7 @@ import { ScratchStageClass } from "./ScratchStageClass";
 import { setActiveScratchStage, transitionToScratchStage } from "./ScratchStages";
 import { currentScratchStage, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
 import { TextureSampling, TextureSamplingEnum } from "./TextureSamplingEnum";
+import { getTextureSampling, setTextureSampling } from "./ScratchTextureSampling";
 import { SRC } from "./ScratchLibraryComments";
 
 /**
@@ -65,7 +66,6 @@ export class ScratchWindowClass extends ObjectClass {
     /** Upstream is a singleton, and programs reach it through getInstance(). */
     private static instance?: ScratchWindowClass;
     private static splashLogo: string = "";
-    private static textureSampling: TextureSampling = TextureSampling.LINEAR;
 
     private requestedWidth: number = 480;
     private requestedHeight: number = 360;
@@ -164,12 +164,12 @@ export class ScratchWindowClass extends ObjectClass {
         desktopOnly("Window.useFullScreen()",
             "Nutze den Vollbild-Knopf der Ausgabe. / Use the output panel's fullscreen button.");
     }
+    /** POINT keeps scaled-up pixel art sharp; see ScratchTextureSampling. */
     static useTextureSampling(sampling: TextureSamplingEnum) {
-        ScratchWindowClass.textureSampling = (sampling?.ordinal ?? TextureSampling.LINEAR) as TextureSampling;
-        desktopOnly("Window.useTextureSampling()");
+        setTextureSampling((sampling?.ordinal ?? TextureSampling.LINEAR) as TextureSampling);
     }
     static getTextureSampling(): TextureSamplingEnum {
-        return TextureSamplingEnum.values[ScratchWindowClass.textureSampling];
+        return TextureSamplingEnum.values[getTextureSampling()];
     }
     static useSplashLogo(path: string) {
         ScratchWindowClass.splashLogo = path;

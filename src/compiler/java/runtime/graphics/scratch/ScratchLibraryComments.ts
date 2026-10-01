@@ -2407,8 +2407,8 @@ export class SRC {
         "en": "Only in the desktop version: starts in fullscreen",
     });
     static windowUseTextureSamplingComment = () => lm({
-        "de": "Nur in der Desktop-Version: legt die Bildglättung fest",
-        "en": "Only in the desktop version: chooses how pictures are smoothed",
+        "de": "Legt fest, wie Bilder beim Vergrößern und Verkleinern geglättet werden. TextureSampling.POINT hält Pixelgrafik scharf, LINEAR (Standard) glättet. BILINEAR und TRILINEAR wirken im Browser wie LINEAR.",
+        "en": "Chooses how pictures are smoothed when scaled. TextureSampling.POINT keeps pixel art sharp, LINEAR (the default) smooths. In the browser BILINEAR and TRILINEAR look like LINEAR.",
     });
     static windowGetTextureSamplingComment = () => lm({
         "de": "Gibt das eingestellte Glättungsverfahren zurück",

@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
 import { isAssetFile } from "../../../../../client/workspace/AssetFile";
 import type { Workspace } from "../../../../../client/workspace/Workspace";
+import { trackTexture } from "./ScratchTextureSampling";
 
 /**
  * The files of the workspace a Scratch program can load by path: its own
@@ -81,9 +82,7 @@ export class ScratchWorkspaceAssets {
         if (!pending) {
             pending = PIXI.Assets.load<PIXI.Texture>({ src: dataUrl, loadParser: "loadTextures" }).then(texture => {
                 if (!texture) throw new Error("The file is not a supported image");
-                texture.source.minFilter = "linear";
-                texture.source.magFilter = "linear";
-                return texture;
+                return trackTexture(texture);
             });
             this.textureCache.set(dataUrl, pending);
             pending.catch(() => this.textureCache.delete(dataUrl));

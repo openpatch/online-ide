@@ -84,8 +84,8 @@ export class ScratchSpriteClass extends ShapeClass {
         // costumes
         { type: "method", signature: "void addCostume(string name)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string, comment: SRC.spriteAddCostumeComment },
         { type: "method", signature: "void addCostume(string name, string imagePath)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string$string, comment: SRC.spriteAddCostume2Comment },
-        { type: "method", signature: "void addCostume(string name, string spriteSheetPath, int x, int y, int width, int height)", native: ScratchSpriteClass.prototype._addCostumeFromSheet, comment: SRC.spriteAddCostume3Comment },
-        { type: "method", signature: "void addCostumes(string prefix, string spriteSheet, int tileWidth, int tileHeight)", native: ScratchSpriteClass.prototype._addCostumes, comment: SRC.spriteAddCostumesComment },
+        { type: "method", signature: "void addCostume(string name, string spriteSheetPath, int x, int y, int width, int height)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string$string$int$int$int$int, comment: SRC.spriteAddCostume3Comment },
+        { type: "method", signature: "void addCostumes(string prefix, string spriteSheet, int tileWidth, int tileHeight)", java: ScratchSpriteClass.prototype._mj$addCostumes$void$string$string$int$int, comment: SRC.spriteAddCostumesComment },
         { type: "method", signature: "void switchCostume(string name)", native: ScratchSpriteClass.prototype._switchCostumeByName, comment: SRC.spriteSwitchCostumeComment },
         { type: "method", signature: "void switchCostume(double index)", native: ScratchSpriteClass.prototype._switchCostumeByIndex, comment: SRC.spriteSwitchCostume2Comment },
         { type: "method", signature: "void nextCostume()", native: ScratchSpriteClass.prototype._nextCostume, comment: SRC.spriteNextCostumeComment },
@@ -633,8 +633,17 @@ export class ScratchSpriteClass extends ShapeClass {
         });
     }
 
-    /** Cut one costume out of a larger image, like upstream's 6-argument form. */
-    _addCostumeFromSheet(name: string, spriteSheetPath: string, x: number, y: number, width: number, height: number) {
+    /**
+     * Cut one costume out of a larger image, like upstream's 6-argument form. The
+     * image may also be a URL; it is loaded first.
+     */
+    _mj$addCostume$void$string$string$int$int$int$int(t: Thread, callback: CallbackParameter,
+        name: string, spriteSheetPath: string, x: number, y: number, width: number, height: number) {
+        ScratchCostumes.whenLoaded(t, [spriteSheetPath], callback,
+            () => this._addCostumeFromSheet(name, spriteSheetPath, x, y, width, height));
+    }
+
+    private _addCostumeFromSheet(name: string, spriteSheetPath: string, x: number, y: number, width: number, height: number) {
         if (this.costumes.some(c => c.name === name)) return;
         const texture = ScratchSpriteClass.subTexture(spriteSheetPath, x, y, width, height);
         this.costumes.push({ name, texture });
@@ -645,9 +654,15 @@ export class ScratchSpriteClass extends ShapeClass {
      * Slice an image into equally sized tiles and add them all. Costume names
      * are the prefix plus the tile's index, matching upstream — including its
      * `x * nx + y` indexing, which is only the row-major order people expect
-     * when the sheet is square.
+     * when the sheet is square. The image may also be a URL; it is loaded first.
      */
-    _addCostumes(prefix: string, spriteSheet: string, tileWidth: number, tileHeight: number) {
+    _mj$addCostumes$void$string$string$int$int(t: Thread, callback: CallbackParameter,
+        prefix: string, spriteSheet: string, tileWidth: number, tileHeight: number) {
+        ScratchCostumes.whenLoaded(t, [spriteSheet], callback,
+            () => this._addCostumes(prefix, spriteSheet, tileWidth, tileHeight));
+    }
+
+    private _addCostumes(prefix: string, spriteSheet: string, tileWidth: number, tileHeight: number) {
         const base = ScratchCostumes.getTexture(spriteSheet);
         if (!base) throw new RuntimeExceptionClass("Unbekanntes Bild / unknown image: " + spriteSheet);
         const nx = Math.floor(base.width / tileWidth);

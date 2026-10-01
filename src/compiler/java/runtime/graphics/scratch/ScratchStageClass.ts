@@ -31,6 +31,7 @@ import {
     scratchStagesRunning,
 } from "./ScratchStages";
 import { beginScratchProgram, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
+import { resetTextureSamplingOnEveryRun } from "./ScratchTextureSampling";
 import { BooleanSupplierInterface } from "./BooleanSupplierInterface";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
@@ -208,6 +209,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             const firstStageOfRun = beginScratchStages(world);
             if (firstStageOfRun) {
                 beginScratchProgram(interpreter);
+                resetTextureSamplingOnEveryRun(interpreter);
                 // the program's own pictures, sounds and fonts, found by the
                 // paths it would read them from on the desktop
                 // (an interpreter without an IDE around it, as in the tests, has none)

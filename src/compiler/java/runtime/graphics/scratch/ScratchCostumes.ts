@@ -1,5 +1,10 @@
 import * as PIXI from "pixi.js";
+import type { CallbackParameter } from "../../../../common/interpreter/CallbackParameter";
+import type { Thread } from "../../../../common/interpreter/Thread";
+import { ThreadState } from "../../../../common/interpreter/ThreadState";
+import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
+import { trackTexture } from "./ScratchTextureSampling";
 
 // Kenney atlases imported by src/development/scratchAssetsGenerator.js.
 // Both JSON descriptor and PNG are imported as hashed asset URLs (loaded on demand);
@@ -35,6 +40,8 @@ export class ScratchCostumes {
     private static bareNameToSheet: Map<string, string> = new Map();
     private static loadPromise: Promise<void> | undefined;
     private static externalTextures: Map<string, Promise<PIXI.Texture>> = new Map();
+    // the same images once they have arrived, for the synchronous lookups
+    private static loadedTextures: Map<string, PIXI.Texture> = new Map();
 
     static load(): Promise<void> {
         if (this.loadPromise) return this.loadPromise;
@@ -42,9 +49,7 @@ export class ScratchCostumes {
             for (const def of SHEET_DEFS) {
                 try {
                     const data: any = await fetch(def.json).then(r => r.json());
-                    const texture: PIXI.Texture = await PIXI.Assets.load(def.png);
-                    texture.source.minFilter = "linear";
-                    texture.source.magFilter = "linear";
+                    const texture: PIXI.Texture = trackTexture(await PIXI.Assets.load(def.png));
                     data.meta = { ...data.meta, size: { w: texture.width, h: texture.height } };
                     const sheet = new PIXI.Spritesheet(texture, data);
                     await sheet.parse();
@@ -70,6 +75,10 @@ export class ScratchCostumes {
     static getTexture(name: string): PIXI.Texture | undefined {
         const own = ScratchWorkspaceAssets.getTexture(name);
         if (own) return own;
+
+        // an image URL this page has already loaded, e.g. by addCostume
+        const loaded = this.loadedTextures.get(name);
+        if (loaded) return loaded;
 
         // strip an optional .png suffix students might copy from the atlas
         name = name.replace(/\.png$/i, "");
@@ -106,15 +115,48 @@ export class ScratchCostumes {
         if (!pending) {
             pending = PIXI.Assets.load<PIXI.Texture>(nameOrUrl).then(texture => {
                 if (!texture) throw new Error("The response is not a supported image");
-                texture.source.minFilter = "linear";
-                texture.source.magFilter = "linear";
-                return texture;
+                this.loadedTextures.set(nameOrUrl, texture);
+                return trackTexture(texture);
             });
             this.externalTextures.set(nameOrUrl, pending);
             // A temporary network problem must not poison the cache forever.
             pending.catch(() => this.externalTextures.delete(nameOrUrl));
         }
         return pending;
+    }
+
+    /**
+     * Run `action` once every image in `paths` can be looked up with getTexture,
+     * then continue the program.
+     *
+     * Cutting costumes out of a sprite sheet, or naming the frames of an
+     * animation, happens synchronously on textures that are already there — which
+     * built-in costumes and workspace files are, but an image URL is not until it
+     * has been downloaded. Such URLs are loaded first, the thread waiting as it
+     * does for addCostume(name, url); everything else runs at once.
+     */
+    static whenLoaded(t: Thread, paths: string[], callback: CallbackParameter, action: () => void) {
+        const missing = [...new Set(paths)].filter(path => !this.getTexture(path));
+        if (missing.length === 0) {
+            action();
+            if (callback) callback();
+            return;
+        }
+
+        const oldState = t.state;
+        t.state = ThreadState.waiting;
+        Promise.all(missing.map(path => this.loadTexture(path).catch(reason => {
+            throw new RuntimeExceptionClass(
+                `Bild konnte nicht geladen werden / could not load image '${path}': ${reason}`);
+        }))).then(() => {
+            t.state = oldState;
+            action();
+            if (callback) callback();
+        }).catch(exception => {
+            t.state = oldState;
+            t.throwRuntimeExceptionOnLastExecutedStep(exception instanceof RuntimeExceptionClass
+                ? exception : new RuntimeExceptionClass(String(exception)));
+        });
     }
 
     private static textureFromSheet(sheetName: string, frame: string): PIXI.Texture | undefined {
