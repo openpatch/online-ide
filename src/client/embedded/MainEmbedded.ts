@@ -102,6 +102,15 @@ export type JavaOnlineConfig = {
     programmingLanguage?: string,
 
     /**
+     * Width of the output panel next to the editor, as CSS ("50%", "520px").
+     * Left out it is 300px, which shrinks a large Scratch stage (say 768x432)
+     * to a size where pixel art and text are hard to make out. The reader can
+     * still drag the slider; in the narrow layout the panel sits below the
+     * editor and this does not apply.
+     */
+    outputWidth?: string,
+
+    /**
      * "dark" or "light" — the same two themes the full IDE offers under
      * Einstellungen.
      *
@@ -714,6 +723,14 @@ export class MainEmbedded implements MainBase {
 
         $div.addClass('joe_javaOnlineDiv');
         $div.append($centerDiv, $rightDiv);
+
+        if (this.config.outputWidth) {
+            // The panel keeps the width asked for, and the editor takes what is left.
+            // Without min-width the editor would not shrink below its content and
+            // push the panel out of the IDE.
+            $rightDiv.css({ "width": this.config.outputWidth, "flex-shrink": "0" });
+            $centerDiv.css("min-width", "0");
+        }
 
         if (!this.config.hideEditor) {
             this.horizontalSlider = new Slider($rightDiv[0], true, false, () => {
