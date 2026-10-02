@@ -25,6 +25,7 @@ import { IScratchEventReceiver, ScratchRuntimeManager } from "./ScratchRuntimeMa
 import { ScratchSoundBank } from "./ScratchSounds";
 import { isLibraryInstance, ScratchSpriteClass } from "./ScratchSpriteClass";
 import { ScratchTextClass } from "./ScratchTextClass";
+import { ScratchSortingClass } from "./ScratchSortingClass";
 import { ScratchTimerClass } from "./ScratchTimerClass";
 import {
     beginScratchStages, IScratchStageLike, isScratchStageActive, registerScratchStage,
@@ -177,6 +178,8 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     scratchLayers?: ScratchLayers;
 
     camera: ScratchCameraClass = new ScratchCameraClass();
+    /** The draw order of the sprites, see ScratchSortingClass. */
+    sorting: ScratchSortingClass = new ScratchSortingClass();
 
     private backdrops: { name: string; texture: PIXI.Texture; stretch: boolean }[] = [];
     private currentBackdrop: number = -1;
@@ -321,7 +324,29 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     _preRender(): void {
         if (!this.isActive() || !this.world?.app) return;
         this._applyCamera();
+        this._applySorting();
         if (this.debugEnabled) this.renderDebugOverlay();
+    }
+
+    /**
+     * Sorting.byY(): the lower a sprite's lower edge, the later it is drawn.
+     * PIXI keeps the children of the sprites layer in the order they were added;
+     * with sortableChildren it draws them by zIndex instead, and falls back to
+     * that order again once sorting is switched off. Recomputed every frame,
+     * because every frame something may have moved.
+     */
+    _applySorting() {
+        const layer = this.scratchLayers?.sprites;
+        if (!layer || layer.destroyed) return;
+        if (!this.sorting.byY) {
+            if (layer.sortableChildren) layer.sortableChildren = false;
+            return;
+        }
+        layer.sortableChildren = true;
+        for (const sprite of this.sprites) {
+            if (sprite.isDestroyed || sprite.isUI()) continue;
+            sprite._setDrawDepth(-(sprite._getY() - sprite._getSpriteHeight() / 2));
+        }
     }
 
     /** Push the camera's position/zoom onto the container that holds the world. */
@@ -953,7 +978,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     // ---- desktop-only extensions ----
     _getPixels() { return desktopOnlyValue("Stage.getPixels()", undefined, "Der Bildpuffer ist im Browser nicht zugänglich. / The pixel buffer is not reachable in the browser."); }
     _getShaders() { return desktopOnlyValue("Stage.getShaders()", undefined, "Shader brauchen OpenGL. / Shaders need OpenGL."); }
-    _getSorting() { return desktopOnlyValue("Stage.getSorting()", undefined); }
+    _getSorting(): ScratchSortingClass { return this.sorting; }
 
     // ---- dimensions ----
     _getCamera(): ScratchCameraClass { return this.camera; }

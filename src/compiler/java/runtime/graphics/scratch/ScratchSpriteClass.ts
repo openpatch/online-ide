@@ -1008,6 +1008,15 @@ export class ScratchSpriteClass extends ShapeClass {
 
     // ---- layering ----
     private get siblings(): PIXI.Container | undefined { return this.container?.parent ?? undefined; }
+    /**
+     * The key the stage sorts by when Sorting.byY() is on (see ScratchStageClass._applySorting).
+     * A speech bubble lives in the same layer and must stay in front of every sprite.
+     */
+    _setDrawDepth(depth: number) {
+        if (this.container && !this.container.destroyed) this.container.zIndex = depth;
+        if (this.speechBubble && !this.speechBubble.destroyed) this.speechBubble.zIndex = Number.MAX_SAFE_INTEGER;
+    }
+
     _goToFrontLayer() { const p = this.siblings; if (p) p.setChildIndex(this.container, p.children.length - 1); }
     _goToBackLayer() { const p = this.siblings; if (p) p.setChildIndex(this.container, 0); }
     private moveLayers(delta: number) {

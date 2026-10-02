@@ -6,8 +6,7 @@ import { SRC } from "./ScratchLibraryComments";
 
 /**
  * The parts of Scratch for Java that a browser cannot provide: GLSL shaders,
- * the raw pixel buffer, sprite sorting by a java.util.Comparator, GIF/video
- * recording and the file system.
+ * the raw pixel buffer, GIF/video recording and the file system.
  *
  * They are declared so that a program written against the desktop library still
  * compiles and runs here. Every method prints a one-time notice (see
@@ -29,21 +28,6 @@ export class ScratchPixelsClass extends ObjectClass {
     _main(): number[] { return desktopOnlyValue("Pixels.main()", [], ScratchPixelsClass.HINT); }
     _background(): number[] { return desktopOnlyValue("Pixels.background()", [], ScratchPixelsClass.HINT); }
     _foreground(): number[] { return desktopOnlyValue("Pixels.foreground()", [], ScratchPixelsClass.HINT); }
-}
-
-/** Draw-order sorting driven by a java.util.Comparator. */
-export class ScratchSortingClass extends ObjectClass {
-    static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.sorting", signature: "class Sorting extends Object", comment: SRC.sortingClassComment },
-        { type: "method", signature: "void byY()", native: ScratchSortingClass.prototype._byY, comment: SRC.sortingByYComment },
-        { type: "method", signature: "void off()", native: ScratchSortingClass.prototype._off, comment: SRC.sortingOffComment },
-        { type: "method", signature: "boolean isOn()", native: ScratchSortingClass.prototype._isOn, comment: SRC.sortingIsOnComment },
-    ];
-    static type: NonPrimitiveType;
-
-    _byY() { desktopOnly("Sorting.byY()"); }
-    _off() { desktopOnly("Sorting.off()"); }
-    _isOn(): boolean { return desktopOnlyValue("Sorting.isOn()", false); }
 }
 
 /** A single GLSL program. */

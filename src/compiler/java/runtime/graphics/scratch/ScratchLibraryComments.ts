@@ -375,20 +375,20 @@ export class SRC {
 
     // ---- Sorting ----
     static sortingClassComment = () => lm({
-        "de": "Nur in der Desktop-Version: Sortierreihenfolge der Figuren",
-        "en": "Only in the desktop version: the order the sprites are drawn in",
+        "de": "Legt fest, in welcher Reihenfolge die Figuren gezeichnet werden",
+        "en": "Determines the order the sprites are drawn in",
     });
     static sortingByYComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Zeichnet Figuren, die weiter unten stehen, vor denen weiter oben. Verglichen wird der untere Rand jeder Figur. So kann man hinter einem Baum vorbeigehen.",
+        "en": "Draws sprites further down in front of those further up. The lower edge of each sprite is compared. This lets a figure walk behind a tree.",
     });
     static sortingOffComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Schaltet die Sortierung aus. Die Figuren werden wieder in der Reihenfolge gezeichnet, in der sie hinzugefügt wurden.",
+        "en": "Switches sorting off. The sprites are drawn in the order they were added again.",
     });
     static sortingIsOnComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Gibt zurück, ob die Figuren sortiert gezeichnet werden",
+        "en": "Returns whether the sprites are drawn sorted",
     });
 
     // ---- Shader ----
@@ -1809,8 +1809,8 @@ export class SRC {
         "en": "Only in the desktop version: the shaders of the stage",
     });
     static stageGetSortingComment = () => lm({
-        "de": "Nur in der Desktop-Version: Sortierreihenfolge der Figuren",
-        "en": "Only in the desktop version: the order the sprites are drawn in",
+        "de": "Gibt die Sortierung der Bühne zurück. Mit getSorting().byY() werden Figuren weiter unten vor denen weiter oben gezeichnet.",
+        "en": "Returns the sorting of the stage. With getSorting().byY() sprites further down are drawn in front of those further up.",
     });
     static stageGetWidthComment = () => lm({
         "de": "Gibt die Breite der Bühne in Pixeln zurück",
