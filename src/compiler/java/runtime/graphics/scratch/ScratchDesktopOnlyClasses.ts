@@ -5,8 +5,8 @@ import { desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
 import { SRC } from "./ScratchLibraryComments";
 
 /**
- * The parts of Scratch for Java that a browser cannot provide: GLSL shaders,
- * the raw pixel buffer, GIF/video recording and the file system.
+ * The parts of Scratch for Java that a browser cannot provide: the raw pixel
+ * buffer, GIF/video recording and the file system.
  *
  * They are declared so that a program written against the desktop library still
  * compiles and runs here. Every method prints a one-time notice (see
@@ -28,68 +28,6 @@ export class ScratchPixelsClass extends ObjectClass {
     _main(): number[] { return desktopOnlyValue("Pixels.main()", [], ScratchPixelsClass.HINT); }
     _background(): number[] { return desktopOnlyValue("Pixels.background()", [], ScratchPixelsClass.HINT); }
     _foreground(): number[] { return desktopOnlyValue("Pixels.foreground()", [], ScratchPixelsClass.HINT); }
-}
-
-/** A single GLSL program. */
-export class ScratchShaderClass extends ObjectClass {
-    static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.shader", signature: "class Shader extends Object", comment: SRC.shaderClassComment },
-        { type: "method", signature: "Shader(string name, string fragmentShaderPath, string vertexShaderPath)", native: ScratchShaderClass.prototype._c3, comment: SRC.shaderConstructorComment },
-        { type: "method", signature: "string getName()", native: ScratchShaderClass.prototype._getName, comment: SRC.shaderGetNameComment },
-        { type: "method", signature: "void setName(string name)", native: ScratchShaderClass.prototype._setName, comment: SRC.shaderSetNameComment },
-        { type: "method", signature: "void set(string name, int x)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSetComment },
-        { type: "method", signature: "void set(string name, boolean x)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet2Comment },
-        { type: "method", signature: "void set(string name, double x)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet3Comment },
-        { type: "method", signature: "void set(string name, int x, int y)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet4Comment },
-        { type: "method", signature: "void set(string name, boolean x, boolean y)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet5Comment },
-        { type: "method", signature: "void set(string name, double x, double y)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet6Comment },
-        { type: "method", signature: "void set(string name, Vector2 vec)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet7Comment },
-        { type: "method", signature: "void set(string name, Color c)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet8Comment },
-        { type: "method", signature: "void set(string name, int[] values, int ncoords)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet9Comment },
-        { type: "method", signature: "void set(string name, double[] values, int ncoords)", native: ScratchShaderClass.prototype._set, comment: SRC.shaderSet10Comment },
-    ];
-    static type: NonPrimitiveType;
-
-    static readonly HINT = "Shader brauchen OpenGL. / Shaders need OpenGL.";
-    name: string = "";
-
-    _c3(name: string, _fragmentShaderPath: string, _vertexShaderPath: string) {
-        this.name = name;
-        desktopOnly("Shader", ScratchShaderClass.HINT);
-        return this;
-    }
-    // the name is just a label, so it can behave normally
-    _getName(): string { return this.name; }
-    _setName(name: string) { this.name = name; }
-    _set() { desktopOnly("Shader.set()", ScratchShaderClass.HINT); }
-}
-
-/** The shader collection a stage or sprite owns. */
-export class ScratchShadersClass extends ObjectClass {
-    static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.shader", signature: "class Shaders extends Object", comment: SRC.shadersClassComment },
-        { type: "method", signature: "Shaders(string owner)", native: ScratchShadersClass.prototype._c1, comment: SRC.shadersConstructorComment },
-        { type: "method", signature: "Shader add(string name, string fragmentShaderPath, string vertexShaderPath)", native: ScratchShadersClass.prototype._add, comment: SRC.shadersAddComment },
-        { type: "method", signature: "Shader get(string name)", native: ScratchShadersClass.prototype._get, comment: SRC.shadersGetComment },
-        { type: "method", signature: "void switchTo(string name)", native: ScratchShadersClass.prototype._switchTo, comment: SRC.shadersSwitchToComment },
-        { type: "method", signature: "void switchTo(double index)", native: ScratchShadersClass.prototype._switchTo, comment: SRC.shadersSwitchTo2Comment },
-        { type: "method", signature: "void next()", native: ScratchShadersClass.prototype._next, comment: SRC.shadersNextComment },
-        { type: "method", signature: "void reset()", native: ScratchShadersClass.prototype._reset, comment: SRC.shadersResetComment },
-        { type: "method", signature: "Shader getCurrent()", native: ScratchShadersClass.prototype._getCurrent, comment: SRC.shadersGetCurrentComment },
-        { type: "method", signature: "int getCurrentIndex()", native: ScratchShadersClass.prototype._getCurrentIndex, comment: SRC.shadersGetCurrentIndexComment },
-        { type: "method", signature: "string getCurrentName()", native: ScratchShadersClass.prototype._getCurrentName, comment: SRC.shadersGetCurrentNameComment },
-    ];
-    static type: NonPrimitiveType;
-
-    _c1(_owner: string) { desktopOnly("Shaders", ScratchShaderClass.HINT); return this; }
-    _add(): ScratchShaderClass | undefined { return desktopOnlyValue("Shaders.add()", undefined, ScratchShaderClass.HINT); }
-    _get(): ScratchShaderClass | undefined { return desktopOnlyValue("Shaders.get()", undefined, ScratchShaderClass.HINT); }
-    _switchTo() { desktopOnly("Shaders.switchTo()", ScratchShaderClass.HINT); }
-    _next() { desktopOnly("Shaders.next()", ScratchShaderClass.HINT); }
-    _reset() { desktopOnly("Shaders.reset()", ScratchShaderClass.HINT); }
-    _getCurrent(): ScratchShaderClass | undefined { return desktopOnlyValue("Shaders.getCurrent()", undefined, ScratchShaderClass.HINT); }
-    _getCurrentIndex(): number { return desktopOnlyValue("Shaders.getCurrentIndex()", -1, ScratchShaderClass.HINT); }
-    _getCurrentName(): string { return desktopOnlyValue("Shaders.getCurrentName()", "", ScratchShaderClass.HINT); }
 }
 
 const RECORDER_HINT = "Aufnahmen gibt es nur in der Desktop-Version. / Recording is desktop only.";

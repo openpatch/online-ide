@@ -31,6 +31,7 @@ import {
     beginScratchStages, IScratchStageLike, isScratchStageActive, registerScratchStage,
     scratchStagesRunning,
 } from "./ScratchStages";
+import { ScratchShadersClass } from "./ScratchShaders";
 import { beginScratchProgram, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
 import { resetTextureSamplingOnEveryRun } from "./ScratchTextureSampling";
 import { setAssetBase } from "./ScratchAssetUrls";
@@ -596,6 +597,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
 
     private applyBgColor() {
         this.world._setBackgroundColor(this.bgColor._get() & 0xffffff);
+        if (this.stageFilter) this.applyStageShader();
     }
     _setColorHue(h: number) { this.bgColor = ScratchColorClass.fromHue(h); this.applyBgColor(); }
     _setColorRGB(r: number, g: number, b: number) { this.bgColor = ScratchColorClass.fromRGB(r, g, b); this.applyBgColor(); }
@@ -977,7 +979,37 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
 
     // ---- desktop-only extensions ----
     _getPixels() { return desktopOnlyValue("Stage.getPixels()", undefined, "Der Bildpuffer ist im Browser nicht zugänglich. / The pixel buffer is not reachable in the browser."); }
-    _getShaders() { return desktopOnlyValue("Stage.getShaders()", undefined, "Shader brauchen OpenGL. / Shaders need OpenGL."); }
+    /** Created on first use; the current shader filters everything but the UI. */
+    private shaders: ScratchShadersClass | undefined;
+    private stageFilter: PIXI.Filter | undefined;
+
+    _getShaders(): ScratchShadersClass {
+        if (!this.shaders) {
+            this.shaders = ScratchShadersClass.of("stage", filter => {
+                this.stageFilter = filter;
+                this.applyStageShader();
+            });
+        }
+        return this.shaders;
+    }
+
+    /**
+     * Filter the stage the way upstream's shader buffer is: the whole stage,
+     * also where nothing is drawn, on the stage's colour.
+     */
+    private applyStageShader() {
+        const layers = this.scratchLayers;
+        if (!layers || layers.shaded.destroyed) return;
+        const filter = this.stageFilter;
+        layers.shaded.filters = filter ? [filter] : [];
+        layers.shaded.filterArea = filter ? new PIXI.Rectangle(0, 0, this.world.width, this.world.height) : undefined as any;
+        const colour = layers.stageColour as PIXI.Graphics;
+        colour.clear();
+        if (filter) {
+            colour.rect(0, 0, this.world.width, this.world.height).fill(this.bgColor._get() & 0xffffff);
+        }
+        colour.visible = !!filter;
+    }
     _getSorting(): ScratchSortingClass { return this.sorting; }
 
     // ---- dimensions ----

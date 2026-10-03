@@ -12,10 +12,11 @@ import { ScratchClockClass } from "./ScratchClockClass";
 import { ScratchColorClass } from "./ScratchColorClass";
 import {
     ScratchFFmpegRecorderClass, ScratchFileClass, ScratchFrameRecorderClass, ScratchGifRecorderClass,
-    ScratchMapObjectClass, ScratchPixelsClass, ScratchRecorderClass, ScratchShaderClass,
-    ScratchPropertyClass, ScratchShadersClass, ScratchTiledMapClass,
+    ScratchMapObjectClass, ScratchPixelsClass, ScratchRecorderClass,
+    ScratchPropertyClass, ScratchTiledMapClass,
     ScratchTilesetImageClass,
 } from "./ScratchDesktopOnlyClasses";
+import { ScratchShaderClass, ScratchShadersClass } from "./ScratchShaders";
 import { ScratchSortingClass } from "./ScratchSortingClass";
 import { ScratchExceptionClass } from "./ScratchExceptionClass";
 import { ScratchHitboxClass } from "./ScratchHitboxClass";

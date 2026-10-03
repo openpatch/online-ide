@@ -393,12 +393,16 @@ export class SRC {
 
     // ---- Shader ----
     static shaderClassComment = () => lm({
-        "de": "Nur in der Desktop-Version: ein Shader-Programm",
-        "en": "Only in the desktop version: one shader program",
+        "de": "Ein Shader-Programm (GLSL-Fragment-Shader im Processing-Stil), das verändert, wie eine Figur oder die Bühne gezeichnet wird",
+        "en": "A shader program (a GLSL fragment shader in Processing's style) that changes how a sprite or the stage is drawn",
     });
     static shaderConstructorComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Lädt einen Shader aus einer Fragment-Shader-Datei. Eigene Vertex-Shader gibt es nur in der Desktop-Version; der Standard von Processing wird angenommen",
+        "en": "Loads a shader from a fragment shader file. Custom vertex shaders are desktop only; Processing's default one is accepted",
+    });
+    static shaderConstructor2Comment = () => lm({
+        "de": "Kopiert einen Shader",
+        "en": "Copies a shader",
     });
     static shaderGetNameComment = () => lm({
         "de": "Gibt den Namen des Shaders zurück",
@@ -409,90 +413,90 @@ export class SRC {
         "en": "Sets the name of the shader",
     });
     static shaderSetComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine int-Uniform-Variable des Shaders",
+        "en": "Sets an int uniform of the shader",
     });
     static shaderSet2Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine boolean-Uniform-Variable des Shaders",
+        "en": "Sets a boolean uniform of the shader",
     });
     static shaderSet3Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine float-Uniform-Variable des Shaders",
+        "en": "Sets a float uniform of the shader",
     });
     static shaderSet4Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine ivec2-Uniform-Variable des Shaders",
+        "en": "Sets an ivec2 uniform of the shader",
     });
     static shaderSet5Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine bvec2-Uniform-Variable des Shaders",
+        "en": "Sets a bvec2 uniform of the shader",
     });
     static shaderSet6Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine vec2-Uniform-Variable des Shaders",
+        "en": "Sets a vec2 uniform of the shader",
     });
     static shaderSet7Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine vec2-Uniform-Variable des Shaders auf einen Vektor",
+        "en": "Sets a vec2 uniform of the shader to a vector",
     });
     static shaderSet8Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine vec3-Uniform-Variable des Shaders auf Rot, Grün und Blau einer Farbe [0...255]",
+        "en": "Sets a vec3 uniform of the shader to a colour's red, green and blue [0...255]",
     });
     static shaderSet9Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine Array-Uniform-Variable des Shaders; ncoords Werte bilden ein Element",
+        "en": "Sets an array uniform of the shader; ncoords values make one element",
     });
     static shaderSet10Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Setzt eine Array-Uniform-Variable des Shaders; ncoords Werte bilden ein Element",
+        "en": "Sets an array uniform of the shader; ncoords values make one element",
     });
 
     // ---- Shaders ----
     static shadersClassComment = () => lm({
-        "de": "Nur in der Desktop-Version: Sammlung von Shadern",
-        "en": "Only in the desktop version: a collection of shaders",
+        "de": "Die Shader einer Figur oder der Bühne; mit einem davon wird gezeichnet",
+        "en": "The shaders of a sprite or the stage, one of which it is drawn with",
     });
     static shadersConstructorComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Erzeugt eine leere Sammlung von Shadern",
+        "en": "Creates an empty set of shaders",
     });
     static shadersAddComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Fügt einen Shader aus einer Fragment-Shader-Datei hinzu und gibt ihn zurück. Gibt es den Namen schon, wird der vorhandene zurückgegeben",
+        "en": "Adds a shader from a fragment shader file and returns it. If the name exists already, that shader is returned",
     });
     static shadersGetComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Gibt den Shader mit diesem Namen zurück, oder null",
+        "en": "Returns the shader of that name, or null",
     });
     static shadersSwitchToComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Zeichnet ab jetzt mit dem Shader dieses Namens",
+        "en": "Draws with the shader of that name from now on",
     });
     static shadersSwitchTo2Comment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Zeichnet ab jetzt mit dem Shader an dieser Position",
+        "en": "Draws with the shader at that position from now on",
     });
     static shadersNextComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Wechselt zum nächsten Shader",
+        "en": "Switches to the next shader",
     });
     static shadersResetComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Zeichnet wieder ohne Shader",
+        "en": "Draws without a shader again",
     });
     static shadersGetCurrentComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Gibt den Shader zurück, mit dem gezeichnet wird, oder null",
+        "en": "Returns the shader drawn with, or null",
     });
     static shadersGetCurrentIndexComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Gibt die Position des aktuellen Shaders zurück, oder -1",
+        "en": "Returns the position of the current shader, or -1",
     });
     static shadersGetCurrentNameComment = () => lm({
-        "de": "Nur in der Desktop-Version",
-        "en": "Only in the desktop version",
+        "de": "Gibt den Namen des aktuellen Shaders zurück, oder null",
+        "en": "Returns the name of the current shader, or null",
     });
 
     // ---- Recorder ----
@@ -1571,8 +1575,8 @@ export class SRC {
         "en": "Creates a copy of the sprite",
     });
     static spriteGetShadersComment = () => lm({
-        "de": "Nur in der Desktop-Version: Shader dieser Figur",
-        "en": "Only in the desktop version: the shaders of this sprite",
+        "de": "Gibt die Shader dieser Figur zurück",
+        "en": "Returns the shaders of this sprite",
     });
 
     // ---- Stage ----
@@ -1817,8 +1821,8 @@ export class SRC {
         "en": "Only in the desktop version: reaching single pixels",
     });
     static stageGetShadersComment = () => lm({
-        "de": "Nur in der Desktop-Version: Shader der Bühne",
-        "en": "Only in the desktop version: the shaders of the stage",
+        "de": "Gibt die Shader der Bühne zurück; sie verändern das ganze Bild ohne die UI",
+        "en": "Returns the shaders of the stage; they change the whole picture except the UI",
     });
     static stageGetSortingComment = () => lm({
         "de": "Gibt die Sortierung der Bühne zurück. Mit getSorting().byY() werden Figuren weiter unten vor denen weiter oben gezeichnet.",

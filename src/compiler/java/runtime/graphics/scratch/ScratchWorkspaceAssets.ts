@@ -23,6 +23,8 @@ export class ScratchWorkspaceAssets {
     private static textures: Map<string, PIXI.Texture> = new Map();
     private static sounds: Map<string, { url: string, format?: string }> = new Map();
     private static fonts: Map<string, string> = new Map();
+    // shader sources (.frag, .vert, .glsl), which are plain text files
+    private static texts: Map<string, string> = new Map();
 
     /** Decoded images and fonts by data URL, so a second run is instant. */
     private static textureCache: Map<string, Promise<PIXI.Texture>> = new Map();
@@ -35,11 +37,18 @@ export class ScratchWorkspaceAssets {
         this.textures = new Map();
         this.sounds = new Map();
         this.fonts = new Map();
+        this.texts = new Map();
         if (!workspace) return this.loadPromise = Promise.resolve();
 
         const loads: Promise<void>[] = [];
         for (const file of workspace.getFiles()) {
-            if (file.isFolder || !isAssetFile(file)) continue;
+            if (file.isFolder) continue;
+            if (!isAssetFile(file)) {
+                if (SHADER_FILE.test(file.name)) {
+                    this.texts.set(normalize([...workspace.getPath(file), file.name].join("/")), file.getText());
+                }
+                continue;
+            }
             const path = normalize([...workspace.getPath(file), file.name].join("/"));
             const dataUrl = file.getText();
             const mime = mimeOf(dataUrl);
@@ -70,6 +79,11 @@ export class ScratchWorkspaceAssets {
 
     static getSound(path: string): { url: string, format?: string } | undefined {
         return this.sounds.get(normalize(path));
+    }
+
+    /** The text of a shader file of the workspace. */
+    static getText(path: string): string | undefined {
+        return this.texts.get(normalize(path));
     }
 
     /** The CSS font family a workspace font file was registered under. */
@@ -106,6 +120,8 @@ export class ScratchWorkspaceAssets {
         return pending;
     }
 }
+
+const SHADER_FILE = /\.(frag|vert|glsl)$/i;
 
 /** "./a/b.png", "/a/b.png" and "a/b.png" all name the same file. */
 function normalize(path: string): string {

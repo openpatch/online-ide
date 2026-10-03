@@ -21,7 +21,7 @@ import { activeScratchStage } from './ScratchStages';
  * index 0 of the PIXI root, so whatever was added last sank to the bottom and
  * stamps piled up in reverse.
  */
-export type ScratchLayerName = "root" | "camera" | "backdrop" | "pen" | "backgroundStamps" | "sprites"
+export type ScratchLayerName = "root" | "shaded" | "stageColour" | "camera" | "backdrop" | "pen" | "backgroundStamps" | "sprites"
     | "texts" | "foregroundStamps" | "debugWorld" | "ui" | "uiTexts" | "debugScreen";
 
 export type ScratchLayers = Record<ScratchLayerName, PIXI.Container>;
@@ -43,6 +43,8 @@ const INSIDE_CAMERA: ScratchLayerName[] = ["backdrop", "pen", "backgroundStamps"
 export function createScratchLayers(parent: PIXI.Container): ScratchLayers {
     const layers = {
         root: new PIXI.Container(),
+        shaded: new PIXI.Container(),
+        stageColour: new PIXI.Graphics(),
         camera: new PIXI.Container(),
         backdrop: new PIXI.Container(),
         pen: new PIXI.Container(),
@@ -55,7 +57,15 @@ export function createScratchLayers(parent: PIXI.Container): ScratchLayers {
         uiTexts: new PIXI.Container(),
         debugScreen: new PIXI.Container(),
     };
-    layers.root.addChild(layers.camera);
+    // A stage shader works on everything but the UI, the stage's colour
+    // included, as upstream's shader buffer holds the backdrop, pens, sprites
+    // and stamps on that colour. The renderer paints the colour as its
+    // background, which a filter does not see, so while a stage shader is on,
+    // `stageColour` paints it again underneath.
+    layers.root.addChild(layers.shaded);
+    layers.stageColour.visible = false;
+    layers.shaded.addChild(layers.stageColour);
+    layers.shaded.addChild(layers.camera);
     for (const name of INSIDE_CAMERA) layers.camera.addChild(layers[name]);
     layers.root.addChild(layers.ui);
     // and above the UI sprites, the same way texts sit above the sprites

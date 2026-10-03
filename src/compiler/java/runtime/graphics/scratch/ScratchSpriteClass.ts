@@ -17,6 +17,7 @@ import { RotationStyle, RotationStyleEnum } from "./RotationStyleEnum";
 import { ScratchColorClass } from "./ScratchColorClass";
 import { ScratchCostumes } from "./ScratchCostumes";
 import { colorKey, isTouchingColor } from "./ScratchColorSensing";
+import { ScratchShadersClass } from "./ScratchShaders";
 import { DEBUG_COLOR, round2 } from "./ScratchDebug";
 import { ScratchHitboxClass } from "./ScratchHitboxClass";
 import { scratchSpriteList } from "./ScratchLists";
@@ -26,7 +27,6 @@ import { ScratchSoundBank } from "./ScratchSounds";
 import { ScratchShapeClass } from "./ScratchShapeClasses";
 import { ScratchTextClass } from "./ScratchTextClass";
 import { ScratchTimerClass } from "./ScratchTimerClass";
-import { desktopOnlyValue } from "./ScratchUnsupported";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
 
@@ -291,6 +291,8 @@ export class ScratchSpriteClass extends ShapeClass {
                 // as upstream's copy constructor: hidden stays hidden, and the
                 // pen keeps its colour, size and whether it is down
                 if (other.container && !other.container.destroyed) this.container.visible = other.container.visible;
+                // a clone is drawn with the same shaders, as upstream's copy is
+                if (other.shaders) this.shaders = other.shaders.copyFor(filter => this.applyShader(filter));
                 if (other.penObj) {
                     // from where the clone is, not from where its pen was made
                     const pen = this._getPen();
@@ -607,9 +609,19 @@ export class ScratchSpriteClass extends ShapeClass {
         return this.spriteText;
     }
 
-    _getShaders(): ObjectClass | undefined {
-        return desktopOnlyValue("Sprite.getShaders()", undefined,
-            "Shader brauchen OpenGL. / Shaders need OpenGL.");
+    /** Created on first use; the current shader is this sprite's filter. */
+    private shaders: ScratchShadersClass | undefined;
+
+    _getShaders(): ScratchShadersClass {
+        if (!this.shaders) {
+            this.shaders = ScratchShadersClass.of("sprite", filter => this.applyShader(filter));
+        }
+        return this.shaders;
+    }
+
+    private applyShader(filter: PIXI.Filter | undefined) {
+        if (!this.container || this.container.destroyed) return;
+        this.container.filters = filter ? [filter] : [];
     }
 
     // ---- costumes ----
