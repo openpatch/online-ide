@@ -1146,6 +1146,10 @@ export class SRC {
         "de": "Zeigt eine Denkblase für die angegebene Zeit in Millisekunden",
         "en": "Shows a thought bubble for the given time in milliseconds",
     });
+    static spriteSetRotationCenterComment = () => lm({
+        "de": "Setzt den Punkt des Kostüms, um den sich die Figur dreht (Drehpunkt). Er sitzt an der Position der Figur. Angegeben in Pixeln des Kostüms von seiner linken oberen Ecke aus, wie bei setHitbox; er wächst mit der Größe und gilt für alle Kostüme.",
+        "en": "Sets the point of the costume the sprite turns around (rotation center). It sits at the sprite's position. Given in the costume's pixels from its top left corner, as for setHitbox; it grows with the size and holds for every costume.",
+    });
     static spriteIsTouchingColorComment = () => lm({
         "de": "Prüft, ob etwas, das die Figur malt, über dieser Farbe auf der Bühne liegt — auf dem Bühnenbild, auf dem, was der Stift gezeichnet hat, oder auf einer anderen Figur. Fast gleiche Farben zählen wie in Scratch.",
         "en": "Checks whether anything the sprite paints lies over this colour on the stage — on the backdrop, on what the pen drew or on another sprite. Nearly equal colours count, as in Scratch.",

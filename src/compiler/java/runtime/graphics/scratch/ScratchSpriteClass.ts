@@ -137,6 +137,7 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "void pointTowardsSprite(Sprite other)", native: ScratchSpriteClass.prototype._pointTowardsSprite, comment: SRC.spritePointTowardsSpriteComment },
         { type: "method", signature: "double getDirection()", native: ScratchSpriteClass.prototype._getDirection, comment: SRC.spriteGetDirectionComment },
         { type: "method", signature: "void setRotationStyle(RotationStyle style)", native: ScratchSpriteClass.prototype._setRotationStyle, comment: SRC.spriteSetRotationStyleComment },
+        { type: "method", signature: "void setRotationCenter(double x, double y)", native: ScratchSpriteClass.prototype._setRotationCenter, comment: SRC.spriteSetRotationCenterComment },
 
         // appearance
         { type: "method", signature: "void show()", native: ScratchSpriteClass.prototype._show, comment: SRC.spriteShowComment },
@@ -287,6 +288,7 @@ export class ScratchSpriteClass extends ShapeClass {
                 this._setUI(other.ui);
                 this.hitboxEnabled = other.hitboxEnabled;
                 this.customHitboxPoints = other.customHitboxPoints?.slice();
+                this.rotationCenter = other.rotationCenter;
                 if (other.currentCostume >= 0) this._applyCostumeIndex(other.currentCostume);
                 // as upstream's copy constructor: hidden stays hidden, and the
                 // pen keeps its colour, size and whether it is down
@@ -483,9 +485,13 @@ export class ScratchSpriteClass extends ShapeClass {
         // a LEFT_RIGHT sprite facing left shows its costume mirrored, as applyState does
         const mirrored = this.rotationStyle === RotationStyle.LEFT_RIGHT
             && this.direction > 180 && this.direction < 360;
+        // mirrored about the rotation center, which then sits as far from the
+        // right edge as it did from the left
+        const center = this.rotationCenterOf(size.w, size.h);
         const contentX = mirrored ? size.w - content.x - content.width : content.x;
-        const left = (contentX - size.w / 2) * scaleX;
-        const top = (content.y - size.h / 2) * scaleY;
+        const centerX = mirrored ? size.w - center.x : center.x;
+        const left = (contentX - centerX) * scaleX;
+        const top = (content.y - center.y) * scaleY;
         const right = left + content.width * scaleX;
         const bottom = top + content.height * scaleY;
 
@@ -733,8 +739,26 @@ export class ScratchSpriteClass extends ShapeClass {
     /** Build the PIXI display object for a costume. UISprite overrides for nine-slice. */
     protected createCostumeDisplay(texture: PIXI.Texture): PIXI.Container {
         const sprite = new PIXI.Sprite(texture);
-        sprite.anchor.set(0.5, 0.5);
+        const center = this.rotationCenterOf(texture.width, texture.height);
+        sprite.anchor.set(center.x / texture.width, center.y / texture.height);
         return sprite;
+    }
+
+    /**
+     * Upstream's rotation center: the point of the costume that sits at the
+     * sprite's position and that it turns and mirrors around, in the
+     * costume's pixels from its top left corner. Unset, it is the middle.
+     */
+    protected rotationCenter: { x: number, y: number } | undefined;
+
+    protected rotationCenterOf(w: number, h: number): { x: number, y: number } {
+        return this.rotationCenter ?? { x: w / 2, y: h / 2 };
+    }
+
+    _setRotationCenter(x: number, y: number) {
+        this.rotationCenter = { x, y };
+        // the anchor, the outline and the bubble all hang off it
+        if (this.currentCostume >= 0) this._applyCostumeIndex(this.currentCostume);
     }
 
     protected _applyCostumeIndex(index: number) {
@@ -767,8 +791,9 @@ export class ScratchSpriteClass extends ShapeClass {
         // is big, and colliding with that empty space looks like a bug.
         const w = texture.width, h = texture.height;
         const content = ScratchCostumes.contentBounds(texture, this.world?.app?.renderer);
-        const left = content.x - w / 2;
-        const top = content.y - h / 2;
+        const center = this.rotationCenterOf(w, h);
+        const left = content.x - center.x;
+        const top = content.y - center.y;
         const right = left + content.width;
         const bottom = top + content.height;
         this.hitPolygonInitial = [
@@ -784,6 +809,8 @@ export class ScratchSpriteClass extends ShapeClass {
         // so a setTint() right after add() lands before the costume exists
         this.applyTint();
         this.applyTransparency();
+        // and so does the shader: the filter belonged to the old display object
+        if (this.shaders) this.applyShader(this.shaders._getCurrent()?.filter);
         this.applyState();
         this.flushPendingStamps(texture);
     }
@@ -1219,9 +1246,10 @@ export class ScratchSpriteClass extends ShapeClass {
     private applyCustomHitbox() {
         if (!this.customHitboxPoints) return;
         const size = this.currentTextureSize();
+        const center = this.rotationCenterOf(size.w, size.h);
         this.hitPolygonInitial = this.customHitboxPoints.map(p => ({
-            x: p.x - size.w / 2,
-            y: p.y - size.h / 2,
+            x: p.x - center.x,
+            y: p.y - center.y,
         }));
         this.hitPolygonDirty = true;
     }
@@ -1310,7 +1338,8 @@ export class ScratchSpriteClass extends ShapeClass {
     private printStamp(texture: PIXI.Texture, layerName: ScratchLayerName,
         matrix: PIXI.Matrix, alpha: number, tint: number) {
         const stamp = new PIXI.Sprite(texture);
-        stamp.anchor.set(0.5, 0.5);
+        const center = this.rotationCenterOf(texture.width, texture.height);
+        stamp.anchor.set(center.x / texture.width, center.y / texture.height);
         stamp.setFromMatrix(matrix);
         stamp.alpha = alpha;
         stamp.tint = tint;
