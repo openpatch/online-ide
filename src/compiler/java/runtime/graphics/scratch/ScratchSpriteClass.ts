@@ -16,6 +16,7 @@ import { MouseCodeEnum } from "./MouseCodeEnum";
 import { RotationStyle, RotationStyleEnum } from "./RotationStyleEnum";
 import { ScratchColorClass } from "./ScratchColorClass";
 import { ScratchCostumes } from "./ScratchCostumes";
+import { colorKey, isTouchingColor } from "./ScratchColorSensing";
 import { DEBUG_COLOR, round2 } from "./ScratchDebug";
 import { ScratchHitboxClass } from "./ScratchHitboxClass";
 import { scratchSpriteList } from "./ScratchLists";
@@ -167,6 +168,9 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "boolean isTouchingSprite(Class<? extends Sprite> c)", native: ScratchSpriteClass.prototype._isTouchingSpriteOfClass, comment: SRC.spriteIsTouchingSprite2Comment },
         { type: "method", signature: "<T extends Sprite> T getTouchingSprite(Class<T> c)", native: ScratchSpriteClass.prototype._getTouchingSprite, comment: SRC.spriteGetTouchingSpriteComment },
         { type: "method", signature: "<T extends Sprite> List<T> getTouchingSprites(Class<T> c)", java: ScratchSpriteClass.prototype._mj$getTouchingSprites$List$Class, comment: SRC.spriteGetTouchingSpritesComment },
+        { type: "method", signature: "boolean isTouchingColor(Color color)", native: ScratchSpriteClass.prototype._isTouchingColor, comment: SRC.spriteIsTouchingColorComment },
+        { type: "method", signature: "boolean isTouchingColor(double r, double g, double b)", native: ScratchSpriteClass.prototype._isTouchingColorRGB, comment: SRC.spriteIsTouchingColor2Comment },
+        { type: "method", signature: "boolean isColorTouchingColor(Color color, Color other)", native: ScratchSpriteClass.prototype._isColorTouchingColor, comment: SRC.spriteIsColorTouchingColorComment },
         { type: "method", signature: "boolean isTouchingEdge()", native: ScratchSpriteClass.prototype._isTouchingEdge, comment: SRC.spriteIsTouchingEdgeComment },
         { type: "method", signature: "boolean isTouchingMousePointer()", native: ScratchSpriteClass.prototype._isTouchingMousePointer, comment: SRC.spriteIsTouchingMousePointerComment },
         { type: "method", signature: "boolean isKeyPressed(KeyCode key)", native: ScratchSpriteClass.prototype._isKeyPressed, comment: SRC.spriteIsKeyPressedComment },
@@ -1086,6 +1090,30 @@ export class ScratchSpriteClass extends ShapeClass {
      * edge once its collision outline — not its costume canvas — leaves the
      * stage. edgeOverlap() answers the same question; see ifOnEdgeBounce.
      */
+    /** Upstream's isTouchingColor/isColorTouchingColor; see ScratchColorSensing. */
+    private touchingColor(mine: number | undefined, target: number): boolean {
+        if (this.isUI()) return false;
+        const stage: any = this.ownerStage();
+        if (!stage?.scratchLayers) return false;
+        const background: ScratchColorClass | undefined = stage._getColor?.();
+        return isTouchingColor(this.world?.app?.renderer as PIXI.Renderer | undefined, {
+            scratchLayers: stage.scratchLayers,
+            world: this.world,
+            backgroundColor: background ? background._get() & 0xffffff : 0xffffff,
+        }, this, mine, target);
+    }
+    _isTouchingColor(color: ScratchColorClass): boolean {
+        if (!color) return false;
+        return this.touchingColor(undefined, colorKey(color.r, color.g, color.b));
+    }
+    _isTouchingColorRGB(r: number, g: number, b: number): boolean {
+        return this.touchingColor(undefined, colorKey(r, g, b));
+    }
+    _isColorTouchingColor(color: ScratchColorClass, other: ScratchColorClass): boolean {
+        if (!color || !other) return false;
+        return this.touchingColor(colorKey(color.r, color.g, color.b), colorKey(other.r, other.g, other.b));
+    }
+
     _isTouchingEdge(): boolean {
         if (!this.hitboxEnabled) return false;
         const over = this.edgeOverlap();

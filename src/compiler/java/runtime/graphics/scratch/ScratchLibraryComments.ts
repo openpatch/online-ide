@@ -1142,6 +1142,18 @@ export class SRC {
         "de": "Zeigt eine Denkblase für die angegebene Zeit in Millisekunden",
         "en": "Shows a thought bubble for the given time in milliseconds",
     });
+    static spriteIsTouchingColorComment = () => lm({
+        "de": "Prüft, ob etwas, das die Figur malt, über dieser Farbe auf der Bühne liegt — auf dem Bühnenbild, auf dem, was der Stift gezeichnet hat, oder auf einer anderen Figur. Fast gleiche Farben zählen wie in Scratch.",
+        "en": "Checks whether anything the sprite paints lies over this colour on the stage — on the backdrop, on what the pen drew or on another sprite. Nearly equal colours count, as in Scratch.",
+    });
+    static spriteIsTouchingColor2Comment = () => lm({
+        "de": "Prüft, ob die Figur eine Farbe berührt, angegeben durch Rot, Grün und Blau [0...255]",
+        "en": "Checks whether the sprite is touching a colour given by red, green and blue [0...255]",
+    });
+    static spriteIsColorTouchingColorComment = () => lm({
+        "de": "Prüft, ob die Teile der Figur in der Farbe color über der Farbe other liegen",
+        "en": "Checks whether the parts of the sprite painted in color lie over the colour other",
+    });
     static spriteAddCostumeComment = () => lm({
         "de": "Fügt eines der eingebauten Kostüme hinzu",
         "en": "Adds one of the built-in costumes",
