@@ -31,9 +31,11 @@ function ensureDir(dir) {
 }
 
 function parseAtlas(xml) {
-    // <SubTexture name="x.png" x="0" y="0" width="1" height="1"/>
+    // <SubTexture name="x.png" x="0" y="0" width="1" height="1"/>, and for a
+    // sprite drawn facing up, down or left also direction="0" (or 180, -90):
+    // Scratch for Java turns those to face right, ScratchCostumes does the same.
     const frames = {};
-    const re = /<SubTexture\s+name="([^"]+)"\s+x="(-?\d+)"\s+y="(-?\d+)"\s+width="(\d+)"\s+height="(\d+)"\s*\/>/g;
+    const re = /<SubTexture\s+name="([^"]+)"\s+x="(-?\d+)"\s+y="(-?\d+)"\s+width="(\d+)"\s+height="(\d+)"(?:\s+direction="(-?\d+)")?\s*\/>/g;
     let m;
     while ((m = re.exec(xml)) !== null) {
         const rawName = m[1];
@@ -48,6 +50,7 @@ function parseAtlas(xml) {
             sourceSize: { w, h },
             pivot: { x: 0.5, y: 0.5 },
         };
+        if (m[6] !== undefined) frames[name].direction = parseInt(m[6], 10);
     }
     return frames;
 }

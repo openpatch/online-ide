@@ -43,6 +43,11 @@ export class ScratchCostumes {
     private static externalTextures: Map<string, Promise<PIXI.Texture>> = new Map();
     // the same images once they have arrived, for the synchronous lookups
     private static loadedTextures: Map<string, PIXI.Texture> = new Map();
+    // "sheet/frame" (lower-cased) -> the way that built-in is drawn facing, for
+    // the ones the atlas says do not face right
+    private static drawnFacing: Map<string, number> = new Map();
+    // a texture -> the same picture turned to face right from each direction
+    private static turnedTextures: Map<PIXI.Texture, Map<number, PIXI.Texture>> = new Map();
 
     static load(): Promise<void> {
         if (this.loadPromise) return this.loadPromise;
@@ -58,6 +63,8 @@ export class ScratchCostumes {
                     for (const frameName of Object.keys(data.frames)) {
                         const key = frameName.toLowerCase();
                         if (!this.bareNameToSheet.has(key)) this.bareNameToSheet.set(key, def.name);
+                        const direction = data.frames[frameName].direction;
+                        if (direction !== undefined) this.drawnFacing.set(def.name + "/" + key, direction);
                     }
                 } catch (e) {
                     // A missing sheet must not break the whole library.
@@ -166,10 +173,72 @@ export class ScratchCostumes {
         const sheet = this.sheets.get(sheetName.toLowerCase());
         if (!sheet) return undefined;
         // spritesheet.textures is keyed by the exact frame name; match case-insensitively
-        const direct = sheet.textures[frame];
-        if (direct) return direct;
-        const key = Object.keys(sheet.textures).find(k => k.toLowerCase() === frame.toLowerCase());
-        return key ? sheet.textures[key] : undefined;
+        const key = sheet.textures[frame] ? frame
+            : Object.keys(sheet.textures).find(k => k.toLowerCase() === frame.toLowerCase());
+        if (!key) return undefined;
+        // Every built-in with a front faces right, as on the desktop; the atlas
+        // names the ones Kenney drew facing another way.
+        const facing = this.drawnFacing.get(sheetName.toLowerCase() + "/" + key.toLowerCase());
+        return facing === undefined ? sheet.textures[key] : this.turnToFaceRight(sheet.textures[key], facing);
+    }
+
+    /**
+     * Maps a direction onto 0, 90, 180 or 270, as upstream's Image does, or
+     * explains why it cannot.
+     */
+    static normaliseDirection(direction: number): number {
+        const degrees = ((direction % 360) + 360) % 360;
+        if (degrees % 90 !== 0) {
+            throw new RuntimeExceptionClass(
+                "Ein Bild kann nur nach oben (0), rechts (90), unten (180) oder links (-90) schauen, nicht " + direction + ". / "
+                + "A picture can only be drawn facing up (0), right (90), down (180) or left (-90), not " + direction + ".");
+        }
+        return degrees;
+    }
+
+    /**
+     * The picture of `texture`, which is drawn facing `direction`, turned so that
+     * it faces right — the way a sprite faces at direction 90. Upstream's
+     * Image.turnToFaceRight: a picture facing up is turned a quarter clockwise,
+     * one facing down a quarter anticlockwise, and one facing left is mirrored,
+     * so that it stays upright.
+     *
+     * The result is a texture of its own rather than a rotated view of the atlas,
+     * so cutting tiles out of it by its frame keeps working. It is made once per
+     * texture and direction.
+     */
+    static turnToFaceRight(texture: PIXI.Texture, direction: number): PIXI.Texture {
+        const facing = this.normaliseDirection(direction);
+        if (facing === 90) return texture;
+
+        let byDirection = this.turnedTextures.get(texture);
+        if (!byDirection) {
+            byDirection = new Map();
+            this.turnedTextures.set(texture, byDirection);
+        }
+        const cached = byDirection.get(facing);
+        if (cached) return cached;
+
+        const { x, y, width: w, height: h } = texture.frame;
+        const quarter = facing !== 270;
+        const canvas = document.createElement("canvas");
+        canvas.width = quarter ? h : w;
+        canvas.height = quarter ? w : h;
+        const context = canvas.getContext("2d")!;
+        context.imageSmoothingEnabled = false;
+        switch (facing) {
+            // up: the top edge becomes the right edge
+            case 0: context.translate(h, 0); context.rotate(Math.PI / 2); break;
+            // down: the bottom edge becomes the right edge
+            case 180: context.translate(0, w); context.rotate(-Math.PI / 2); break;
+            // left: mirrored
+            default: context.translate(w, 0); context.scale(-1, 1); break;
+        }
+        context.drawImage(texture.source.resource as CanvasImageSource, x, y, w, h, 0, 0, w, h);
+
+        const turned = trackTexture(PIXI.Texture.from(canvas));
+        byDirection.set(facing, turned);
+        return turned;
     }
 
     private static contentBoundsCache: Map<PIXI.Texture, ContentBounds> = new Map();
