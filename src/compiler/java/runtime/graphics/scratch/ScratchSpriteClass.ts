@@ -474,7 +474,11 @@ export class ScratchSpriteClass extends ShapeClass {
         const content = texture
             ? ScratchCostumes.contentBounds(texture, this.world?.app?.renderer)
             : { x: 0, y: 0, width: size.w, height: size.h };
-        const left = (content.x - size.w / 2) * scaleX;
+        // a LEFT_RIGHT sprite facing left shows its costume mirrored, as applyState does
+        const mirrored = this.rotationStyle === RotationStyle.LEFT_RIGHT
+            && this.direction > 180 && this.direction < 360;
+        const contentX = mirrored ? size.w - content.x - content.width : content.x;
+        const left = (contentX - size.w / 2) * scaleX;
         const top = (content.y - size.h / 2) * scaleY;
         const right = left + content.width * scaleX;
         const bottom = top + content.height * scaleY;
