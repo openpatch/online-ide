@@ -29,8 +29,16 @@ export type ColorSensingStage = {
     backgroundColor: number;
 };
 
-/** Offscreen textures, kept per renderer and only resized when a sprite needs more room. */
-const targets: WeakMap<PIXI.Renderer, { scene: PIXI.RenderTexture, self: PIXI.RenderTexture }> = new WeakMap();
+/**
+ * Per renderer: the two offscreen textures, resized only when a sprite needs
+ * more room, a view onto each for reading them back, and the stand-in that is
+ * drawn in the sprite's place. Rendering a container on its own turns it into
+ * a render group of PIXI's for good, which the live sprite must not become,
+ * so its costume is drawn through this stand-in instead.
+ */
+type Targets = { scene: PIXI.RenderTexture, self: PIXI.RenderTexture, sceneView: PIXI.Texture,
+    selfView: PIXI.Texture, standIn: PIXI.Sprite };
+const targets: WeakMap<PIXI.Renderer, Targets> = new WeakMap();
 
 /**
  * Scratch's tolerance: red and green compared on their top five bits, blue on
@@ -51,6 +59,8 @@ export function isTouchingColor(renderer: PIXI.Renderer | undefined, stage: Colo
     const layers = stage?.scratchLayers;
     const container = sprite.container;
     if (!renderer || !layers || !container || container.destroyed || !container.visible) return false;
+    // a costume is a Sprite; the nine-slice of a UISprite is not, and UI sprites do not sense
+    if (!(container instanceof PIXI.Sprite)) return false;
 
     // The sprite's transform on the stage: camera, then its layer, then itself.
     // They are taken from the containers' own local transforms, which the
@@ -77,7 +87,7 @@ export function isTouchingColor(renderer: PIXI.Renderer | undefined, stage: Colo
     const width = right - left, height = bottom - top;
     if (width <= 0 || height <= 0) return false;
 
-    const { scene, self } = targetsFor(renderer, width, height);
+    const { scene, self, sceneView, selfView, standIn } = targetsFor(renderer, width, height);
 
     // the stage without the sprite, its texts and the debug overlay
     const hidden = [container, layers.texts, layers.debugWorld].filter(c => c.visible);
@@ -87,25 +97,34 @@ export function isTouchingColor(renderer: PIXI.Renderer | undefined, stage: Colo
             container: layers.camera,
             target: scene,
             clear: true,
-            clearColor: stage!.backgroundColor,
+            // an array: the number 0 for black would be taken for "no colour"
+            clearColor: PIXI.Color.shared.setValue(stage!.backgroundColor).toArray(),
             transform: layers.camera.localTransform.clone().translate(-left, -top),
         });
     } finally {
         for (const c of hidden) c.visible = true;
     }
 
-    // the sprite on its own
+    // The sprite's costume on its own, as upstream samples it: with its tint,
+    // but at full opacity - a ghosted sprite still senses - and without its
+    // shader.
+    standIn.texture = container.texture;
+    standIn.anchor.copyFrom(container.anchor);
+    standIn.tint = container.tint;
     renderer.render({
-        container,
+        container: standIn,
         target: self,
         clear: true,
         clearColor: [0, 0, 0, 0],
         transform: placed.clone().translate(-left, -top),
     });
 
-    const frame = new PIXI.Rectangle(0, 0, width, height);
-    const under = renderer.extract.pixels({ target: new PIXI.Texture({ source: scene.source, frame }) }).pixels;
-    const own = renderer.extract.pixels({ target: new PIXI.Texture({ source: self.source, frame }) }).pixels;
+    for (const view of [sceneView, selfView]) {
+        view.frame.width = width;
+        view.frame.height = height;
+    }
+    const under = renderer.extract.pixels({ target: sceneView }).pixels;
+    const own = renderer.extract.pixels({ target: selfView }).pixels;
 
     for (let i = 0; i < width * height * 4; i += 4) {
         const alpha = own[i + 3];
@@ -120,17 +139,25 @@ export function isTouchingColor(renderer: PIXI.Renderer | undefined, stage: Colo
     return false;
 }
 
-function targetsFor(renderer: PIXI.Renderer, width: number, height: number) {
-    let pair = targets.get(renderer);
-    if (!pair) {
+function targetsFor(renderer: PIXI.Renderer, width: number, height: number): Targets {
+    let made = targets.get(renderer);
+    if (!made) {
         const make = () => PIXI.RenderTexture.create({ width, height, resolution: 1 });
-        pair = { scene: make(), self: make() };
-        targets.set(renderer, pair);
+        const scene = make();
+        const self = make();
+        // the views are kept: a Texture listens to its source until it is destroyed
+        made = {
+            scene, self,
+            sceneView: new PIXI.Texture({ source: scene.source, frame: new PIXI.Rectangle(0, 0, width, height) }),
+            selfView: new PIXI.Texture({ source: self.source, frame: new PIXI.Rectangle(0, 0, width, height) }),
+            standIn: new PIXI.Sprite(),
+        };
+        targets.set(renderer, made);
     }
-    for (const texture of [pair.scene, pair.self]) {
+    for (const texture of [made.scene, made.self]) {
         if (texture.width < width || texture.height < height) {
             texture.resize(Math.max(texture.width, width), Math.max(texture.height, height), 1);
         }
     }
-    return pair;
+    return made;
 }
