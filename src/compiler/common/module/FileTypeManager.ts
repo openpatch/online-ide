@@ -23,6 +23,9 @@ export class FileTypeManager {
         { name: "JPEG-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".jpeg" },
         { name: "GIF-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".gif" },
         { name: "WebP-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".webp" },
+        { name: "Fragment-Shader", file_type: 1, iconclass: "img_file-dark-text", language: "glsl", suffix: ".frag" },
+        { name: "Vertex-Shader", file_type: 1, iconclass: "img_file-dark-text", language: "glsl", suffix: ".vert" },
+        { name: "GLSL-Shader", file_type: 1, iconclass: "img_file-dark-text", language: "glsl", suffix: ".glsl" },
         { name: "Assembler-Quelltext", file_type: 0, iconclass: "img_file-dark-assembly", language: ProgrammingLanguageData.ByAssembly.monacoLanguageSelector, suffix: "." + ProgrammingLanguageData.ByAssembly.fileEndingWithOutDot }
     ];
 

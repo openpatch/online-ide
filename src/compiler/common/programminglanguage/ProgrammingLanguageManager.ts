@@ -4,6 +4,7 @@ import { ProgrammingLanguage } from "./ProgrammingLanguage";
 import { ErrorMarker } from "../monacoproviders/ErrorMarker";
 import { ByAssemblyLanguage } from "../../assembly/byassembly/ByAssemblyLanguage";
 import { ProgrammingLanguageData } from "./ProgrammingLanguageData";
+import { registerGlslLanguage } from "../monacoproviders/GlslLanguage";
 
 export class ProgrammingLanguageManager {
     private languages: ProgrammingLanguage[] = [];
@@ -13,6 +14,7 @@ export class ProgrammingLanguageManager {
         ProgrammingLanguageManager.instance = this;
         this.languages.push(JavaLanguage.getInstance());
         this.languages.push(ByAssemblyLanguage.getInstance());
+        registerGlslLanguage();
     }
 
     public static getInstance(): ProgrammingLanguageManager {

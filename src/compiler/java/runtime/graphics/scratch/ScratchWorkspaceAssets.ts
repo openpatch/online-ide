@@ -53,6 +53,13 @@ export class ScratchWorkspaceAssets {
             const dataUrl = file.getText();
             const mime = mimeOf(dataUrl);
 
+            // A page embedding the IDE hands over every file it names with
+            // `@file` as a data URL, whatever is in it - a shader as well.
+            if (SHADER_FILE.test(file.name)) {
+                this.texts.set(path, textOf(dataUrl));
+                continue;
+            }
+
             if (mime.startsWith("image/")) {
                 loads.push(this.texture(dataUrl).then(
                     texture => { this.textures.set(path, texture); },
@@ -126,6 +133,16 @@ const SHADER_FILE = /\.(frag|vert|glsl)$/i;
 /** "./a/b.png", "/a/b.png" and "a/b.png" all name the same file. */
 function normalize(path: string): string {
     return path.replace(/^\.\//, "").replace(/^\/+/, "");
+}
+
+/** The text a data URL holds, base64 or not, read as UTF-8. */
+function textOf(dataUrl: string): string {
+    const comma = dataUrl.indexOf(",");
+    const header = dataUrl.substring(0, comma);
+    const body = dataUrl.substring(comma + 1);
+    if (!/;base64$/i.test(header)) return decodeURIComponent(body);
+    const bytes = Uint8Array.from(atob(body), c => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
 }
 
 function mimeOf(dataUrl: string): string {
