@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, test } from 'vitest';
 import JSZip from 'jszip';
-import { exportProjectZip, importProjectZip, projectPath, workspacePaths } from '../client/workspace/PortableProject';
+import { exportProjectZip, fetchProjectAssets, importProjectZip, projectPath, referencedAssetPaths, workspacePaths } from '../client/workspace/PortableProject';
 import type { ExportedWorkspace } from '../client/workspace/WorkspaceImporterExporter';
 
 function workspace(flavor: string): ExportedWorkspace {
@@ -109,4 +109,25 @@ test('teaching manifests and original Scratch information survive transfer', asy
     expect(await result.file('.scratch4j/migration.json')!.async('string')).toContain('tasks');
     expect([...await result.file('.scratch4j/original.sb3')!.async('uint8array')]).toEqual([80, 75, 1, 2]);
     expect(result.file('.scratch4j/build/cache.java')).toBeNull();
+});
+
+test('assets the program loads from next to the page, not from the workspace, go into the ZIP', async () => {
+    const original = workspace('standard');
+    original.modules[1].text = 'void main() { new Stage().addBackdrop("bg", "./assets/bg.png");\n'
+        + '  addSound("s", "assets/sound.ogg"); String t = "Hallo \\"x.png\\""; load("https://example.org/a.png"); }\n';
+    const paths = referencedAssetPaths(original, ['assets/walk1.png', 'cat', 'assets/bg.png']);
+    expect(paths.sort()).toEqual(['assets/bg.png', 'assets/walk1.png']);
+    const served: Record<string, Response> = {
+        'https://book.example/kapitel/assets/bg.png': new Response(new Uint8Array([9, 8]), { headers: { 'content-type': 'image/png' } }),
+        'https://book.example/kapitel/assets/walk1.png': new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } }),
+    };
+    const fetch = globalThis.fetch;
+    globalThis.fetch = (async (url: string) => served[url] ?? new Response('', { status: 404 })) as any;
+    try {
+        const { files, missing } = await fetchProjectAssets(paths, path => 'https://book.example/kapitel/' + path);
+        expect(missing).toEqual(['assets/walk1.png']);
+        const archive = await JSZip.loadAsync(await exportProjectZip(original, files));
+        expect([...await archive.file('assets/bg.png')!.async('uint8array')]).toEqual([9, 8]);
+        expect([...await archive.file('assets/image.png')!.async('uint8array')]).toEqual([0, 1, 2, 3, 255]);
+    } finally { globalThis.fetch = fetch; }
 });

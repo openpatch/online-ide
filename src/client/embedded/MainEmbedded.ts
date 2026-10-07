@@ -42,7 +42,8 @@ import { SpritesheetData } from "../spritemanager/SpritesheetData.js";
 import { GUIFile } from "../workspace/File.js";
 import { Workspace } from "../workspace/Workspace.js";
 import { ExportedWorkspace, WorkspaceExporter } from "../workspace/WorkspaceImporterExporter.js";
-import { exportProjectZip, importProjectZip, workspacePaths } from '../workspace/PortableProject';
+import { exportProjectZip, fetchProjectAssets, importProjectZip, referencedAssetPaths, workspacePaths } from '../workspace/PortableProject';
+import { requestedAssetPaths, resolveAssetUrl, setAssetBase } from '../../compiler/java/runtime/graphics/scratch/ScratchAssetUrls';
 import { configFromURLParameters, sharedWorkspaceIdFromURL } from "./EmbeddedURLConfig.js";
 import { showURLParametersPanel } from "./EmbeddedURLParametersPanel.js";
 import { EmbeddedMessages } from "./EmbeddedMessages.js";
@@ -995,11 +996,18 @@ export class MainEmbedded implements MainBase {
     async saveProjectZip() {
         try {
             const workspace = await WorkspaceExporter.exportWorkspace(this.currentWorkspace);
-            const bytes = await exportProjectZip(workspace);
+            // files the program loads from next to this page rather than from the workspace
+            setAssetBase(this.getAssetBaseUrl());
+            const literals = referencedAssetPaths(workspace);
+            const { files, missing } = await fetchProjectAssets(referencedAssetPaths(workspace, requestedAssetPaths()), resolveAssetUrl);
+            const bytes = await exportProjectZip(workspace, files);
             let name = prompt(EmbeddedMessages.ProjectFilename(), this.currentWorkspace.name + '.zip');
             if (!name) return;
             if (!name.toLowerCase().endsWith('.zip')) name += '.zip';
             downloadFile(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), name, true);
+            // a path a run merely tried (a built-in costume name, say) is no loss
+            const lost = missing.filter(path => literals.includes(path));
+            if (lost.length) alert(`${EmbeddedMessages.ProjectAssetsMissing()}\n${lost.join('\n')}`);
         } catch (error) { alert(`${EmbeddedMessages.ProjectFailed()}\n${error.message}`); }
     }
 

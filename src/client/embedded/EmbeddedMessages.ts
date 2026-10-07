@@ -4,6 +4,7 @@ export class EmbeddedMessages {
     static ExportProject = () => lm({ de: 'Projekt-ZIP für Studio speichern', en: 'Save project ZIP for Studio' });
     static ProjectFilename = () => lm({ de: 'Dateiname für das Projekt-ZIP', en: 'Project ZIP filename' });
     static ImportProject = () => lm({ de: 'Workspace-JSON oder Projekt-ZIP öffnen', en: 'Open workspace JSON or project ZIP' });
+    static ProjectAssetsMissing = () => lm({ de: 'Diese Dateien nennt das Programm, sie konnten aber nicht ins Projekt-ZIP übernommen werden:', en: 'The program names these files, but they could not be added to the project ZIP:' });
     static ProjectFailed = () => lm({ de: 'Das Projekt konnte nicht übertragen werden:', en: 'The project could not be transferred:' });
 
     static UploadAsset = () => lm({

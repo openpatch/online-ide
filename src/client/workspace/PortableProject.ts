@@ -90,7 +90,47 @@ function metadataWarnings(metadata: any): string[] {
     return warnings;
 }
 
-export async function exportProjectZip(workspace: ExportedWorkspace): Promise<Uint8Array> {
+const ASSET = /\.(png|jpe?g|svg|gif|webp|wav|mp3|ogg|ttf|otf|woff2?|frag|vert|glsl|json|tmx|tsx|csv|txt)$/i;
+
+/**
+ * Relative paths of files a program loads that are not part of its workspace.
+ *
+ * In the browser `addCostume("hero", "assets/hero.png")` may load a file that
+ * lies next to the page embedding the IDE (see ScratchAssetUrls) instead of one
+ * handed over with `@file`. Studio has no such page, so these files have to go
+ * into the ZIP. Candidates are the string literals of the Java sources plus the
+ * paths runs have asked for, which covers names built at run time.
+ */
+export function referencedAssetPaths(workspace: ExportedWorkspace, requested: string[] = []): string[] {
+    const own = new Set([...workspacePaths(workspace).values()].map(name => name.toLowerCase()));
+    const literals = workspace.modules.filter(file => !file.isFolder && /\.java$/i.test(file.name))
+        .flatMap(file => [...file.text.matchAll(/"((?:[^"\\\n]|\\.)*)"/g)].map(match => match[1].replace(/\\(["\\])/g, '$1')));
+    const paths = new Set<string>();
+    for (const candidate of [...literals, ...requested]) {
+        const path = candidate.replace(/^\.\//, '');
+        if (!ASSET.test(path) || /^[a-z][a-z0-9+.-]*:/i.test(path) || own.has(path.toLowerCase())) continue;
+        try { paths.add(projectPath(path)); } catch { /* not a file path */ }
+    }
+    return [...paths];
+}
+
+/** Downloads the given project files; the ones that cannot be had are reported. */
+export async function fetchProjectAssets(paths: string[], resolve: (path: string) => string):
+    Promise<{ files: Map<string, Uint8Array>, missing: string[] }> {
+    const files = new Map<string, Uint8Array>();
+    const missing: string[] = [];
+    await Promise.all(paths.map(async path => {
+        try {
+            const response = await fetch(resolve(path));
+            // a dev server or SPA host answers an unknown path with its index page
+            if (!response.ok || /text\/html/i.test(response.headers.get('content-type') ?? '')) throw new Error(String(response.status));
+            files.set(path, new Uint8Array(await response.arrayBuffer()));
+        } catch { missing.push(path); }
+    }));
+    return { files, missing: missing.sort() };
+}
+
+export async function exportProjectZip(workspace: ExportedWorkspace, extraFiles: Map<string, Uint8Array> = new Map()): Promise<Uint8Array> {
     if (workspace.settings?.language !== 'Java' || !workspace.settings.libraries?.includes('scratch')) throw new Error('Choose a Java workspace with the Scratch library first.');
     if (workspace.spritesheetBase64) throw new Error('Extract the legacy spritesheet into image files before exporting a portable project. Workspace JSON still preserves it.');
     const extraLibraries = workspace.settings.libraries.filter(id => !['scratch', 'nrw'].includes(id));
@@ -110,6 +150,15 @@ export async function exportProjectZip(workspace: ExportedWorkspace): Promise<Ui
         if (file.isFolder) { zip.folder(name); continue; }
         if (name === METADATA) continue;
         const bytes = bytesOf(file.text);
+        total += bytes.length;
+        if (bytes.length > MAX_FILE || total > MAX_TOTAL) throw new Error(`Project asset limit exceeded: ${name}`);
+        zip.file(name, bytes);
+    }
+    const names = new Set([...paths.values()].map(name => name.toLowerCase()));
+    for (const [path, bytes] of extraFiles) {
+        const name = projectPath(path);
+        if (name === METADATA || names.has(name.toLowerCase())) continue;
+        names.add(name.toLowerCase());
         total += bytes.length;
         if (bytes.length > MAX_FILE || total > MAX_TOTAL) throw new Error(`Project asset limit exceeded: ${name}`);
         zip.file(name, bytes);

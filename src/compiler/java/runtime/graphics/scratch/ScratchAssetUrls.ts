@@ -17,6 +17,16 @@
 
 let assetBase: string | undefined;
 
+/**
+ * The relative paths runs have asked for, so that a project export can take
+ * along files whose names a program builds at run time ("walk" + i + ".png").
+ */
+const requested: Set<string> = new Set();
+
+export function requestedAssetPaths(): string[] {
+    return [...requested];
+}
+
 /** Called by the first stage of a run with what the IDE was configured with. */
 export function setAssetBase(base: string | undefined) {
     assetBase = base ? (base.endsWith("/") ? base : base + "/") : undefined;
@@ -24,6 +34,7 @@ export function setAssetBase(base: string | undefined) {
 
 export function resolveAssetUrl(path: string): string {
     if (!path || path.startsWith("/") || /^[a-z][a-z0-9+.-]*:/i.test(path)) return path;
+    requested.add(path);
     const pageUrl = typeof document !== "undefined" ? document.baseURI : undefined;
     try {
         const base = assetBase ? new URL(assetBase, pageUrl).href : pageUrl;
