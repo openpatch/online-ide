@@ -111,10 +111,15 @@ export class ActorManager {
         if (this.actors["act"].length == 0 && this.actors["actWithTime"].length == 0) return;
 
         this.runningactThread = this.interpreter.scheduler.createThread("act method-thread");
+        const scratchClock = this.interpreter.retrieveObject('ScratchGameClock') as
+            { runFrame(thread: Thread, actors: IActor[]): void } | undefined;
+        scratchClock?.runFrame(this.runningactThread, this.actors.act);
         for (let actor of this.actors["act"]) {
+            if (scratchClock && actor.usesScratchGameClock) continue;
             if (actor.isActing) actor._mj$act$void$(this.runningactThread, undefined);
         }
         for (let actor of this.actors["actWithTime"]) {
+            if (scratchClock && actor.usesScratchGameClock) continue;
             if (actor.isActing) actor._mj$act$void$double(this.runningactThread, undefined, dt);
         }
 

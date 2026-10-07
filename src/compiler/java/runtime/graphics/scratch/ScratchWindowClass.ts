@@ -10,6 +10,8 @@ import { currentScratchStage, desktopOnly, desktopOnlyValue } from "./ScratchUns
 import { TextureSampling, TextureSamplingEnum } from "./TextureSamplingEnum";
 import { getTextureSampling, setTextureSampling } from "./ScratchTextureSampling";
 import { SRC } from "./ScratchLibraryComments";
+import { scratchBrowserVersion } from './ScratchCompatibility';
+import { scratchGameClock } from './ScratchGameClock';
 
 /**
  * The application window, mirroring org.openpatch.scratch.Window.
@@ -38,6 +40,12 @@ export class ScratchWindowClass extends ObjectClass {
         { type: "method", signature: "int getWidth()", native: ScratchWindowClass.prototype._getWidth, comment: SRC.windowGetWidthComment },
         { type: "method", signature: "int getHeight()", native: ScratchWindowClass.prototype._getHeight, comment: SRC.windowGetHeightComment },
         { type: "method", signature: "double getDeltaTime()", native: ScratchWindowClass.prototype._getDeltaTime, comment: SRC.windowGetDeltaTimeComment },
+        { type: "method", signature: "void pause()", native: ScratchWindowClass.prototype._pause },
+        { type: "method", signature: "void resume()", native: ScratchWindowClass.prototype._resume },
+        { type: "method", signature: "boolean isPaused()", native: ScratchWindowClass.prototype._isPaused },
+        { type: "method", signature: "void step()", native: ScratchWindowClass.prototype._step },
+        { type: "method", signature: "void setGameSpeed(double speed)", native: ScratchWindowClass.prototype._setGameSpeed },
+        { type: "method", signature: "double getGameSpeed()", native: ScratchWindowClass.prototype._getGameSpeed },
 
         { type: "method", signature: "Stage getStage()", native: ScratchWindowClass.prototype._getStage, comment: SRC.windowGetStageComment },
         { type: "method", signature: "void setStage(Stage stage)", native: ScratchWindowClass.prototype._setStage, comment: SRC.windowSetStageComment },
@@ -129,7 +137,13 @@ export class ScratchWindowClass extends ObjectClass {
 
     _getWidth(): number { return this.currentStage()?._getWidth() ?? this.requestedWidth; }
     _getHeight(): number { return this.currentStage()?._getHeight() ?? this.requestedHeight; }
-    _getDeltaTime(): number { return this.currentStage()?._getDeltaTime() ?? 0; }
+    _getDeltaTime(): number { return scratchGameClock().stepSeconds; }
+    _pause() { scratchGameClock().pause(); }
+    _resume() { scratchGameClock().resume(); }
+    _isPaused() { return scratchGameClock().paused; }
+    _step() { scratchGameClock().step(); }
+    _setGameSpeed(speed: number) { scratchGameClock().setSpeed(speed); }
+    _getGameSpeed() { return scratchGameClock().speed; }
 
     _getStage(): ScratchStageClass | undefined { return this.currentStage(); }
 
@@ -157,7 +171,7 @@ export class ScratchWindowClass extends ObjectClass {
     _exit() { this.currentStage()?._exit(); }
     _mj$whenExits$void$(_t: Thread, callback: CallbackParameter): void { if (callback) callback(); }
 
-    _getLibraryVersion(): string { return "scratch-for-java (Online-IDE-Portierung)"; }
+    _getLibraryVersion(): string { return scratchBrowserVersion; }
     _getLibraryTitle(): string { return "Scratch for Java"; }
 
     static useFullScreen() {

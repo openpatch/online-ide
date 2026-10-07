@@ -6,28 +6,16 @@ import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 import { trackTexture } from "./ScratchTextureSampling";
 import { resolveAssetUrl } from "./ScratchAssetUrls";
+import assetCatalog from './catalogs/assets.json';
 
-// Kenney atlases imported by src/development/scratchAssetsGenerator.js.
-// Both JSON descriptor and PNG are imported as hashed asset URLs (loaded on demand);
-// the descriptor is fetched + parsed at runtime, matching the main spritesheet.
-import platformerJson from "/assets/graphics/scratch/platformer.json.txt";
-import platformerPng from "/assets/graphics/scratch/platformer.png";
-import jumperJson from "/assets/graphics/scratch/jumper.json.txt";
-import jumperPng from "/assets/graphics/scratch/jumper.png";
-import spaceShooterJson from "/assets/graphics/scratch/space_shooter.json.txt";
-import spaceShooterPng from "/assets/graphics/scratch/space_shooter.png";
-import tappyPlaneJson from "/assets/graphics/scratch/tappy_plane.json.txt";
-import tappyPlanePng from "/assets/graphics/scratch/tappy_plane.png";
-
-type SheetDef = { name: string; json: string; png: string };
-
-// Resolution order: a bare costume name resolves to the FIRST sheet defining it.
-const SHEET_DEFS: SheetDef[] = [
-    { name: "platformer", json: platformerJson, png: platformerPng },
-    { name: "jumper", json: jumperJson, png: jumperPng },
-    { name: "space_shooter", json: spaceShooterJson, png: spaceShooterPng },
-    { name: "tappy_plane", json: tappyPlaneJson, png: tappyPlanePng },
-];
+// Geometry and lookup order come from the release catalog; Vite hashes every atlas PNG.
+const sheetUrls = import.meta.glob<string>('/assets/graphics/scratch/*.png',
+    { eager: true, query: '?url', import: 'default' });
+const SHEET_DEFS = [...new Set(assetCatalog.images.map(image => image.sheet))].map(name => {
+    const png = sheetUrls['/assets/graphics/scratch/' + name + '.png'];
+    if (!png) throw new Error('Missing Scratch atlas from release catalog: ' + name);
+    return { name, png };
+});
 
 /**
  * Registry of the built-in kenney.nl costumes bundled with the Scratch library.
@@ -54,7 +42,12 @@ export class ScratchCostumes {
         this.loadPromise = (async () => {
             for (const def of SHEET_DEFS) {
                 try {
-                    const data: any = await fetch(def.json).then(r => r.json());
+                    const frames = Object.fromEntries(assetCatalog.images.filter(image => image.sheet === def.name).map(image => [
+                        image.name, { frame: { x: image.x, y: image.y, w: image.width, h: image.height },
+                            rotated: false, trimmed: false, spriteSourceSize: { x: 0, y: 0, w: image.width, h: image.height },
+                            sourceSize: { w: image.width, h: image.height }, direction: image.direction },
+                    ]));
+                    const data: any = { frames, meta: { image: def.png, scale: '1' } };
                     const texture: PIXI.Texture = trackTexture(await PIXI.Assets.load(def.png));
                     data.meta = { ...data.meta, size: { w: texture.width, h: texture.height } };
                     const sheet = new PIXI.Spritesheet(texture, data);

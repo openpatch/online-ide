@@ -1,6 +1,10 @@
 import { lm } from "../../tools/language/LanguageManager";
 
 export class EmbeddedMessages {
+    static ExportProject = () => lm({ de: 'Projekt-ZIP für Studio speichern', en: 'Save project ZIP for Studio' });
+    static ProjectFilename = () => lm({ de: 'Dateiname für das Projekt-ZIP', en: 'Project ZIP filename' });
+    static ImportProject = () => lm({ de: 'Workspace-JSON oder Projekt-ZIP öffnen', en: 'Open workspace JSON or project ZIP' });
+    static ProjectFailed = () => lm({ de: 'Das Projekt konnte nicht übertragen werden:', en: 'The project could not be transferred:' });
 
     static UploadAsset = () => lm({
     "de": "Bilddatei hochladen",

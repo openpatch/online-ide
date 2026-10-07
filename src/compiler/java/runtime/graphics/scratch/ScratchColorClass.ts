@@ -33,6 +33,7 @@ export class ScratchColorClass extends ObjectClass {
         { type: "method", signature: "double getL()", native: ScratchColorClass.prototype._getL, comment: SRC.colorGetLComment },
         { type: "method", signature: "String toString()", java: ScratchColorClass.prototype._mj$toString$String$, comment: SRC.colorToStringComment },
         { type: "method", signature: "boolean equals(Object other)", java: ScratchColorClass.prototype._mj$equals$boolean$Object, comment: SRC.colorEqualsComment },
+        { type: "method", signature: "int hashCode()", native: ScratchColorClass.prototype._hashCode },
     ];
 
     static type: NonPrimitiveType;
@@ -185,7 +186,18 @@ export class ScratchColorClass extends ObjectClass {
     /** Two colours are the same when they are the same colour. */
     _mj$equals$boolean$Object(t: Thread, callback: CallbackFunction, other: ObjectClassOrNull): void {
         t.s.push(other instanceof ScratchColorClass
-            && other.r === this.r && other.g === this.g && other.b === this.b);
+            && Object.is(other.r, this.r) && Object.is(other.g, this.g) && Object.is(other.b, this.b));
         if (callback) callback();
+    }
+
+    _hashCode(): number {
+        const bytes = new DataView(new ArrayBuffer(8));
+        let hash = 1;
+        for (const value of [this.r, this.g, this.b]) {
+            bytes.setFloat64(0, value);
+            const channel = Number.isNaN(value) ? 0x7ff80000 : bytes.getInt32(0) ^ bytes.getInt32(4);
+            hash = (Math.imul(hash, 31) + channel) | 0;
+        }
+        return hash;
     }
 }

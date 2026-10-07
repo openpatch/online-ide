@@ -22,4 +22,3 @@ dist-ssr
 /intern/
 
 upload*.cmd
-/package-lock.json

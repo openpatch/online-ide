@@ -2,6 +2,7 @@ import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
 import { SRC } from "./ScratchLibraryComments";
+import { resetScratchGameClock, scratchGameClock } from './ScratchGameClock';
 
 /**
  * Timing helper, mirroring org.openpatch.scratch.Timer.
@@ -30,11 +31,11 @@ export class ScratchTimerClass extends ObjectClass {
 
     static resetProgramStart() {
         ScratchTimerClass.programStart = (typeof performance !== "undefined") ? performance.now() : Date.now();
+        resetScratchGameClock();
     }
 
     static _millis(): number {
-        const now = (typeof performance !== "undefined") ? performance.now() : Date.now();
-        return Math.round(now - ScratchTimerClass.programStart);
+        return Math.trunc(scratchGameClock().millis);
     }
 
     private startMillisEvery = -1;

@@ -40,7 +40,8 @@ export type ViewMode = {
 export type WorkspaceSettings = {
     language: string,
     libraries?: string[],
-    assemblyArchitecture?: string
+    assemblyArchitecture?: string,
+    scratchProject?: Record<string, unknown>;
 }
 
 export type FileData = {

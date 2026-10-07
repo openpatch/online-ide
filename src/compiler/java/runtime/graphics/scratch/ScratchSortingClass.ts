@@ -17,6 +17,7 @@ import { SRC } from "./ScratchLibraryComments";
 export class ScratchSortingClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch.extensions.sorting", signature: "class Sorting extends Object", comment: SRC.sortingClassComment },
+        { type: "method", signature: "Sorting()", native: ScratchSortingClass.prototype._c0 },
         { type: "method", signature: "void byY()", native: ScratchSortingClass.prototype._byY, comment: SRC.sortingByYComment },
         { type: "method", signature: "void off()", native: ScratchSortingClass.prototype._off, comment: SRC.sortingOffComment },
         { type: "method", signature: "boolean isOn()", native: ScratchSortingClass.prototype._isOn, comment: SRC.sortingIsOnComment },
@@ -25,6 +26,8 @@ export class ScratchSortingClass extends ObjectClass {
 
     /** True while the sprites are drawn in the order of their lower edge. */
     byY = false;
+
+    _c0() { return this; }
 
     _byY() { this.byY = true; }
     _off() { this.byY = false; }

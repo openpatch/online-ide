@@ -94,8 +94,9 @@ export class EmbeddedFileExplorer {
     }
 
     selectFirstFileIfPresent() {
-        if (this.treeview.nodes.length > 1) {
-            this.treeview.selectNodeAndSetFocus(this.treeview.nodes[1], true);
+        const firstFile = this.treeview.nodes.find(node => node.externalObject && !node.externalObject.isFolder);
+        if (firstFile) {
+            this.treeview.selectNodeAndSetFocus(firstFile, true);
         } else {
             let editor = this.main.getMainEditor();
             let model = monaco.editor.createModel("Keine Datei vorhanden.", "plaintext");
@@ -120,7 +121,7 @@ export class EmbeddedFileExplorer {
 
     removeAllFiles() {
         this.treeview.clear();
-        this.selectFirstFileIfPresent();
+        this.main.getMainEditor().setModel(null);
     }
 
 
@@ -128,7 +129,7 @@ export class EmbeddedFileExplorer {
 
         let fileType = FileTypeManager.filenameToFileType(file.name, this.main.getCurrentProgrammingLanguage());
         let iconclass = fileType.iconclass;
-        let node = this.treeview.addNode(false, file.name, iconclass, file);
+        let node = this.treeview.addNode(file.isFolder, file.name, iconclass, file);
         node.readOnly = fileType.suffix == ".md";
 
     }
@@ -145,9 +146,11 @@ export class EmbeddedFileExplorer {
 
         if (isAssetFile(file)) {
             this.main.$monacoDiv.hide();
-            this.main.$hintDiv.addClass("joe_assetPreview").show().empty().append(
-                jQuery('<img alt="">').attr("src", file.getText()).attr("alt", file.name)
-            );
+            const preview = this.main.$hintDiv.addClass("joe_assetPreview").show().empty();
+            const url = file.getText();
+            if (url.startsWith('data:image/')) preview.append(jQuery('<img alt="">').attr('src', url).attr('alt', file.name));
+            else if (url.startsWith('data:audio/')) preview.append(jQuery('<audio controls></audio>').attr('src', url));
+            else preview.append(jQuery('<a></a>').text(file.name).attr('href', url).attr('download', file.name));
             return;
         }
 

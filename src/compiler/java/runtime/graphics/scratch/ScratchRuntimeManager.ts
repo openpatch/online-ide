@@ -128,6 +128,18 @@ export class ScratchRuntimeManager implements InternalMouseListener {
     }
 
     // ---- broadcasts ----
+    broadcastInThread(t: Thread, callback: (() => void) | undefined, message: StringClass, sender: any) {
+        const receivers: IScratchEventReceiver[] = sender ? [...sender.sprites, sender] : [...this.lists.iReceive];
+        let index = 0;
+        const next = () => {
+            const receiver = receivers[index++];
+            if (!receiver) { callback?.(); return; }
+            if (receiver._mj$whenIReceive$void$String) receiver._mj$whenIReceive$void$String(t, next, message);
+            else next();
+        };
+        next();
+    }
+
     /**
      * `message` may arrive as a raw JS string (internal callers) or already boxed
      * as a StringClass (when it came through a Java `String` parameter). Boxing a

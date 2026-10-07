@@ -1,4 +1,5 @@
 import * as PIXI from "pixi.js";
+import { scratchGameClock } from './ScratchGameClock';
 import { CallbackParameter } from "../../../../common/interpreter/CallbackParameter";
 import { Thread } from "../../../../common/interpreter/Thread";
 import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
@@ -12,6 +13,7 @@ import { TextAlign, TextAlignEnum } from "./TextAlignEnum";
 import { TextStyle, TextStyleEnum } from "./TextStyleEnum";
 import { SRC } from "./ScratchLibraryComments";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
+import type { ScratchSpriteClass } from './ScratchSpriteClass';
 
 /** Font shipped with the Scratch library (see src/development/scratchAssetsGenerator.js). */
 const DEFAULT_FONT = "UbuntuMono, monospace";
@@ -33,6 +35,8 @@ export class ScratchTextClass extends ObjectClass {
         { type: "declaration", package: "org.openpatch.scratch", signature: "class Text extends Object", comment: SRC.textClassComment },
 
         { type: "method", signature: "Text()", java: ScratchTextClass.prototype._cj$_constructor_$Text$, comment: SRC.textConstructorComment },
+        { type: "method", signature: "Text(Sprite sprite)", java: ScratchTextClass.prototype._cj$_constructor_$Text$Sprite },
+        { type: "method", signature: "Text(Text text)", java: ScratchTextClass.prototype._cj$_constructor_$Text$Text },
         { type: "method", signature: "Text(string text, double x, double y, double width)", java: ScratchTextClass.prototype._cj$_constructor_$Text$string$double$double$double, comment: SRC.textConstructor2Comment },
         { type: "method", signature: "Text(string text, double x, double y, double width, TextStyle style)", java: ScratchTextClass.prototype._cj$_constructor_$Text$string$double$double$double$TextStyle, comment: SRC.textConstructor3Comment },
 
@@ -155,6 +159,24 @@ export class ScratchTextClass extends ObjectClass {
 
     private container?: PIXI.Container;
     private hideTimeout?: any;
+    private sprite?: ScratchSpriteClass;
+    private static attached = new WeakMap<IWorld, Set<ScratchTextClass>>();
+
+    _cj$_constructor_$Text$Sprite(t: Thread, callback: CallbackParameter, sprite: ScratchSpriteClass) {
+        this.sprite = sprite;
+        this.style = TextStyle.SPEAK;
+        this.align = TextAlign.LEFT;
+        this._cj$_constructor_$Text$(t, callback);
+    }
+
+    _cj$_constructor_$Text$Text(t: Thread, callback: CallbackParameter, text: ScratchTextClass) {
+        for (const key of ['world', 'stage', 'text', 'tx', 'ty', 'boxWidth', 'textSize', 'align', 'style',
+            'visible', 'textColor', 'backgroundColor', 'strokeColor', 'currentFont', 'ui']) this[key] = text[key];
+        this.fonts = text.fonts.map(font => ({ ...font }));
+        this.redraw();
+        t.s.push(this);
+        callback?.();
+    }
 
     _cj$_constructor_$Text$(t: Thread, callback: CallbackParameter) {
         this._cj$_constructor_$Text$string$double$double$double(t, callback, "", 0, 0, 0);
@@ -191,6 +213,16 @@ export class ScratchTextClass extends ObjectClass {
 
     // ---- rendering ----
     private redraw() {
+        if (this.sprite) {
+            this.tx = this.sprite._getX() + this.sprite._getSpriteWidth() / 2;
+            this.ty = this.sprite._getY() + this.sprite._getSpriteHeight() / 2;
+            this.stage = this.sprite.stage;
+            if (this.world) {
+                let texts = ScratchTextClass.attached.get(this.world);
+                if (!texts) ScratchTextClass.attached.set(this.world, texts = new Set());
+                texts.add(this);
+            }
+        }
         // Where the old one sat among the other texts. Redrawing builds a new
         // container, and a new child goes on top: without this, saying anything
         // - or moving the text, or recolouring it - would undo goToBackLayer().
@@ -330,14 +362,14 @@ export class ScratchTextClass extends ObjectClass {
     }
 
     _showText(text: string) {
-        if (this.hideTimeout) { clearTimeout(this.hideTimeout); this.hideTimeout = undefined; }
+        if (this.hideTimeout) { this.hideTimeout(); this.hideTimeout = undefined; }
         this.text = text ?? "";
         this.visible = this.text.length > 0;
         this.redraw();
     }
     _showTextFor(text: string, millis: number) {
         this._showText(text);
-        this.hideTimeout = setTimeout(() => this._showText(""), millis);
+        this.hideTimeout = scratchGameClock().schedule(() => this._showText(""), millis);
     }
 
     // ---- position ----
@@ -416,10 +448,19 @@ export class ScratchTextClass extends ObjectClass {
     _getStyle(): TextStyleEnum { return TextStyleEnum.values[this.style] as TextStyleEnum; }
 
     _remove() {
-        if (this.hideTimeout) { clearTimeout(this.hideTimeout); this.hideTimeout = undefined; }
+        if (this.world) ScratchTextClass.attached.get(this.world)?.delete(this);
+        if (this.hideTimeout) { this.hideTimeout(); this.hideTimeout = undefined; }
         if (this.container && !this.container.destroyed) this.container.destroy({ children: true });
         this.container = undefined;
         this.visible = false;
+    }
+
+    static refreshAttached(world: IWorld) {
+        for (const text of this.attached.get(world) ?? []) {
+            const x = text.sprite!._getX() + text.sprite!._getSpriteWidth() / 2;
+            const y = text.sprite!._getY() + text.sprite!._getSpriteHeight() / 2;
+            if (x !== text.tx || y !== text.ty || text.stage !== text.sprite!.stage) text.redraw();
+        }
     }
 
     // ---- layering ----

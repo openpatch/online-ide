@@ -29,6 +29,9 @@ import { ScratchTextClass } from "./ScratchTextClass";
 import { ScratchTimerClass } from "./ScratchTimerClass";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
+import { scratchGameClock } from './ScratchGameClock';
+import { ScratchMonitors } from './ScratchMonitors';
+import { SupplierInterface } from './SupplierInterface';
 
 type Costume = { name: string; texture: PIXI.Texture };
 
@@ -38,6 +41,7 @@ type Costume = { name: string; texture: PIXI.Texture };
  */
 type ScratchStageLike = {
     _broadcast(message: StringClass): void;
+    _mj$broadcast$void$String(t: Thread, callback: CallbackParameter, message: StringClass): void;
     _ask(question: string): void;
     _getAnswer(): string;
     _isAsking(): boolean;
@@ -55,6 +59,7 @@ type ScratchStageLike = {
  * to the IDE world's top-left/y-down pixel space in applyState().
  */
 export class ScratchSpriteClass extends ShapeClass {
+    readonly usesScratchGameClock = true;
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch", signature: "class Sprite extends Actor", comment: SRC.spriteClassComment },
 
@@ -184,7 +189,7 @@ export class ScratchSpriteClass extends ShapeClass {
 
         // things the sprite asks its stage for
         { type: "method", signature: "Stage getStage()", native: ScratchSpriteClass.prototype._getStage, comment: SRC.spriteGetStageComment },
-        { type: "method", signature: "void broadcast(String message)", native: ScratchSpriteClass.prototype._broadcast, comment: SRC.spriteBroadcastComment },
+        { type: "method", signature: "void broadcast(String message)", java: ScratchSpriteClass.prototype._mj$broadcast$void$String, comment: SRC.spriteBroadcastComment },
         { type: "method", signature: "void ask(string question)", native: ScratchSpriteClass.prototype._ask, comment: SRC.spriteAskComment },
         { type: "method", signature: "string getAnswer()", native: ScratchSpriteClass.prototype._getAnswer, comment: SRC.spriteGetAnswerComment },
         { type: "method", signature: "boolean isAsking()", native: ScratchSpriteClass.prototype._isAsking, comment: SRC.spriteIsAskingComment },
@@ -208,7 +213,12 @@ export class ScratchSpriteClass extends ShapeClass {
 
         { type: "method", signature: "Pen getPen()", native: ScratchSpriteClass.prototype._getPen, comment: SRC.spriteGetPenComment },
 
-        { type: "method", signature: "void remove()", native: ScratchSpriteClass.prototype._remove, comment: SRC.spriteRemoveComment },
+        { type: "method", signature: "void remove()", java: ScratchSpriteClass.prototype._mj$remove$void$, comment: SRC.spriteRemoveComment },
+        { type: "method", signature: "boolean isClone()", native: ScratchSpriteClass.prototype._isClone },
+        { type: "method", signature: "void deleteThisClone()", java: ScratchSpriteClass.prototype._mj$deleteThisClone$void$ },
+        { type: "method", signature: "void whenStartsAsClone()", java: ScratchSpriteClass.prototype._mj$whenStartsAsClone$void$ },
+        { type: "method", signature: "void showVariable(string name, Supplier<Object> value)", java: ScratchSpriteClass.prototype._mj$showVariable$void$string$Supplier },
+        { type: "method", signature: "void hideVariable(string name)", native: ScratchSpriteClass.prototype._hideVariable },
 
         { type: "method", signature: "Sprite clone()", java: ScratchSpriteClass.prototype._mj$copy$Shape$, comment: SRC.spriteCloneComment },
         { type: "method", signature: "Shaders getShaders()", native: ScratchSpriteClass.prototype._getShaders, comment: SRC.spriteGetShadersComment },
@@ -242,6 +252,15 @@ export class ScratchSpriteClass extends ShapeClass {
     private customHitboxPoints?: { x: number, y: number }[];
     /** Set once the sprite has registered its event hooks. */
     runtime?: ScratchRuntimeManager;
+    private cloned = false;
+    private removing = false;
+    variableMonitors = new ScratchMonitors();
+    _mj$showVariable$void$string$Supplier(t: Thread, callback: CallbackParameter, name: string, supplier: SupplierInterface) {
+        const owner = (this.constructor as any).type?.identifier ?? this.constructor.name;
+        this.variableMonitors.show(t, name, supplier, `${owner}: ${name}`);
+        if (callback) callback();
+    }
+    _hideVariable(name: string) { this.variableMonitors.hide(name); }
 
     _cj$_constructor_$Sprite$(t: Thread, callback: CallbackParameter) {
         this._cj$_constructor_$Shape$(t, () => {
@@ -345,6 +364,7 @@ export class ScratchSpriteClass extends ShapeClass {
     // ---- overridable event hooks (empty defaults) ----
     _mj$whenAddedToStage$void$(_t: Thread, callback: CallbackParameter): void { if (callback) callback(); }
     _mj$whenRemovedFromStage$void$(_t: Thread, callback: CallbackParameter): void { if (callback) callback(); }
+    _mj$whenStartsAsClone$void$(_t: Thread, callback: CallbackParameter): void { if (callback) callback(); }
     _mj$whenClicked$void$(_t: Thread, callback: CallbackParameter): void { if (callback) callback(); }
     _mj$whenKeyPressed$void$KeyCode(_t: Thread, callback: CallbackParameter, _key: KeyCodeEnum): void { if (callback) callback(); }
     _mj$whenKeyReleased$void$KeyCode(_t: Thread, callback: CallbackParameter, _key: KeyCodeEnum): void { if (callback) callback(); }
@@ -513,14 +533,14 @@ export class ScratchSpriteClass extends ShapeClass {
     }
 
     private clearSpeech() {
-        if (this.speechTimeout) { clearTimeout(this.speechTimeout); this.speechTimeout = undefined; }
+        if (this.speechTimeout) { this.speechTimeout(); this.speechTimeout = undefined; }
         if (this.speechBubble) { this.speechBubble.destroy({ children: true }); this.speechBubble = undefined; }
     }
 
     _say(text: string) { this.showSpeech(text, false); }
     _think(text: string) { this.showSpeech(text, true); }
-    _sayFor(text: string, millis: number) { this.showSpeech(text, false); this.speechTimeout = setTimeout(() => this.clearSpeech(), millis); }
-    _thinkFor(text: string, millis: number) { this.showSpeech(text, true); this.speechTimeout = setTimeout(() => this.clearSpeech(), millis); }
+    _sayFor(text: string, millis: number) { this.showSpeech(text, false); this.speechTimeout = scratchGameClock().schedule(() => this.clearSpeech(), millis); }
+    _thinkFor(text: string, millis: number) { this.showSpeech(text, true); this.speechTimeout = scratchGameClock().schedule(() => this.clearSpeech(), millis); }
 
     // ---- coordinate conversion + transform ----
     // scaleMagnitudeX/Y give the (positive) scale of the costume container.
@@ -577,11 +597,14 @@ export class ScratchSpriteClass extends ShapeClass {
     attachToStage(stage: ScratchStageLike) {
         if (this.stage === stage) return;
         this.stage = stage;
-        if (this.penObj) this.penObj.stage = stage;
+        if (this.penObj) { this.penObj.stage = stage; this.penObj.attachToWorld(this.world as any); }
+        const shapes = this.world?.shapesWhichBelongToNoGroup;
+        if (shapes && !shapes.includes(this)) shapes.push(this);
         const layer = spriteLayerOf(this, this.isUI());
         if (layer && this.container && !this.container.destroyed) layer.addChild(this.container);
         if (this.speechBubble && !this.speechBubble.destroyed) layer?.addChild(this.speechBubble);
         this.spriteText?.attachToStage(stage as object);
+        this.removing = false;
     }
 
     /** The stage that answers for this sprite: its own, or the one on screen. */
@@ -594,6 +617,11 @@ export class ScratchSpriteClass extends ShapeClass {
 
     _getStage(): ScratchStageLike | undefined { return this.stage; }
     _broadcast(message: StringClass) { this.ownerStage()?._broadcast(message); }
+    _mj$broadcast$void$String(t: Thread, callback: CallbackParameter, message: StringClass) {
+        const stage = this.ownerStage();
+        if (stage) stage._mj$broadcast$void$String(t, callback, message);
+        else callback?.();
+    }
     _ask(question: string) { this.ownerStage()?._ask(question); }
     _getAnswer(): string { return this.ownerStage()?._getAnswer() ?? ""; }
     _isAsking(): boolean { return this.ownerStage()?._isAsking() ?? false; }
@@ -859,14 +887,14 @@ export class ScratchSpriteClass extends ShapeClass {
         this.glideFromX = this.sx; this.glideFromY = this.sy;
         this.glideToX = x; this.glideToY = y;
         this.glideMillis = seconds * 1000;
-        this.glideStart = performance.now();
+        this.glideStart = ScratchTimerClass._millis();
     }
     _isGliding(): boolean { return this.glideStart >= 0; }
 
     /** Advance an in-progress glide; called once per frame from act(). */
     private stepGlide() {
         if (this.glideStart < 0) return;
-        const elapsed = performance.now() - this.glideStart;
+        const elapsed = ScratchTimerClass._millis() - this.glideStart;
         if (elapsed >= this.glideMillis) {
             this.glideStart = -1;
             this._setPosition(this.glideToX, this.glideToY);
@@ -1353,33 +1381,122 @@ export class ScratchSpriteClass extends ShapeClass {
         for (const s of queued) this.printStamp(texture, s.layerName, s.matrix, s.alpha, s.tint);
     }
 
+    _mj$remove$void$(t: Thread, callback: CallbackParameter) {
+        if (!this.stage || this.isDestroyed || this.removing) { if (callback) callback(); return; }
+        this.removing = true;
+        this.detachFromStage();
+        this._mj$whenRemovedFromStage$void$(t, () => {
+            this.removing = false;
+            if (callback) callback();
+        });
+    }
+
+    _isClone(): boolean { return this.cloned; }
+    _mj$deleteThisClone$void$(t: Thread, callback: CallbackParameter) {
+        if (this.cloned) this._mj$remove$void$(t, callback);
+        else if (callback) callback();
+    }
+
     _remove() {
+        if (!this.stage || this.isDestroyed) return;
         // let the sprite react while it is still intact
         this.runtime?.fireRemovedFromStage(this as IScratchEventReceiver);
+        this.detachFromStage();
+    }
+
+    private detachFromStage() {
         this.clearSpeech();
         this.spriteText?._remove();
         // Take the sprite out of the stage's list too, so it stops being iterated
         // by the per-frame loop and the class-based sensing methods.
-        const stage = this.ownerStage();
+        const stage = this.stage;
         if (stage) {
             const i = stage.sprites.indexOf(this);
             if (i >= 0) stage.sprites.splice(i, 1);
         }
         this.stage = undefined;
-        this.destroy();
+        this.penObj?._removedFromStage(stage as any);
+        if (this.penObj) this.penObj.stage = undefined;
+        this.container?.removeFromParent();
+        this.variableMonitors.detach();
+        this.runtime?.unregister(this);
+        this.listenersRegistered = false;
+        this.world?.interpreter?.actorManager.unregisterActor(this);
+        for (const list of [this.world?.shapesWhichBelongToNoGroup, this.world?.shapesNotAffectedByWorldTransforms]) {
+            const index = list?.indexOf(this) ?? -1;
+            if (index >= 0) list!.splice(index, 1);
+        }
+    }
+
+    override destroy() {
+        if (this.isDestroyed) return;
+        this.variableMonitors.clear();
+        this.runtime?.unregister(this);
+        this.clearSpeech();
+        this.spriteText?._remove();
+        this.soundBank.stopAll();
+        super.destroy();
     }
 
     _mj$copy$Shape$(t: Thread, callback: CallbackParameter) {
-        // minimal copy: shares costume list
-        const copy = new ScratchSpriteClass();
-        copy._cj$_constructor_$Sprite$(t, () => {
-            copy.costumes = this.costumes.slice();
-            copy.sx = this.sx; copy.sy = this.sy; copy.direction = this.direction;
-            copy.size = this.size; copy.rotationStyle = this.rotationStyle;
-            if (this.currentCostume >= 0) copy._applyCostumeIndex(this.currentCostume);
-            t.s.push(copy);
-            if (callback) callback();
-        });
+        // Java instance initializers live in interpreted constructors. Neither
+        // those nor a student's constructor run when cloning an object.
+        const copy = Object.assign(Object.create(Object.getPrototypeOf(this)), this) as ScratchSpriteClass;
+        copy.cloneStateFrom(this);
+        copy.cloned = true;
+        if (this.stage) {
+            const stage = this.stage;
+            stage.sprites.splice(Math.max(0, stage.sprites.indexOf(this)), 0, copy);
+            copy.attachToStage(stage);
+            const parent = copy.container.parent;
+            if (parent === this.container.parent) parent?.setChildIndex(copy.container, parent.getChildIndex(this.container));
+        }
+        copy._registerListeners(t);
+        t.s.push(copy);
+        copy._mj$whenStartsAsClone$void$(t, callback);
+    }
+
+    protected cloneStateFrom(original: ScratchSpriteClass) {
+        this.stage = undefined;
+        this.runtime = undefined;
+        this.listenersRegistered = false;
+        this.removing = false;
+        this.isDestroyed = false;
+        this.belongsToGroup = undefined;
+        this.mouseEventsImplemented = undefined;
+        this.mouseLastSeenInsideObject = false;
+        this.hitPolygonInitial = original.hitPolygonInitial.map(point => ({ ...point }));
+        this.hitPolygonTransformed = original.hitPolygonTransformed.map(point => ({ ...point }));
+        this.customHitboxPoints = original.customHitboxPoints?.map(point => ({ ...point }));
+        this.rotationCenter = original.rotationCenter ? { ...original.rotationCenter } : undefined;
+        this.costumes = original.costumes.map(costume => ({ ...costume }));
+        this.container = new PIXI.Container();
+        this.pendingStamps = [];
+        this.speechBubble = undefined;
+        this.speechTimeout = undefined;
+        this.spriteText = undefined;
+        this.variableMonitors = new ScratchMonitors();
+        this.timers = new Map();
+        this.soundBank = original.soundBank.copy();
+        this.penObj = new ScratchPenClass();
+        this.penObj.sprite = this;
+        this.penObj.attachToWorld(this.world as any);
+        this.penObj.px = this.sx; this.penObj.py = this.sy;
+        if (original.penObj) {
+            this.penObj._copyFrom(original.penObj);
+            if (original.penObj._isInBackground()) this.penObj._goToBackground();
+            else this.penObj._goToForeground();
+        }
+        this.shaders = original.shaders?.copyFor(filter => this.applyShader(filter));
+        // Object's synchronization state belongs to this object alone.
+        for (const key of ['runnableOrWaitingThreads', 'threadHoldingLockToThisObject', 'reentranceCounter']) delete this[key];
+        this.world.shapesWhichBelongToNoGroup.push(this);
+        (spriteLayerOf(this, this.isUI()) ?? this.world.app.stage).addChild(this.container);
+        if (this.currentCostume >= 0) this._applyCostumeIndex(this.currentCostume);
+        this.container.visible = original.container.visible;
+        this.container.alpha = original.container.alpha;
+        this.container.tint = original.container.tint;
+        this.applyState();
     }
 
     // shared mouse state, updated by ScratchStage's mouse listener

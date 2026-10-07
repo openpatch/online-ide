@@ -192,7 +192,7 @@ export class WorldClass extends BaseWorldClass implements IWorld, GraphicSystem,
         }
 
         let onProgramStoppedCallback = () => {
-            if (this.interpreter.getMain().getRepl().state == "standalone") return;
+            if (this.interpreter.getMain()?.getRepl()?.state == "standalone") return;
             this.onProgramStopped();
             interpreter.eventManager.off(onProgramStoppedCallback);
             this.mouseManager.removeAllListeners();
@@ -549,4 +549,3 @@ export class WorldClass extends BaseWorldClass implements IWorld, GraphicSystem,
         return this.interpreter;
     }
 }
-

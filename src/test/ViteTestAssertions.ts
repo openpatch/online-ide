@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import { TestContext } from 'vitest';
 import { Step } from "../compiler/common/interpreter/Step";
 import { Thread } from "../compiler/common/interpreter/Thread";
 import { getLine, threeDez } from "../tools/StringTools";
@@ -9,7 +8,13 @@ export class ViteTestAssertions implements DummyAssertionObserver {
 
     check = '\xB7';
 
-    constructor(private context: TestContext, private lineOffset: number) {
+    readonly failures: string[] = [];
+
+    throwIfFailed(): void {
+        if (this.failures.length) throw new Error(this.failures.join("\n"));
+    }
+
+    constructor(private lineOffset: number) {
 
     }
 
@@ -70,7 +75,7 @@ export class ViteTestAssertions implements DummyAssertionObserver {
         console.log(chalk.red("Test failed: ") + message);
         console.log(chalk.gray("Details:     ") + detail);
 
-        let range = step.range;
+        let range = step?.range;
         if(thread.hasCPU()){
             range = thread.__cpu.getRangeOfCurrentInstruction();
         }
@@ -96,8 +101,7 @@ export class ViteTestAssertions implements DummyAssertionObserver {
 
 
 
-        //@ts-ignore
-        this.context.task.fails = 1;
+        this.failures.push(message + ": " + detail);
     }
 
 

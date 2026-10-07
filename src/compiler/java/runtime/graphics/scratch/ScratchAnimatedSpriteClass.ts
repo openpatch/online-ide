@@ -95,8 +95,12 @@ export class ScratchAnimatedSpriteClass extends ScratchSpriteClass {
     }
 
     _mj$clone$AnimatedSprite$(t: Thread, callback: CallbackParameter) {
-        const copy = new ScratchAnimatedSpriteClass();
-        copy._cj$_constructor_$AnimatedSprite$AnimatedSprite(t, callback, this);
+        this._mj$copy$Shape$(t, callback);
+    }
+
+    protected override cloneStateFrom(original: ScratchAnimatedSpriteClass) {
+        super.cloneStateFrom(original);
+        this.animations = new Map(original.animations);
     }
 
     /**

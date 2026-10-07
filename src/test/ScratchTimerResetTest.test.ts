@@ -3,6 +3,13 @@ import { IWorld } from '../compiler/java/runtime/graphics/IWorld';
 import { ScratchCostumes } from '../compiler/java/runtime/graphics/scratch/ScratchCostumes';
 import { ScratchStageClass } from '../compiler/java/runtime/graphics/scratch/ScratchStageClass';
 import { ScratchTimerClass } from '../compiler/java/runtime/graphics/scratch/ScratchTimerClass';
+import { scratchGameClock } from '../compiler/java/runtime/graphics/scratch/ScratchGameClock';
+
+function advanceGame(millis: number) {
+    const clock = scratchGameClock();
+    const steps = clock.frame(millis / 1000);
+    for (let index = 0; index < steps; index++) clock.advance();
+}
 
 /**
  * Timer.millis() counts from the start of the program, so a program that waits
@@ -101,6 +108,7 @@ describe('Scratch program clock', () => {
         expect(ScratchTimerClass._millis()).toBe(0);
 
         now = 5400;
+        advanceGame(400);
         expect(ScratchTimerClass._millis()).toBe(400);
     });
 
@@ -111,6 +119,7 @@ describe('Scratch program clock', () => {
         // the program has been going for a while and now builds the stage it
         // means to transition to later
         now += 2000;
+        advanceGame(2000);
         await buildStage(interpreter);
 
         expect(ScratchTimerClass._millis()).toBe(2000);
@@ -123,6 +132,7 @@ describe('Scratch program clock', () => {
         // the run ends somewhere past the two and a half seconds a program might
         // be waiting for, and the next one begins with a world of its own
         now += 9000;
+        advanceGame(9000);
         expect(ScratchTimerClass._millis()).toBe(9000);
 
         const second = fakeInterpreter(fakeWorld());
@@ -140,9 +150,11 @@ describe('Scratch program clock', () => {
             const atFirstFrame = timeToSwitch();
 
             now += 2000;
+            advanceGame(2000);
             const atTwoSeconds = timeToSwitch();
 
             now += 1000;
+            advanceGame(1000);
             const atThreeSeconds = timeToSwitch();
 
             // the program is stopped some time later

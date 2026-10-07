@@ -290,6 +290,7 @@ export class ScratchShadersClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch.extensions.shader", signature: "class Shaders extends Object", comment: SRC.shadersClassComment },
         { type: "method", signature: "Shaders(string owner)", native: ScratchShadersClass.prototype._c1, comment: SRC.shadersConstructorComment },
+        { type: "method", signature: "Shaders(Shaders shaders)", native: ScratchShadersClass.prototype._cCopy },
         { type: "method", signature: "Shader add(string name, string fragmentShaderPath, string vertexShaderPath)", java: ScratchShadersClass.prototype._mj$add$Shader$string$string$string, comment: SRC.shadersAddComment },
         { type: "method", signature: "Shader get(string name)", native: ScratchShadersClass.prototype._get, comment: SRC.shadersGetComment },
         { type: "method", signature: "void switchTo(string name)", native: ScratchShadersClass.prototype._switchToName, comment: SRC.shadersSwitchToComment },
@@ -310,6 +311,13 @@ export class ScratchShadersClass extends ObjectClass {
     onChange: ((filter: PIXI.Filter | undefined) => void) | undefined;
 
     _c1(owner: string) { this.owner = owner ?? "sprite"; return this; }
+
+    _cCopy(shaders: ScratchShadersClass) {
+        this.owner = shaders.owner;
+        this.shaders = shaders.shaders.map(shader => new ScratchShaderClass()._cCopy(shader));
+        this.current = shaders.current;
+        return this;
+    }
 
     static of(owner: string, onChange: (filter: PIXI.Filter | undefined) => void): ScratchShadersClass {
         const shaders = new ScratchShadersClass();

@@ -13,7 +13,7 @@ export class StoreOutputPrintManager extends IPrintManager {
     }
 
     printIntern(text: string | undefined, withNewline: boolean, color: number | undefined): void {
-        if (!text) return;
+        if (text === undefined) return;
         if (text.startsWith("Execution")) return;
         this.output += text;
         if (withNewline) this.output += "\n";

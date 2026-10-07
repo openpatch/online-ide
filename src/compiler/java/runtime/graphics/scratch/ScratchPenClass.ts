@@ -21,6 +21,8 @@ export class ScratchPenClass extends ObjectClass {
         { type: "declaration", package: "org.openpatch.scratch", signature: "class Pen extends Object", comment: SRC.penClassComment },
 
         { type: "method", signature: "Pen()", java: ScratchPenClass.prototype._cj$_constructor_$Pen$, comment: SRC.penConstructorComment },
+        { type: "method", signature: "Pen(Sprite sprite)", java: ScratchPenClass.prototype._cj$_constructor_$Pen$Sprite },
+        { type: "method", signature: "Pen(Pen pen)", java: ScratchPenClass.prototype._cj$_constructor_$Pen$Pen },
 
         { type: "method", signature: "void down()", native: ScratchPenClass.prototype._down, comment: SRC.penDownComment },
         { type: "method", signature: "void up()", native: ScratchPenClass.prototype._up, comment: SRC.penUpComment },
@@ -54,7 +56,7 @@ export class ScratchPenClass extends ObjectClass {
     private layer?: PIXI.Graphics;
 
     /** Every live pen, so Stage.eraseAll() can clear all of them at once. */
-    private static allPens: ScratchPenClass[] = [];
+    private static allPens = new WeakMap<IWorld, Set<ScratchPenClass>>();
 
     px: number = 0;   // pen position in Scratch coords (centre origin, y up)
     py: number = 0;
@@ -83,16 +85,35 @@ export class ScratchPenClass extends ObjectClass {
         if (callback) callback();
     }
 
+    _cj$_constructor_$Pen$Sprite(t: Thread, callback: CallbackParameter, sprite: any) {
+        this.sprite = sprite;
+        this.px = sprite._getX();
+        this.py = sprite._getY();
+        this._cj$_constructor_$Pen$(t, callback);
+    }
+
+    _cj$_constructor_$Pen$Pen(t: Thread, callback: CallbackParameter, pen: ScratchPenClass) {
+        this.attachToWorld(pen.world);
+        this.sprite = pen.sprite;
+        this.px = pen.px;
+        this.py = pen.py;
+        this._copyFrom(pen);
+        t.s.push(this);
+        callback?.();
+    }
+
     /** Called by ScratchSpriteClass/ScratchStageClass to attach a pen without going through the interpreter. */
     attachToWorld(world: IWorld) {
         this.world = world;
-        if (ScratchPenClass.allPens.indexOf(this) < 0) ScratchPenClass.allPens.push(this);
+        if (!world) return;
+        let pens = ScratchPenClass.allPens.get(world);
+        if (!pens) ScratchPenClass.allPens.set(world, pens = new Set());
+        pens.add(this);
     }
 
     /** Stage.eraseAll(): clear the pen layers belonging to that stage. */
     static eraseAllLayers(world: IWorld, stage?: object) {
-        for (const pen of ScratchPenClass.allPens) {
-            if (pen.world !== world) continue;
+        for (const pen of ScratchPenClass.allPens.get(world) ?? []) {
             if (stage !== undefined && pen.stage !== undefined && pen.stage !== stage) continue;
             pen._eraseAll();
         }
@@ -124,7 +145,7 @@ export class ScratchPenClass extends ObjectClass {
      */
     /** Upstream's Pen(Pen p): colour, size and transparency, and down if it was. */
     _copyFrom(other: ScratchPenClass) {
-        this.colorHue = other.colorHue;
+        this.colorHue = new ScratchColorClass()._cCopy(other.colorHue);
         this.colorInt = other.colorInt;
         this.size = other.size;
         this.opacity = other.opacity;
@@ -223,5 +244,8 @@ export class ScratchPenClass extends ObjectClass {
 
     /** Upstream's stage-lifecycle hooks; the world is already set up here. */
     _addedToStage(_stage: ObjectClass) { }
-    _removedFromStage(_stage: ObjectClass) { this._eraseAll(); }
+    _removedFromStage(_stage: ObjectClass) {
+        this._eraseAll();
+        if (this.world) ScratchPenClass.allPens.get(this.world)?.delete(this);
+    }
 }

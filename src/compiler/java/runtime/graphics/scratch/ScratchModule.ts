@@ -1,6 +1,8 @@
 import { CodeFragment } from "../../../../common/disassembler/CodeFragment";
 import { JavaLibraryModule } from "../../../module/libraries/JavaLibraryModule";
 import { BooleanSupplierInterface } from "./BooleanSupplierInterface";
+import { SupplierInterface } from './SupplierInterface';
+import { applyScratchCatalog } from './ScratchCatalog';
 import { KeyCodeEnum } from "./KeyCodeEnum";
 import { LayerEnum } from "./LayerEnum";
 import { MouseCodeEnum } from "./MouseCodeEnum";
@@ -64,6 +66,7 @@ export class ScratchModule extends JavaLibraryModule implements ScratchListFlavo
             KeyCodeEnum, MouseCodeEnum, RotationStyleEnum, LayerEnum, TextAlignEnum, TextStyleEnum,
             TextureSamplingEnum,
             BooleanSupplierInterface,
+            SupplierInterface,
             ScratchOperatorsClass, ScratchRandomClass, ScratchClockClass,
             ScratchHtmlColorClass, ScratchExceptionClass,
             ScratchColorClass, ScratchVector2Class, ScratchTimerClass, ScratchCameraClass,
@@ -81,6 +84,7 @@ export class ScratchModule extends JavaLibraryModule implements ScratchListFlavo
             ScratchFileClass, ScratchMapObjectClass, ScratchTiledMapClass,
             ScratchPropertyClass, ScratchTilesetImageClass,
         );
+        this.classesInterfacesEnums.forEach(applyScratchCatalog);
     }
 
     isReplModule(): boolean {

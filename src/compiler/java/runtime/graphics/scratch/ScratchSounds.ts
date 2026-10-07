@@ -31,6 +31,8 @@ export class ScratchSound {
 
     constructor(public name: string, private url: string, private format?: string) { }
 
+    copy(): ScratchSound { return new ScratchSound(this.name, this.url, this.format); }
+
     private getHowl(): any {
         if (!this.howl) {
             this.howl = new Howl({
@@ -128,6 +130,13 @@ export class ScratchSounds {
 export class ScratchSoundBank {
     private sounds: ScratchSound[] = [];
     private volume: number = 100;
+
+    copy(): ScratchSoundBank {
+        const bank = new ScratchSoundBank();
+        bank.sounds = this.sounds.map(sound => sound.copy());
+        bank.setVolume(this.volume);
+        return bank;
+    }
 
     add(name: string, path: string) {
         if (this.sounds.some(s => s.name === name)) return;

@@ -39,6 +39,9 @@ import { BooleanSupplierInterface } from "./BooleanSupplierInterface";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
+import { scratchGameClock } from './ScratchGameClock';
+import { ScratchMonitors } from './ScratchMonitors';
+import { SupplierInterface } from './SupplierInterface';
 
 /** Processing's default frame rate, which upstream never changes. */
 const SCRATCH_FRAMES_PER_SECOND = 60;
@@ -58,10 +61,19 @@ const DISPLAY_FONT_SIZE = 14;
  * in ScratchSpriteClass).
  */
 export class ScratchStageClass extends ActorClass implements InternalMouseListener, IScratchStageLike {
+    readonly usesScratchGameClock = true;
+    readonly variableMonitors = new ScratchMonitors();
+    _mj$showVariable$void$string$Supplier(t: Thread, callback: CallbackParameter, name: string, supplier: SupplierInterface) {
+        this.variableMonitors.show(t, name, supplier);
+        if (callback) callback();
+    }
+    _hideVariable(name: string) { this.variableMonitors.hide(name); }
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch", signature: "class Stage extends Actor", comment: SRC.stageClassComment },
 
         { type: "method", signature: "Stage()", java: ScratchStageClass.prototype._cj$_constructor_$Stage$, comment: SRC.stageConstructorComment },
+        { type: "method", signature: "void showVariable(string name, Supplier<Object> value)", java: ScratchStageClass.prototype._mj$showVariable$void$string$Supplier },
+        { type: "method", signature: "void hideVariable(string name)", native: ScratchStageClass.prototype._hideVariable },
         { type: "method", signature: "Stage(int width, int height)", java: ScratchStageClass.prototype._cj$_constructor_$Stage$int$int, comment: SRC.stageConstructor2Comment },
         { type: "method", signature: "Stage(int width, int height, string assets)", java: ScratchStageClass.prototype._cj$_constructor_$Stage$int$int$string, comment: SRC.stageConstructor3Comment },
 
@@ -77,16 +89,16 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
 
         { type: "method", signature: "void whenBackdropSwitches(String name)", java: ScratchStageClass.prototype._mj$whenBackdropSwitches$void$String, comment: SRC.stageWhenBackdropSwitchesComment },
 
-        { type: "method", signature: "void broadcast(String message)", native: ScratchStageClass.prototype._broadcast, comment: SRC.stageBroadcastComment },
+        { type: "method", signature: "void broadcast(String message)", java: ScratchStageClass.prototype._mj$broadcast$void$String, comment: SRC.stageBroadcastComment },
 
         { type: "method", signature: "void add(Sprite sprite)", java: ScratchStageClass.prototype._mj$add$void$Sprite, comment: SRC.stageAddComment },
         { type: "method", signature: "void add(Pen pen)", native: ScratchStageClass.prototype._addPen, comment: SRC.stageAdd2Comment },
         { type: "method", signature: "void add(Text text)", java: ScratchStageClass.prototype._mj$add$void$Text, comment: SRC.stageAdd3Comment },
         { type: "method", signature: "void remove(Text text)", native: ScratchStageClass.prototype._removeText, comment: SRC.stageRemoveComment },
         { type: "method", signature: "void remove(Pen pen)", native: ScratchStageClass.prototype._removePen, comment: SRC.stageRemove2Comment },
-        { type: "method", signature: "void remove(Sprite sprite)", native: ScratchStageClass.prototype._remove, comment: SRC.stageRemove3Comment },
-        { type: "method", signature: "void removeAll()", native: ScratchStageClass.prototype._removeAll, comment: SRC.stageRemoveAllComment },
-        { type: "method", signature: "void remove(Class<? extends Sprite> c)", native: ScratchStageClass.prototype._removeOfClass, comment: SRC.stageRemove4Comment },
+        { type: "method", signature: "void remove(Sprite sprite)", java: ScratchStageClass.prototype._mj$remove$void$Sprite, comment: SRC.stageRemove3Comment },
+        { type: "method", signature: "void removeAll()", java: ScratchStageClass.prototype._mj$removeAll$void$, comment: SRC.stageRemoveAllComment },
+        { type: "method", signature: "void remove(Class<? extends Sprite> c)", java: ScratchStageClass.prototype._mj$remove$void$Class, comment: SRC.stageRemove4Comment },
         { type: "method", signature: "List<Sprite> getAll()", java: ScratchStageClass.prototype._mj$getAll$List$, comment: SRC.stageGetAllComment },
         { type: "method", signature: "<T extends Sprite> List<T> find(Class<T> c)", java: ScratchStageClass.prototype._mj$find$List$Class, comment: SRC.stageFindComment },
         { type: "method", signature: "<T extends Sprite> int count(Class<T> c)", native: ScratchStageClass.prototype._count, comment: SRC.stageCountComment },
@@ -249,6 +261,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
                 // first frame. How much depends on what the browser had cached -
                 // nothing on a cold load, which is where it was measured at 7s.
                 if (firstStageOfRun) ScratchTimerClass.resetProgramStart();
+                interpreter.storeObject('ScratchGameClock', scratchGameClock());
                 t.state = oldState;
                 t.s.push(this);
                 this.registerIfNobodyElseWill(t, callback);
@@ -324,6 +337,8 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      */
     _preRender(): void {
         if (!this.isActive() || !this.world?.app) return;
+        ScratchMonitors.refresh(this);
+        ScratchTextClass.refreshAttached(this.world);
         this._applyCamera();
         this._applySorting();
         if (this.debugEnabled) this.renderDebugOverlay();
@@ -411,6 +426,9 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      * Upstream walks its own sprite list, so the message stays on this stage.
      */
     _broadcast(message: StringClass) { this.runtime.broadcast(message, this); }
+    _mj$broadcast$void$String(t: Thread, callback: CallbackParameter, message: StringClass) {
+        this.runtime.broadcastInThread(t, callback, message, this);
+    }
 
     // ---- sprites ----
     /**
@@ -428,6 +446,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         // a sprite built before this stage was on screen drew itself into
         // whichever stage was, so it has to be moved over now
         sprite.attachToStage(this);
+        sprite._registerListeners(t);
         const hook = (sprite as any)._mj$whenAddedToStage$void$;
         if (!hook) {
             if (callback) callback();
@@ -458,16 +477,38 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         text._remove();
         if (text.stage === this) text.stage = undefined;
     }
-    _removePen(pen: ScratchPenClass) { pen?._eraseAll(); }
+    _removePen(pen: ScratchPenClass) {
+        pen?._removedFromStage(this);
+        if (pen) pen.stage = undefined;
+    }
     _remove(sprite: ScratchSpriteClass) {
-        const i = this.sprites.indexOf(sprite);
-        if (i >= 0) this.sprites.splice(i, 1);
-        if (sprite) sprite.stage = undefined;
-        sprite?.destroy();
+        if (sprite?.stage === this) sprite._remove();
     }
     _removeAll() {
-        for (const s of this.sprites.slice()) { s.stage = undefined; s.destroy(); }
-        this.sprites.length = 0;
+        for (const s of this.sprites.slice()) this._remove(s);
+    }
+
+    _mj$remove$void$Sprite(t: Thread, callback: CallbackParameter, sprite: ScratchSpriteClass) {
+        if (sprite?.stage === this) sprite._mj$remove$void$(t, callback);
+        else callback?.();
+    }
+
+    private removeSprites(t: Thread, callback: CallbackParameter, sprites: ScratchSpriteClass[]) {
+        let index = 0;
+        const next = () => {
+            const sprite = sprites[index++];
+            if (sprite) this._mj$remove$void$Sprite(t, next, sprite);
+            else callback?.();
+        };
+        next();
+    }
+
+    _mj$removeAll$void$(t: Thread, callback: CallbackParameter) {
+        this.removeSprites(t, callback, [...this.sprites]);
+    }
+
+    _mj$remove$void$Class(t: Thread, callback: CallbackParameter, c: ClassClass) {
+        this.removeSprites(t, callback, this.spritesOfClass(c));
     }
 
     /**
@@ -613,8 +654,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         return timer;
     }
     _getDeltaTime(): number {
-        const fps = this._getFrameRate();
-        return fps > 0 ? 1 / fps : 0;
+        return scratchGameClock().stepSeconds;
     }
     _getFrameRate(): number {
         return (this.world as any).app?.ticker?.FPS ?? 30;
@@ -639,10 +679,10 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      * look at.
      */
     private displayText(text: string, millis?: number) {
-        if (this.displayTimeout) { clearTimeout(this.displayTimeout); this.displayTimeout = undefined; }
+        if (this.displayTimeout) { this.displayTimeout(); this.displayTimeout = undefined; }
         if (this.displayContainer) { this.displayContainer.destroy({ children: true }); this.displayContainer = undefined; }
         this.displayContainer = this.makeBottomBand(text);
-        if (millis !== undefined) this.displayTimeout = setTimeout(() => this.displayText("", undefined), millis);
+        if (millis !== undefined) this.displayTimeout = scratchGameClock().schedule(() => this.displayText("", undefined), millis);
     }
 
     /**

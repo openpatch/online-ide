@@ -42,6 +42,7 @@ import { SpritesheetData } from "../spritemanager/SpritesheetData.js";
 import { GUIFile } from "../workspace/File.js";
 import { Workspace } from "../workspace/Workspace.js";
 import { ExportedWorkspace, WorkspaceExporter } from "../workspace/WorkspaceImporterExporter.js";
+import { exportProjectZip, importProjectZip, workspacePaths } from '../workspace/PortableProject';
 import { configFromURLParameters, sharedWorkspaceIdFromURL } from "./EmbeddedURLConfig.js";
 import { showURLParametersPanel } from "./EmbeddedURLParametersPanel.js";
 import { EmbeddedMessages } from "./EmbeddedMessages.js";
@@ -210,6 +211,9 @@ export class MainEmbedded implements MainBase {
     runExitListeners: OnRunExitListener[] = [];
 
     scriptListFromHtml: JOScript[] = [];
+    private savedWorkspaceSnapshot = '';
+    private workspaceSavePending = false;
+    private loadedSpritesheetBase64?: string;
 
 
     constructor(private $outerDiv: JQuery<HTMLElement>) {
@@ -356,7 +360,8 @@ export class MainEmbedded implements MainBase {
         if (configJson != null && typeof configJson == "string") {
             this.config = JSON.parse(configJson.split("'").join('"'));
         } else {
-            this.config = {}
+            this.config = configJson && typeof configJson === 'object' && !Array.isArray(configJson)
+                ? { ...configJson } as JavaOnlineConfig : {};
         }
 
         // The URL is layered over the div's configuration, not under it: the div
@@ -455,6 +460,15 @@ export class MainEmbedded implements MainBase {
 
     async readScriptsFromIndexedDB(): Promise<void> {
 
+        if (this.config.cacheUserEdits && !this.loadedSharedWorkspace) {
+            const cached = await new Promise<string>(resolve => this.indexedDB.getScript(this.config.id + '-workspace', resolve));
+            if (cached && await this.loadWorkspaceFromFile(new globalThis.File([cached], 'workspace.json'))) {
+                this.savedWorkspaceSnapshot = cached;
+                setInterval(() => this.saveScripts(), 1000);
+                return;
+            }
+        }
+
         return new Promise<void>((resolve, reject) => {
             let files = this.currentWorkspace.getFiles();
             files.forEach(f => {
@@ -485,6 +499,7 @@ export class MainEmbedded implements MainBase {
 
                     let scriptList: string[] = JSON.parse(scriptListJSon);
                     let countDown = scriptList.length;
+                    if (!countDown) { setInterval(() => that.saveScripts(), 1000); resolve(); return; }
 
                     for (let file of files.slice()) {
                         that.fileExplorer?.removeFile(file, false);  // calls MainEmbedded.removeFile subsequently
@@ -500,6 +515,7 @@ export class MainEmbedded implements MainBase {
                                 script = this.eraseDokuwikiSearchMarkup(script);
 
                                 let file = new GUIFile(this, name, script);
+                                file.id = that.currentWorkspace.getFiles().length + 1;
                                 if (!isAssetFile(file)) file.getMonacoModel();
                                 file.setSaved(true);
                                 file.readOnly = that.isReadOnlyScript(name);
@@ -530,26 +546,20 @@ export class MainEmbedded implements MainBase {
     }
 
     saveScripts() {
-
-        let files = this.currentWorkspace.getFiles();
-
-        let scriptList: string[] = [];
-        let oneNotSaved: boolean = false;
-
-        files.forEach(file => oneNotSaved = oneNotSaved || !file.isSaved());
-
-        if (oneNotSaved) {
-
-            for (let file of files) {
-                scriptList.push(file.name);
-                let scriptId = this.config.id + file.name;
-                this.indexedDB.writeScript(scriptId, file.getText());
-                file.setSaved(true);
-                // console.log("Saving script " + scriptId);
-            }
-
-            this.indexedDB.writeScript(this.config.id, JSON.stringify(scriptList));
-
+        if (!this.indexedDB || this.config.id == null || !this.config.cacheUserEdits) return;
+        const files = this.currentWorkspace.getFiles();
+        const snapshot = JSON.stringify({ name: this.currentWorkspace.name, settings: this.currentWorkspace.settings,
+            spritesheetBase64: this.loadedSpritesheetBase64,
+            modules: files.map(file => ({ name: file.name, text: file.getText(), id: file.id,
+                isFolder: file.isFolder, parent_folder_id: file.parent_folder_id })) });
+        if (snapshot !== this.savedWorkspaceSnapshot && !this.workspaceSavePending) {
+            this.workspaceSavePending = true;
+            this.indexedDB.writeWorkspace(this.config.id + '-workspace', snapshot).then(() => {
+                this.savedWorkspaceSnapshot = snapshot;
+                const saved = JSON.parse(snapshot).modules;
+                files.forEach((file, index) => { if (file.getText() === saved[index].text) file.setSaved(true); });
+            }).catch(error => console.error('Workspace cache failed; download a project copy.', error))
+                .finally(() => { this.workspaceSavePending = false; });
         }
 
         let classDiagram = this.rightDiv?.classDiagram;
@@ -561,6 +571,8 @@ export class MainEmbedded implements MainBase {
     }
 
     deleteScriptsInDB() {
+        this.indexedDB.removeScript(this.config.id + '-workspace');
+        this.savedWorkspaceSnapshot = '';
         this.indexedDB.getScript(this.config.id, (scriptListJSon) => {
             if (scriptListJSon == null) {
                 return;
@@ -669,6 +681,8 @@ export class MainEmbedded implements MainBase {
             var files: FileList = event.originalEvent.target.files;
             that.loadWorkspaceFromFile(files[0]);
         })
+        $buttonOpen.attr('title', EmbeddedMessages.ImportProject());
+        $buttonOpen.find('input').attr('accept', '.json,.zip');
 
         let $buttonSave = jQuery('<div class="img_save-dark jo_button jo_active"' +
             'style="margin-right: 8px;" title="Workspace in Datei speichern"></div>');
@@ -677,6 +691,10 @@ export class MainEmbedded implements MainBase {
         $buttonSave.on('click', () => { that.saveWorkspaceToFile() });
 
         $controlsDiv.append($buttonOpen, $buttonSave);
+        const $projectZip = jQuery('<button type="button" class="jo_button jo_active" style="margin-right:8px">ZIP</button>')
+            .attr('title', EmbeddedMessages.ExportProject());
+        $projectZip.on('click', () => this.saveProjectZip());
+        $controlsDiv.append($projectZip);
 
         if (this.config.jsonStore) {
             let $buttonShare = jQuery('<div class="img_copy-dark jo_button jo_active"' +
@@ -974,6 +992,17 @@ export class MainEmbedded implements MainBase {
         downloadFile(exportedWorkspace, filename)
     }
 
+    async saveProjectZip() {
+        try {
+            const workspace = await WorkspaceExporter.exportWorkspace(this.currentWorkspace);
+            const bytes = await exportProjectZip(workspace);
+            let name = prompt(EmbeddedMessages.ProjectFilename(), this.currentWorkspace.name + '.zip');
+            if (!name) return;
+            if (!name.toLowerCase().endsWith('.zip')) name += '.zip';
+            downloadFile(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), name, true);
+        } catch (error) { alert(`${EmbeddedMessages.ProjectFailed()}\n${error.message}`); }
+    }
+
     /**
      * Uploads the workspace and hands back a link to it.
      *
@@ -1047,65 +1076,64 @@ export class MainEmbedded implements MainBase {
         }
     }
 
-    loadWorkspaceFromFile(file: globalThis.File) {
-        let that = this;
-        if (file == null) return;
-        var reader = new FileReader();
-        reader.onload = async (event) => {
-            let text: string = <string>event.target.result;
-            // if (!text.startsWith("{")) {
-            //     alert(`<div>Das Format der Datei ${file.name} passt nicht.</div>`);
-            //     return;
-            // }
-
-            let ew: ExportedWorkspace = JSON.parse(text);
-
-            if (Array.isArray(ew)) {
-                if (ew.length == 0) {
-                    alert(`<div>Das Format der Datei ${file.name} passt nicht.</div>`);
-                    return;
-                }
-                ew = ew[0];
-            }
-
-            if (ew.modules == null || ew.name == null || ew.settings == null) {
-                alert(`<div>Das Format der Datei ${file.name} passt nicht.</div>`);
-                return;
-            }
-
-            let ws: Workspace = new Workspace(ew.name, this, 0);
-            ws.settings = ew.settings;
-            ws.id = 0; // class diagram needs this
-
-            for (let mo of ew.modules) {
-                let f = new GUIFile(this, mo.name, mo.text);
-                ws.addFile(f);
-            }
-
-            that.currentWorkspace = ws;
-
-            if (ew.spritesheetBase64) {
-                let zipFile = base64ToBytes(ew.spritesheetBase64);
-                await new SpritesheetData().initializeSpritesheetForWorkspace(ws, this, zipFile);
-            }
-
-            if (that.fileExplorer != null) {
-                that.fileExplorer.removeAllFiles();
-                ws.getFiles().forEach(file => that.fileExplorer.addFile(file));
-                that.fileExplorer.selectFirstFileIfPresent();
+    async loadWorkspaceFromFile(file: globalThis.File) {
+        if (!file) return false;
+        try {
+            let ew: ExportedWorkspace;
+            let warnings: string[] = [];
+            if (file.name.toLowerCase().endsWith('.zip')) {
+                const result = await importProjectZip(await file.arrayBuffer(), file.name.replace(/\.zip$/i, ''));
+                ew = result.workspace;
+                warnings = result.warnings;
             } else {
-                this.setFileActive(this.currentWorkspace.getFirstFile());
+                const parsed = JSON.parse(await file.text());
+                if (Array.isArray(parsed) && parsed.length !== 1) throw new Error('Choose a file containing one workspace.');
+                ew = Array.isArray(parsed) ? parsed[0] : parsed;
+                if (!ew || typeof ew.name !== 'string' || !Array.isArray(ew.modules) || !ew.settings) {
+                    throw new Error('Invalid workspace JSON');
+                }
+                for (const module of ew.modules) {
+                    if (typeof module.name !== 'string' || typeof module.text !== 'string') throw new Error('Invalid workspace file');
+                }
+                workspacePaths(ew);
             }
-
+            const ws = new Workspace(ew.name, this, 0);
+            ws.settings = ew.settings;
+            ws.id = 0;
+            const ids = new Map<number, number>();
+            const files = ew.modules.map((module, index) => {
+                const result = new GUIFile(this, module.name, module.text);
+                result.id = index + 1;
+                result.isFolder = !!module.isFolder;
+                if (module.id != null) ids.set(module.id, result.id);
+                ws.addFile(result);
+                return result;
+            });
+            files.forEach((result, index) => result.parent_folder_id = ids.get(ew.modules[index].parent_folder_id) ?? null);
+            if (ew.spritesheetBase64) {
+                await new SpritesheetData().initializeSpritesheetForWorkspace(ws, this, base64ToBytes(ew.spritesheetBase64));
+            }
+            if (this.getInterpreter().isRunningOrPaused()) this.getInterpreter().stop(false);
+            this.getMainEditor().setModel(null);
+            this.currentWorkspace.getFiles().forEach(file => file.disposeMonacoModel());
+            this.lastActiveFile = undefined;
+            this.loadedSpritesheetBase64 = ew.spritesheetBase64;
+            this.currentWorkspace = ws;
+            ws.setLibraries(this.getCompiler());
+            if (this.fileExplorer) {
+                this.fileExplorer.removeAllFiles();
+                ws.getFiles().forEach(file => this.fileExplorer.addFile(file));
+                this.fileExplorer.selectFirstFileIfPresent();
+            } else this.setFileActive(ws.getFirstFile());
+            const entry = ws.settings.scratchProject?.startFile;
+            const startFile = ws.getFiles().find(file => [...ws.getPath(file), file.name].join('/') === entry);
+            if (startFile) this.setFileActive(startFile);
             this.getCompiler().triggerCompile();
-
-            that.saveScripts();
-
+            this.saveScripts();
             this.showResetButton();
-
-        };
-        reader.readAsText(file);
-
+            if (warnings.length) alert(warnings.join('\n\n'));
+            return true;
+        } catch (error) { alert(`${EmbeddedMessages.ProjectFailed()}\n${error.message}`); return false; }
     }
 
     showResetButton() {
@@ -1352,4 +1380,3 @@ export class MainEmbedded implements MainBase {
     }
 
 }
-

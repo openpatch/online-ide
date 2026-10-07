@@ -56,6 +56,12 @@ export class EmbeddedIndexedDB {
       });
   }
 
+  /** One IndexedDB record commits the complete workspace atomically. */
+  public async writeWorkspace(scriptId: string, script: string): Promise<void> {
+    if (!this.db) throw new Error('Workspace cache is unavailable');
+    await this.db.put({ scriptId, script });
+  }
+
   public removeScript(scriptId: string) {
     this.db.delete(scriptId).catch((error) => {
       console.error("Error removing script: ", error);

@@ -223,10 +223,6 @@ rec.start();
 rec.stop();
 assertEquals(false, rec.isRecording(), "GifRecorder never records here");
 
-Shader shader = new Shader("blur", "blur.frag", "blur.vert");
-assertEquals("blur", shader.getName(), "Shader keeps its name");
-shader.set("radius", 4);
-
 print("weiter");
 
 /**::
@@ -273,6 +269,15 @@ class MyStage extends Stage {
         Pixels px = this.getPixels();
         Shaders sh = this.getShaders();
         Sorting so = this.getSorting();
+    }
+
+    // Shaders load assets asynchronously and need WebGL when executed.
+    // Their source translation is covered by ScratchShaderTranslationTest;
+    // this method checks the Java constructor and uniform signatures.
+    public void shaderApi() {
+        Shader shader = new Shader("blur", "blur.frag", "blur.vert");
+        String name = shader.getName();
+        shader.set("radius", 4);
     }
 
     public void windowApi() {
