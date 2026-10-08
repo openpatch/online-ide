@@ -66,6 +66,12 @@ export class JavaCompiledModule extends JavaBaseModule {
 
     imports: string[][] = [];
 
+    /**
+     * Classes whose static members are visible by their simple name through an
+     * `import static a.b.C.member;` (member) or `import static a.b.C.*;` ("*").
+     */
+    staticImports: { type: NonPrimitiveType, member: string }[] = [];
+
     constructor(file: CompilerFile, public moduleManager?: JavaModuleManager) {
         super(file, false);
     }
@@ -204,6 +210,7 @@ export class JavaCompiledModule extends JavaBaseModule {
         this.inlayHints = [];
         this.importedTypes.clear();
         this.imports = [];
+        this.staticImports = [];
     }
 
     hasMainProgram(): boolean {

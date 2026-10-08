@@ -1289,12 +1289,16 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
                         return this.registerCodeReachedAssertion(node, parameterValueSnippets);
                     }
                 } else {
-                    this.pushError(JCM.methodCallOutsideClassNeedsDotSyntax(), "error", node);
-                    return undefined;
+                    let staticallyImported = this.searchStaticallyImportedMethod(node.identifier, parameterTypes, node.identifierRange);
+                    if (!staticallyImported) {
+                        this.pushError(JCM.methodCallOutsideClassNeedsDotSyntax(), "error", node);
+                        return undefined;
+                    }
+                    objectSnippet = this.staticallyImportedClassSnippet(staticallyImported.staticType, node.identifierRange);
                 }
 
             }
-            objectSnippet = new StringCodeSnippet(`${Helpers.elementRelativeToStackbase(0)}`, EmptyRange.instance, classContext);
+            if (!objectSnippet) objectSnippet = new StringCodeSnippet(`${Helpers.elementRelativeToStackbase(0)}`, EmptyRange.instance, classContext);
         }
 
         if (!objectSnippet || !objectSnippet.type) {
@@ -1348,6 +1352,17 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
                     break;
                 }
                 outerType = outerType.outerType;
+            }
+        }
+
+        // import static a.b.C.*; makes the static methods of C callable by their simple name
+        if (!method && !node.nodeToGetObject && this.module.staticImports.length > 0) {
+            let staticallyImported = this.searchStaticallyImportedMethod(node.identifier, parameterTypes, node.identifierRange);
+            if (staticallyImported) {
+                methods = staticallyImported.methods;
+                method = methods.best;
+                outerTypeTemplate = "";
+                objectSnippet = this.staticallyImportedClassSnippet(staticallyImported.staticType, node.identifierRange);
             }
         }
 
@@ -1509,6 +1524,22 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
         }
 
         return undefined;
+    }
+
+    searchStaticallyImportedMethod(identifier: string, parameterTypes: (JavaType | undefined)[], methodCallRange: IRange) {
+        for (let staticImport of this.module.staticImports) {
+            if (staticImport.member != "*" && staticImport.member != identifier) continue;
+            let methods = this.searchMethod(identifier, staticImport.type.staticType,
+                parameterTypes, false, true, true, methodCallRange);
+            if (methods.best) {
+                return { methods: methods, staticType: staticImport.type.staticType };
+            }
+        }
+        return undefined;
+    }
+
+    staticallyImportedClassSnippet(staticType: StaticNonPrimitiveType, range: IRange): CodeSnippet {
+        return new StringCodeSnippet(`${Helpers.classes}["${staticType.nonPrimitiveType.pathAndIdentifierAsDotSeparatedString}"]`, range, staticType);
     }
 
     isStringOrChar(type: JavaType) {

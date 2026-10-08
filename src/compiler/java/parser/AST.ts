@@ -211,6 +211,7 @@ export interface ASTStaticInitializerNode extends ASTStatementNode {
 
 export interface ASTImportStatementNode extends ASTNode {
     kind: TokenType.keywordImport,
+    isStatic?: boolean,
     importedPath: string[],
     pathRanges: IRange[],
 }

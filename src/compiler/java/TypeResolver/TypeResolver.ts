@@ -7,7 +7,7 @@ import { JavaBaseModule } from "../module/JavaBaseModule";
 import { JavaCompiledModule } from "../module/JavaCompiledModule";
 import { JavaModuleManager } from "../module/JavaModuleManager";
 import { JavaLibraryModuleManager } from "../module/libraries/JavaLibraryModuleManager";
-import { ASTArrayTypeNode, ASTBaseTypeNode, ASTClassDefinitionNode, ASTEnumDefinitionNode, ASTFieldDeclarationNode, ASTGenericTypeInstantiationNode, ASTInterfaceDefinitionNode, ASTMethodDeclarationNode, ASTTypeDefinitionWithGenerics, ASTTypeNode, ASTWildcardTypeNode, TypeScope } from "../parser/AST";
+import { ASTArrayTypeNode, ASTBaseTypeNode, ASTClassDefinitionNode, ASTEnumDefinitionNode, ASTFieldDeclarationNode, ASTGenericTypeInstantiationNode, ASTImportStatementNode, ASTInterfaceDefinitionNode, ASTMethodDeclarationNode, ASTTypeDefinitionWithGenerics, ASTTypeNode, ASTWildcardTypeNode, TypeScope } from "../parser/AST";
 import { InterfaceClass } from "../runtime/system/javalang/InterfaceClass";
 import { PrimitiveType } from "../runtime/system/primitiveTypes/PrimitiveType.ts";
 import { JavaArrayType } from "../types/JavaArrayType";
@@ -93,6 +93,10 @@ export class TypeResolver {
                 module.importedTypes.set(identifier, type as NonPrimitiveType);
             });
             for (let importStatement of module.ast.importStatements) {
+                if (importStatement.isStatic) {
+                    this.registerStaticImport(module, importStatement);
+                    continue;
+                }
                 module.imports.push(importStatement.importedPath);
                 let types = this.libraryModuleManager.typestore.getTypesMatchingImportPath(importStatement.importedPath, module, importStatement.pathRanges);
                 if (types.length == 0) {
@@ -104,6 +108,28 @@ export class TypeResolver {
                 }
             }
         }
+    }
+
+    /**
+     * import static a.b.C.member; and import static a.b.C.*; make the static
+     * members of class C usable by their simple name. Only the class is resolved
+     * here, the member is looked up where it is used.
+     */
+    registerStaticImport(module: JavaCompiledModule, importStatement: ASTImportStatementNode) {
+        let path = importStatement.importedPath;
+        let type: JavaType | undefined = undefined;
+        if (path.length >= 2) {
+            let types = this.libraryModuleManager.typestore.getTypesMatchingImportPath(path.slice(0, -1), module, importStatement.pathRanges.slice(0, -1));
+            if (types.length == 1) type = types[0];
+            if (!type) type = this.moduleManager.typestore.getType(path.slice(0, -1));
+            // java.lang.Math and friends live without package in this runtime
+            if (!type && path[0] == "java") type = this.libraryModuleManager.typestore.getType(path[path.length - 2]);
+        }
+        if (!(type instanceof NonPrimitiveType)) {
+            this.pushError(JCM.importedTypesNotFound(path.join(".")), importStatement.range, module, "error");
+            return;
+        }
+        module.staticImports.push({ type: type, member: path[path.length - 1] });
     }
 
     gatherTypeDefinitionNodes() {

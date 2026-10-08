@@ -145,6 +145,11 @@ export class Parser extends StatementParser {
                 pathRanges: []
             }
 
+            if (this.tt as TokenType == TokenType.keywordStatic) {
+                astImportStatementNode.isStatic = true;
+                this.nextToken(); // skip "static"
+            }
+
             if(this.tt as TokenType != TokenType.identifier){
                 this.pushError(JCM.importStatementMustStartWithIdentifier(), "error");
                 this.skipTokensTillEndOfLineOr([TokenType.semicolon]);

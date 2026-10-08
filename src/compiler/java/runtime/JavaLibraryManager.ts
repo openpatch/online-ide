@@ -5,6 +5,7 @@ import { JavaCompiler } from "../JavaCompiler";
 import { JavaLibraryModule } from "../module/libraries/JavaLibraryModule";
 import { GNGModule } from "./graphics/gng/GNGModule";
 import { ScratchModule } from "./graphics/scratch/ScratchModule";
+import { ZeichnenModule } from "./graphics/zeichnen/ZeichnenModule";
 import { NiedersachsenModule } from "./modules/niedersachsen/NiedersachsenModule";
 import { NRWModule } from "./modules/nrw/NRWModule";
 
@@ -31,6 +32,11 @@ export class JavaLibraryManager implements LibraryManager {
             identifier: 'Scratch for Java',
             description: 'Scratch-artige Klassenbibliothek (Stage, Sprite, Costumes) — Port von org.openpatch.scratch. Zusammen mit den Abiturklassen NRW liefern getAll, find und getTouchingSprites deren List',
             id: 'scratch'
+        },
+        {
+            identifier: 'Zeichnen mit Java',
+            description: 'Einfache Bibliothek zum Zeichnen mit Java: Pakete zeichnen (Zeichenflaeche, Rechteck, Oval, Linie, Dreieck, Timerflaeche, ImperativesZeichnen ...), turtle und farbmanagment',
+            id: 'zeichnen'
         },
     ];
 
@@ -59,6 +65,8 @@ export class JavaLibraryManager implements LibraryManager {
                 case "niedersachsen": additionalModules.push(new NiedersachsenModule());
                     break;
                 case "scratch": additionalModules.push(new ScratchModule(nrwLists));
+                    break;
+                case "zeichnen": additionalModules.push(new ZeichnenModule());
                     break;
             }
         }

@@ -660,6 +660,9 @@ export class Interpreter {
         let world: IWorld = this.retrieveObject("WorldClass");
         if (this.actorManager.hasActors() || world?.hasActors()) return true;
 
+        // library "Zeichnen mit Java": running Timerflaeche or a last repaint pending
+        if (this.retrieveObject("ZeichnenRuntime")?.keepsProgramAlive()) return true;
+
         let timerCount: number = this.retrieveObject(Interpreter.TimerCountIndentifier) || 0;
         return timerCount > 0;
     }
