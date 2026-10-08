@@ -413,6 +413,50 @@
         color: var(--file-active-border);
     }
 
+    /* the libraries dialog: one checkbox per library */
+    .joe_librariesDialog {
+        width: min(36em, calc(100% - 2em));
+    }
+
+    .joe_libraryOption {
+        display: flex;
+        gap: 0.6em;
+        align-items: flex-start;
+        margin-top: 0.5em;
+        padding: 0.6em 0.8em;
+        border: 1px solid var(--menuitemsdivider);
+        border-radius: 4px;
+        background-color: var(--backgroundDark);
+        cursor: pointer;
+    }
+
+    .joe_libraryOption:hover {
+        background-color: var(--backgroundSelected);
+    }
+
+    .joe_libraryOption input {
+        margin: 0.15em 0 0 0;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .joe_libraryName {
+        color: var(--fontColorLight);
+        font-weight: bold;
+    }
+
+    .joe_libraryId {
+        margin-left: 0.4em;
+        font-family: 'Consolas', monospace;
+        font-weight: normal;
+        opacity: 0.7;
+    }
+
+    .joe_libraryDescription {
+        margin-top: 0.2em;
+        line-height: 1.4;
+    }
+
     /* the export dialog: one card per way out */
     .joe_exportDialog {
         width: min(32em, calc(100% - 2em));

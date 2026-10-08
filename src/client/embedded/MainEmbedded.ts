@@ -47,6 +47,7 @@ import { requestedAssetPaths, resolveAssetUrl, setAssetBase } from '../../compil
 import { configFromURLParameters, sharedWorkspaceIdFromURL } from "./EmbeddedURLConfig.js";
 import { showURLParametersPanel } from "./EmbeddedURLParametersPanel.js";
 import { showExportDialog } from "./EmbeddedExportDialog.js";
+import { showLibrariesDialog } from "./EmbeddedLibrariesDialog.js";
 import { EmbeddedMessages } from "./EmbeddedMessages.js";
 import { EmbeddedFileExplorer } from "./EmbeddedFileExplorer.js";
 import { ThemeManager } from "../main/gui/ThemeManager.js";
@@ -701,6 +702,20 @@ export class MainEmbedded implements MainBase {
 
         $controlsDiv.append($buttonOpen, $buttonExport);
 
+        // Only where the link is actually read, like the "?" panel: a page that
+        // embeds the IDE for a lesson decides on its libraries itself.
+        // The language is only set later on, so its libraries are looked up on click.
+        if (this.config.urlConfig) {
+            let $buttonLibraries = jQuery('<div class="img_library-dark jo_button jo_active" style="margin-right: 8px;"></div>')
+                .attr('title', EmbeddedMessages.LibrariesTooltip());
+            $buttonLibraries.on('click', () => {
+                let libraries = that.getCurrentProgrammingLanguage()?.getLibraryManager()?.getLibrariesData() ?? [];
+                showLibrariesDialog(that.$outerDiv, libraries, that.currentWorkspace.settings.libraries ?? [],
+                    selected => that.setLibraries(selected));
+            });
+            $controlsDiv.append($buttonLibraries);
+        }
+
         // Only where the link is actually read: elsewhere the panel would list
         // parameters that do nothing.
         if (this.config.urlConfig) {
@@ -976,6 +991,28 @@ export class MainEmbedded implements MainBase {
         this.debounceDiagramDrawing = setTimeout(() => {
             this.rightDiv?.classDiagram?.drawDiagram(this.currentWorkspace, onlyUpdateIdentifiers);
         }, 500);
+    }
+
+    /**
+     * Switches the workspace to the given libraries and compiles anew. Where the
+     * link carries the configuration it is rewritten too, so that reloading the
+     * page and a shared link keep the choice.
+     */
+    setLibraries(libraries: string[]) {
+        this.currentWorkspace.settings.libraries = libraries;
+        this.config.libraries = libraries;
+        let compiler = this.getCompiler();
+        this.currentWorkspace.getFiles().forEach(file => compiler.setFileDirty(file));
+        this.currentWorkspace.setLibraries(compiler);
+        compiler.triggerCompile();
+        this.saveScripts();
+
+        if (this.config.urlConfig) {
+            let url = new URL(location.href);
+            url.searchParams.set("libraries", libraries.join(","));
+            // keep the commas readable: ?libraries=scratch,nrw rather than scratch%2Cnrw
+            history.replaceState(history.state, "", url.toString().replace(/(libraries=[^&#]*)/, match => decodeURIComponent(match)));
+        }
     }
 
     async saveWorkspaceToFile(filename: string) {

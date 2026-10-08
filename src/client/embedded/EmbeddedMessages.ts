@@ -66,6 +66,26 @@ export class EmbeddedMessages {
     "en": "The shared workspace could not be loaded. Please check the link.",
     })
 
+    static LibrariesTooltip = () => lm({
+    "de": "Klassenbibliotheken auswählen",
+    "en": "Choose class libraries",
+    })
+
+    static LibrariesHeading = () => lm({
+    "de": "Klassenbibliotheken",
+    "en": "Class libraries",
+    })
+
+    static LibrariesIntro = () => lm({
+    "de": "Welche Bibliotheken das Programm benutzen kann. Die Auswahl gilt sofort und steht auch im Link (?libraries=…), sodass ein geteilter Link sie mitnimmt.",
+    "en": "Which libraries the program can use. The choice applies at once and is also put into the link (?libraries=…), so a shared link takes it along.",
+    })
+
+    static LibrariesNone = () => lm({
+    "de": "Für diese Programmiersprache gibt es keine Klassenbibliotheken zur Auswahl.",
+    "en": "There are no class libraries to choose from for this programming language.",
+    })
+
     static URLParametersTooltip = () => lm({
     "de": "Welche Einstellungen der Link mitgeben kann",
     "en": "Which settings the link can carry",

@@ -686,6 +686,13 @@
       background-image: url('../icons/export-dark.svg');
    }
 
+   .img_library-dark {
+      width: 16px;
+      height: 16px;
+      background-repeat: no-repeat;
+      background-image: url('../icons/library-dark.svg');
+   }
+
    .img_start-dark {
       width: 16px;
       height: 16px;
