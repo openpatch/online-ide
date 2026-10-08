@@ -1,31 +1,15 @@
 import jQuery from "jquery";
 import { EmbeddedMessages } from "./EmbeddedMessages";
 import { URL_PARAMETERS, urlParameterValue } from "./EmbeddedURLConfig";
+import { showEmbeddedDialog } from "./EmbeddedDialog";
 
 /**
  * The panel behind the playground's "?" button: what may stand in the link, and
  * what this link says.
- *
- * It lives inside the IDE's own div rather than in the page, so that it is
- * painted in the IDE's colours (the theme sets its custom properties there) and
- * so that an IDE embedded in somebody else's page cannot cover that page over.
  */
 export function showURLParametersPanel($outerDiv: JQuery<HTMLElement>) {
 
-    // one at a time, however often the button is pressed
-    $outerDiv.find('.joe_urlHelpBackdrop').remove();
-
-    let $backdrop = jQuery('<div class="joe_urlHelpBackdrop"></div>');
-    let $panel = jQuery('<div class="joe_urlHelp" tabindex="-1"></div>');
-
-    let $heading = jQuery('<div class="joe_urlHelpHeading"></div>');
-    $heading.append(jQuery('<div></div>').text(EmbeddedMessages.URLParametersHeading()));
-    // a plain "times" rather than one of the icon classes: none of them reads as
-    // "close", and the icons are a fixed colour while this follows the theme
-    let $close = jQuery('<div class="joe_urlHelpClose"></div>').text("\u2715");
-    $close.attr('title', EmbeddedMessages.URLParametersClose());
-    $heading.append($close);
-    $panel.append($heading);
+    let { $panel } = showEmbeddedDialog($outerDiv, EmbeddedMessages.URLParametersHeading(), 'joe_urlHelp');
 
     $panel.append(jQuery('<div class="joe_urlHelpIntro"></div>').text(EmbeddedMessages.URLParametersIntro()));
 
@@ -59,22 +43,4 @@ export function showURLParametersPanel($outerDiv: JQuery<HTMLElement>) {
     $panel.append($table);
 
     $panel.append(jQuery('<div class="joe_urlHelpIntro"></div>').text(EmbeddedMessages.URLParametersShareHint()));
-
-    let close = () => {
-        jQuery(document).off('keydown', onKey);
-        $backdrop.remove();
-    };
-    let onKey = (event: JQuery.KeyDownEvent) => {
-        if (event.key == "Escape") close();
-    };
-
-    $close.on('click', close);
-    // a click beside the panel closes it, one inside it does not
-    $backdrop.on('click', close);
-    $panel.on('click', event => event.stopPropagation());
-    jQuery(document).on('keydown', onKey);
-
-    $backdrop.append($panel);
-    $outerDiv.append($backdrop);
-    $panel.trigger('focus');
 }

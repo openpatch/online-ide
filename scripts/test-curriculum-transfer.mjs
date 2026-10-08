@@ -37,7 +37,10 @@ try {
     const edited = main.replace('new Window(768, 432)', 'new Window(800, 450)') + '\n// continued in browser\n';
     await page.evaluate(source => window.transferTest.edit('Main.java', source), edited);
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'ZIP', exact: true }).click();
+    // the export button opens a dialog; its first option saves the ZIP for a local IDE
+    await page.locator('.img_export-dark').click();
+    await page.locator('.joe_exportDialog input').first().fill('student.zip');
+    await page.locator('.joe_exportDialog .joe_exportButton').first().click();
     const browserZip = path.join(temporary, 'browser.zip');
     await (await download).saveAs(browserZip);
     const imported = cli('import', browserZip, path.join(temporary, 'studio'));

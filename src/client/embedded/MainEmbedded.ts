@@ -46,6 +46,7 @@ import { exportProjectZip, fetchProjectAssets, importProjectZip, referencedAsset
 import { requestedAssetPaths, resolveAssetUrl, setAssetBase } from '../../compiler/java/runtime/graphics/scratch/ScratchAssetUrls';
 import { configFromURLParameters, sharedWorkspaceIdFromURL } from "./EmbeddedURLConfig.js";
 import { showURLParametersPanel } from "./EmbeddedURLParametersPanel.js";
+import { showExportDialog } from "./EmbeddedExportDialog.js";
 import { EmbeddedMessages } from "./EmbeddedMessages.js";
 import { EmbeddedFileExplorer } from "./EmbeddedFileExplorer.js";
 import { ThemeManager } from "../main/gui/ThemeManager.js";
@@ -685,24 +686,20 @@ export class MainEmbedded implements MainBase {
         $buttonOpen.attr('title', EmbeddedMessages.ImportProject());
         $buttonOpen.find('input').attr('accept', '.json,.zip');
 
-        let $buttonSave = jQuery('<div class="img_save-dark jo_button jo_active"' +
-            'style="margin-right: 8px;" title="Workspace in Datei speichern"></div>');
+        // one button for every way the project leaves the page: ZIP for a local IDE, workspace JSON, link
+        let $buttonExport = jQuery('<div class="img_export-dark jo_button jo_active" style="margin-right: 8px;"></div>')
+            .attr('title', EmbeddedMessages.Export());
+        $buttonExport.on('click', () => {
+            showExportDialog(that.$outerDiv, {
+                defaultZipName: that.currentWorkspace.name + '.zip',
+                saveZip: name => that.saveProjectZip(name),
+                defaultJsonName: that.config.jsonFilename ?? "workspace.json",
+                saveJson: name => that.saveWorkspaceToFile(name),
+                createLink: that.config.jsonStore ? () => that.createShareLink() : undefined,
+            });
+        });
 
-
-        $buttonSave.on('click', () => { that.saveWorkspaceToFile() });
-
-        $controlsDiv.append($buttonOpen, $buttonSave);
-        const $projectZip = jQuery('<button type="button" class="jo_button jo_active" style="margin-right:8px">ZIP</button>')
-            .attr('title', EmbeddedMessages.ExportProject());
-        $projectZip.on('click', () => this.saveProjectZip());
-        $controlsDiv.append($projectZip);
-
-        if (this.config.jsonStore) {
-            let $buttonShare = jQuery('<div class="img_copy-dark jo_button jo_active"' +
-                'style="margin-right: 8px;" title="' + EmbeddedMessages.ShareWorkspaceTooltip() + '"></div>');
-            $buttonShare.on('click', () => { that.shareWorkspace($buttonShare) });
-            $controlsDiv.append($buttonShare);
-        }
+        $controlsDiv.append($buttonOpen, $buttonExport);
 
         // Only where the link is actually read: elsewhere the panel would list
         // parameters that do nothing.
@@ -981,34 +978,25 @@ export class MainEmbedded implements MainBase {
         }, 500);
     }
 
-    async saveWorkspaceToFile() {
-        let filename: string = prompt("Bitte geben Sie den Dateinamen ein", this.config.jsonFilename);
-        if (filename == null) {
-            alert("Der Dateiname ist leer, daher wird nichts gespeichert.");
-            return;
-        }
-        if (!filename.endsWith(".json")) filename = filename + ".json";
-        let ws = this.currentWorkspace;
-        let exportedWorkspace = await WorkspaceExporter.exportWorkspace(ws);
-        downloadFile(exportedWorkspace, filename)
+    async saveWorkspaceToFile(filename: string) {
+        let exportedWorkspace = await WorkspaceExporter.exportWorkspace(this.currentWorkspace);
+        downloadFile(exportedWorkspace, filename);
     }
 
-    async saveProjectZip() {
-        try {
-            const workspace = await WorkspaceExporter.exportWorkspace(this.currentWorkspace);
-            // files the program loads from next to this page rather than from the workspace
-            setAssetBase(this.getAssetBaseUrl());
-            const literals = referencedAssetPaths(workspace);
-            const { files, missing } = await fetchProjectAssets(referencedAssetPaths(workspace, requestedAssetPaths()), resolveAssetUrl);
-            const bytes = await exportProjectZip(workspace, files);
-            let name = prompt(EmbeddedMessages.ProjectFilename(), this.currentWorkspace.name + '.zip');
-            if (!name) return;
-            if (!name.toLowerCase().endsWith('.zip')) name += '.zip';
-            downloadFile(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), name, true);
-            // a path a run merely tried (a built-in costume name, say) is no loss
-            const lost = missing.filter(path => literals.includes(path));
-            if (lost.length) alert(`${EmbeddedMessages.ProjectAssetsMissing()}\n${lost.join('\n')}`);
-        } catch (error) { alert(`${EmbeddedMessages.ProjectFailed()}\n${error.message}`); }
+    /**
+     * Saves the project as a ZIP a local IDE can open, together with the files
+     * the program loads from next to this page rather than from the workspace.
+     * Resolves to the paths the program names but that could not be fetched.
+     */
+    async saveProjectZip(name: string): Promise<string[]> {
+        const workspace = await WorkspaceExporter.exportWorkspace(this.currentWorkspace);
+        setAssetBase(this.getAssetBaseUrl());
+        const literals = referencedAssetPaths(workspace);
+        const { files, missing } = await fetchProjectAssets(referencedAssetPaths(workspace, requestedAssetPaths()), resolveAssetUrl);
+        const bytes = await exportProjectZip(workspace, files);
+        downloadFile(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), name, true);
+        // a path a run merely tried (a built-in costume name, say) is no loss
+        return missing.filter(path => literals.includes(path));
     }
 
     /**
@@ -1018,38 +1006,22 @@ export class MainEmbedded implements MainBase {
      * playground - libraries, theme, which panels are shown - and not just the
      * files: the query says what the IDE is, the fragment says what is in it.
      */
-    async shareWorkspace($button?: JQuery<HTMLElement>) {
+    async createShareLink(): Promise<string> {
         let jsonStore = this.config.jsonStore;
-        if (!jsonStore) return;
+        if (!jsonStore) throw new Error("no json store configured");
 
-        $button?.removeClass('jo_active').attr('title', EmbeddedMessages.ShareWorkspaceUploading());
+        let exportedWorkspace = await WorkspaceExporter.exportWorkspace(this.currentWorkspace);
 
-        try {
-            let exportedWorkspace = await WorkspaceExporter.exportWorkspace(this.currentWorkspace);
+        let response = await fetch(`${jsonStore.replace(/\/$/, "")}/api/v2/post`, {
+            method: "POST",
+            mode: "cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(exportedWorkspace)
+        });
+        if (!response.ok) throw new Error("json store answered " + response.status);
 
-            let response = await fetch(`${jsonStore.replace(/\/$/, "")}/api/v2/post`, {
-                method: "POST",
-                mode: "cors",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(exportedWorkspace)
-            });
-            if (!response.ok) throw new Error("json store answered " + response.status);
-
-            let id = (await response.json()).id;
-            let link = location.origin + location.pathname + location.search + "#json=" + encodeURIComponent(id);
-
-            // The clipboard is the convenient way and is not always allowed to be
-            // used, so the link is shown either way, in something the reader can
-            // copy out of by hand.
-            let copied = await navigator.clipboard?.writeText(link).then(() => true, () => false);
-            prompt(EmbeddedMessages.ShareWorkspaceDone() +
-                (copied ? " (" + EmbeddedMessages.ShareWorkspaceCopied() + ")" : ""), link);
-        } catch (error) {
-            console.error(error);
-            alert(EmbeddedMessages.ShareWorkspaceFailed());
-        } finally {
-            $button?.addClass('jo_active').attr('title', EmbeddedMessages.ShareWorkspaceTooltip());
-        }
+        let id = (await response.json()).id;
+        return location.origin + location.pathname + location.search + "#json=" + encodeURIComponent(id);
     }
 
     /**

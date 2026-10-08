@@ -10,6 +10,7 @@ import { Treeview } from "../../../tools/components/treeview/Treeview.js";
 import { SimpleProgressbar } from "./ProgressIndicator.js";
 import { TreeviewNode } from "../../../tools/components/treeview/TreeviewNode.js";
 import JSZip from "jszip";
+import { importProjectZip } from "../../workspace/PortableProject.js";
 
 
 export class ImportWorkspaceGUI {
@@ -143,7 +144,8 @@ export class ImportWorkspaceGUI {
                 jsZip.loadAsync(f).then((zip) => {
                     let jsonFile = zip.file("all_workspaces.json");
                     if(jsonFile == null){
-                        alert(WorkspaceImportMessages.zipDoesntContainAllWorkspacesJson(f.name));
+                        // no "all workspaces" export: one project, as the ZIP export writes it
+                        this.addProjectZip(f, treeview);
                         return;
                     }
                     jsonFile.async("text").then((text: string) => {
@@ -162,6 +164,20 @@ export class ImportWorkspaceGUI {
 
         }
 
+    }
+
+    // the importer orders workspaces by id, so each project ZIP needs one of its own
+    private nextProjectZipId: number = -1;
+
+    async addProjectZip(f: File, treeview: Treeview<ExportedWorkspace, number>) {
+        try {
+            let { workspace, warnings } = await importProjectZip(new Uint8Array(await f.arrayBuffer()), f.name.replace(/\.zip$/i, ''));
+            workspace.id = this.nextProjectZipId--;
+            treeview.addNode(false, workspace.name, 'img_workspace-dark', workspace);
+            if (warnings.length) alert(warnings.join('\n\n'));
+        } catch (error) {
+            alert(WorkspaceImportMessages.projectZipFailed(f.name) + "\n" + error.message);
+        }
     }
 
     fillSourceTreeviewFromJson(jsonText: string, treeview: Treeview<ExportedWorkspace, number>, filename: string) {

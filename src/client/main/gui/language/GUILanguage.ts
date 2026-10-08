@@ -379,6 +379,16 @@ Are you sure?`
         'en': 'Export workspace to file'
     });
 
+    static exportForLocalIDE = () => lm({
+        'de': 'Als ZIP exportieren (auch für lokale IDEs geeignet)',
+        'en': 'Export as ZIP (also suited for local IDEs)'
+    });
+
+    static exportForLocalIDEFailed = () => lm({
+        'de': 'Der Workspace konnte nicht exportiert werden:',
+        'en': 'The workspace could not be exported:'
+    });
+
     static distributeToClass = () => lm({
         'de': 'An Klasse austeilen',
         'en': 'Distribute to class'

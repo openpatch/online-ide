@@ -131,3 +131,41 @@ test('assets the program loads from next to the page, not from the workspace, go
         expect([...await archive.file('assets/image.png')!.async('uint8array')]).toEqual([0, 1, 2, 3, 255]);
     } finally { globalThis.fetch = fetch; }
 });
+
+test.each([
+    ['plain Java', { language: 'Java', libraries: [] }],
+    ['another library', { language: 'Java', libraries: ['zeichnen', 'nrw'] }],
+    ['Scratch next to a library Studio has no adapter for', { language: 'Java', libraries: ['scratch', 'zeichnen'] }],
+    ['another language', { language: 'ByAssembly', assemblyArchitecture: 'B1' }],
+])('a workspace that is no Scratch project (%s) goes into a ZIP and comes back as it was', async (_, settings: any) => {
+    const original: ExportedWorkspace = { name: 'work', id: 1, settings, spritesheetBase64: 'UEsDBA==',
+        modules: [
+            { id: 1, name: 'src', text: '', isFolder: true, identical_to_repository_version: true },
+            { id: 2, name: 'Main.java', parent_folder_id: 1, text: 'class Main {\n\tvoid main() { IO.println("ä"); }\n}\n', isFolder: false, identical_to_repository_version: true },
+            { id: 3, name: 'bild.png', text: 'data:image/png;base64,AAECA/8=', isFolder: false, identical_to_repository_version: true },
+            { id: 4, name: 'leer', text: '', isFolder: true, identical_to_repository_version: true },
+            { id: 5, name: 'notizen.asm', text: 'LOAD 1\n', isFolder: false, identical_to_repository_version: true },
+        ] };
+    const bytes = await exportProjectZip(original, new Map([['assets/extra.png', new Uint8Array([9, 8, 7])]]));
+    const archive = await JSZip.loadAsync(bytes);
+    expect(archive.file('.scratch4j/project.json')).toBeNull();
+    expect(await archive.file('src/Main.java')!.async('string')).toContain('IO.println("ä")');
+    expect([...await archive.file('bild.png')!.async('uint8array')]).toEqual([0, 1, 2, 3, 255]);
+
+    const { workspace: restored, warnings } = await importProjectZip(bytes, 'work.zip');
+    expect(warnings).toEqual([]);
+    expect(restored.settings).toEqual(settings);
+    expect(restored.spritesheetBase64).toBe('UEsDBA==');
+    const paths = [...workspacePaths(restored)].map(([file, path]) => [path, file.isFolder ? '/' : file.text]);
+    expect(paths).toEqual(expect.arrayContaining([
+        ['src', '/'], ['leer', '/'], ['src/Main.java', original.modules[1].text], ['bild.png', original.modules[2].text],
+        ['notizen.asm', 'LOAD 1\n'], ['assets', '/'], ['assets/extra.png', 'data:image/png;base64,CQgH'],
+    ]));
+    expect(paths.some(([path]) => path.startsWith('.online-ide'))).toBe(false);
+});
+
+test('a Scratch project is still exported for Studio', async () => {
+    const archive = await JSZip.loadAsync(await exportProjectZip(workspace('nrw')));
+    expect(archive.file('.scratch4j/project.json')).not.toBeNull();
+    expect(archive.file('.online-ide/workspace.json')).toBeNull();
+});

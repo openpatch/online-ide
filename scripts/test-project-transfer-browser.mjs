@@ -42,7 +42,10 @@ try {
     const edited = source.replace('student edit', 'continued in browser');
     await page.evaluate(edited => window.transferTest.edit('Main.java', edited), edited);
     const downloaded = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'ZIP', exact: true }).click();
+    // the export button opens a dialog; its first option saves the ZIP for a local IDE
+    await page.locator('.img_export-dark').click();
+    await page.locator('.joe_exportDialog input').first().fill('roundtrip.zip');
+    await page.locator('.joe_exportDialog .joe_exportButton').first().click();
     const download = await downloaded;
     const artifacts = process.env.SCRATCH_BROWSER_ARTIFACTS || path.join(os.tmpdir(), 'scratch-browser-tests');
     await fs.mkdir(artifacts, { recursive: true });
@@ -56,6 +59,8 @@ try {
     assert.equal(metadata.flavour, 'nrw');
     assert.equal(metadata.lesson, 'roundtrip');
     assert.deepEqual(alerts, []);
+    assert.equal(await page.locator('.joe_exportStatusError').count(), 0, 'every asset the program names was taken along');
+    await page.keyboard.press('Escape');
     if (process.env.SCRATCH_TRANSFER_INPUT) {
         const input = process.env.SCRATCH_TRANSFER_INPUT;
         await page.locator('input[accept=".json,.zip"]').setInputFiles(input);

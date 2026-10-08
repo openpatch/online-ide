@@ -1,8 +1,27 @@
 import { lm } from "../../tools/language/LanguageManager";
 
 export class EmbeddedMessages {
-    static ExportProject = () => lm({ de: 'Projekt-ZIP für Studio speichern', en: 'Save project ZIP for Studio' });
-    static ProjectFilename = () => lm({ de: 'Dateiname für das Projekt-ZIP', en: 'Project ZIP filename' });
+    static Export = () => lm({ de: 'Exportieren', en: 'Export' });
+    static ExportHeading = () => lm({ de: 'Projekt exportieren', en: 'Export project' });
+    static ExportLocalTitle = () => lm({ de: 'Als ZIP exportieren (auch für lokale IDEs geeignet)', en: 'Export as ZIP (also suited for local IDEs)' });
+    static ExportLocalDescription = () => lm({
+        de: 'Speichert alle Dateien des Projekts und die Bilder, die das Programm lädt, als ZIP-Datei. Sie lässt sich hier über „Öffnen“, in der Online-IDE über „Workspace importieren“ oder in einer lokalen IDE öffnen.',
+        en: 'Saves all files of the project and the images the program loads as a ZIP file. It can be opened here with “Open”, in the Online-IDE with “Import workspace” or in a local IDE.' });
+    static ExportLocalButton = () => lm({ de: 'Als ZIP speichern', en: 'Save as ZIP' });
+    static ExportLocalPreparing = () => lm({ de: 'Die Datei wird zusammengestellt …', en: 'Putting the file together …' });
+    static ExportJsonTitle = () => lm({ de: 'Als Workspace-Datei speichern (JSON)', en: 'Save as workspace file (JSON)' });
+    static ExportJsonDescription = () => lm({
+        de: 'Speichert den Workspace als JSON-Datei. Sie lässt sich hier über „Öffnen“ oder in der Online-IDE über „Workspace importieren“ wieder laden.',
+        en: 'Saves the workspace as a JSON file. It can be loaded again here with “Open” or in the Online-IDE with “Import workspace”.' });
+    static ExportJsonButton = () => lm({ de: 'Als JSON speichern', en: 'Save as JSON' });
+    static ExportLocalDone = (name: string) => lm({ de: `${name} wurde gespeichert.`, en: `${name} has been saved.` });
+    static ProjectFilename = () => lm({ de: 'Dateiname', en: 'File name' });
+    static ExportLinkTitle = () => lm({ de: 'Als Link speichern', en: 'Save as link' });
+    static ExportLinkDescription = () => lm({
+        de: 'Lädt das Projekt hoch. Der Link öffnet es wieder, mit denselben Einstellungen wie diese Seite.',
+        en: 'Uploads the project. The link opens it again, with the same settings as this page.' });
+    static ExportLinkButton = () => lm({ de: 'Link erstellen', en: 'Create link' });
+    static ExportCopyButton = () => lm({ de: 'Kopieren', en: 'Copy' });
     static ImportProject = () => lm({ de: 'Workspace-JSON oder Projekt-ZIP öffnen', en: 'Open workspace JSON or project ZIP' });
     static ProjectAssetsMissing = () => lm({ de: 'Diese Dateien nennt das Programm, sie konnten aber nicht ins Projekt-ZIP übernommen werden:', en: 'The program names these files, but they could not be added to the project ZIP:' });
     static ProjectFailed = () => lm({ de: 'Das Projekt konnte nicht übertragen werden:', en: 'The project could not be transferred:' });
@@ -22,19 +41,14 @@ export class EmbeddedMessages {
     "en": "new file",
     })
 
-    static ShareWorkspaceTooltip = () => lm({
-    "de": "Workspace teilen: als Link speichern",
-    "en": "Share workspace: save it as a link",
-    })
-
     static ShareWorkspaceUploading = () => lm({
     "de": "Der Workspace wird hochgeladen …",
     "en": "Uploading the workspace …",
     })
 
     static ShareWorkspaceDone = () => lm({
-    "de": "Der Workspace wurde gespeichert. Über diesen Link kann er geöffnet werden:",
-    "en": "The workspace has been saved. This link opens it:",
+    "de": "Das Projekt wurde hochgeladen. Dieser Link öffnet es:",
+    "en": "The project has been uploaded. This link opens it:",
     })
 
     static ShareWorkspaceCopied = () => lm({
@@ -87,7 +101,7 @@ export class EmbeddedMessages {
     "en": "Meaning",
     })
 
-    static URLParametersClose = () => lm({
+    static DialogClose = () => lm({
     "de": "Schließen",
     "en": "Close",
     })

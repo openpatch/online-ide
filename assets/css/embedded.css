@@ -315,8 +315,8 @@
         color: var(--fontColorLight);
     }
 
-    /* the panel behind the "?" button, listing what the link may carry */
-    .joe_urlHelpBackdrop {
+    /* dialogs over the IDE (see EmbeddedDialog.ts): the "?" panel, the export */
+    .joe_dialogBackdrop {
         position: absolute;
         inset: 0;
         z-index: 30;
@@ -326,7 +326,7 @@
         background-color: rgba(0, 0, 0, 0.5);
     }
 
-    .joe_urlHelp {
+    .joe_dialog {
         display: flex;
         flex-direction: column;
         max-width: min(52em, calc(100% - 2em));
@@ -341,7 +341,7 @@
         outline: none;
     }
 
-    .joe_urlHelpHeading {
+    .joe_dialogHeading {
         position: sticky;
         top: 0;
         display: flex;
@@ -355,7 +355,7 @@
         font-weight: bold;
     }
 
-    .joe_urlHelpClose {
+    .joe_dialogClose {
         cursor: pointer;
         padding: 0 0.3em;
         font-size: 14pt;
@@ -363,10 +363,11 @@
         opacity: 0.7;
     }
 
-    .joe_urlHelpClose:hover {
+    .joe_dialogClose:hover {
         opacity: 1;
     }
 
+    .joe_dialogIntro,
     .joe_urlHelpIntro {
         padding: 0.2em 0 0.7em 0;
         line-height: 1.5;
@@ -410,6 +411,85 @@
         font-family: 'Consolas', monospace;
         overflow-wrap: anywhere;
         color: var(--file-active-border);
+    }
+
+    /* the export dialog: one card per way out */
+    .joe_exportDialog {
+        width: min(32em, calc(100% - 2em));
+    }
+
+    .joe_exportOption {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5em;
+        margin-top: 0.7em;
+        padding: 0.8em;
+        border: 1px solid var(--menuitemsdivider);
+        border-radius: 4px;
+        background-color: var(--backgroundDark);
+    }
+
+    .joe_exportOptionTitle {
+        display: flex;
+        align-items: center;
+        gap: 0.5em;
+        color: var(--fontColorLight);
+        font-weight: bold;
+    }
+
+    .joe_exportOptionDescription {
+        line-height: 1.4;
+    }
+
+    .joe_exportRow {
+        display: flex;
+        gap: 0.5em;
+        align-items: center;
+    }
+
+    .joe_exportRow input {
+        flex: 1;
+        min-width: 0;
+        padding: 4px 6px;
+        border: 1px solid var(--menuitemsdivider);
+        border-radius: 3px;
+        background-color: var(--backgroundLight);
+        color: var(--fontColorNormal);
+        font: inherit;
+    }
+
+    .joe_exportButton {
+        flex-shrink: 0;
+        padding: 4px 10px;
+        border: 1px solid var(--file-active-border);
+        border-radius: 3px;
+        background-color: var(--backgroundSelected);
+        color: var(--fontColorLight);
+        font: inherit;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .joe_exportButton:hover {
+        filter: brightness(1.2);
+    }
+
+    .joe_exportButton:disabled {
+        opacity: 0.5;
+        cursor: default;
+        filter: none;
+    }
+
+    .joe_exportStatus {
+        line-height: 1.4;
+    }
+
+    .joe_exportStatus:empty {
+        display: none;
+    }
+
+    .joe_exportStatusError {
+        color: var(--console-error);
     }
 }
 

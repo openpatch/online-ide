@@ -13,6 +13,7 @@ import { TeacherExplorer } from './TeacherExplorer.js';
 import { WorkspaceSettingsDialog } from "./WorkspaceSettingsDialog.js";
 import { GUIFile } from '../../workspace/File.js';
 import { WorkspaceExporter } from '../../workspace/WorkspaceImporterExporter.js';
+import { exportProjectZip } from '../../workspace/PortableProject.js';
 import { SchedulerState } from "../../../compiler/common/interpreter/SchedulerState.js";
 import { GuiMessages } from './language/GuiMessages.js';
 import { AccordionMessages, ProjectExplorerMessages } from './language/GUILanguage.js';
@@ -596,6 +597,18 @@ export class ProjectExplorer {
                             callback: async () => {
                                 let name: string = workspace.name.replace(/\//g, "_");
                                 downloadFile(await WorkspaceExporter.exportWorkspace(workspace), name + ".json")
+                            }
+                        },
+                        {
+                            caption: ProjectExplorerMessages.exportForLocalIDE(),
+                            callback: async () => {
+                                let name: string = workspace.name.replace(/\//g, "_");
+                                try {
+                                    let bytes = await exportProjectZip(await WorkspaceExporter.exportWorkspace(workspace));
+                                    downloadFile(new Blob([bytes as Uint8Array<ArrayBuffer>], { type: 'application/zip' }), name + ".zip", true);
+                                } catch (error) {
+                                    alert(ProjectExplorerMessages.exportForLocalIDEFailed() + "\n" + error.message);
+                                }
                             }
                         }
                     );

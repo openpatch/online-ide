@@ -4,6 +4,9 @@ import { scratchDesktopVersion, scratchBrowserMembers } from '../../compiler/jav
 const contract = { desktopVersion: scratchDesktopVersion, members: scratchBrowserMembers };
 
 const METADATA = '.scratch4j/project.json';
+// a workspace that is no Scratch project: its settings, its binary files, its legacy spritesheet
+const WORKSPACE_METADATA = '.online-ide/workspace.json';
+const WORKSPACE_SPRITESHEET = '.online-ide/spritesheet.zip';
 const MAX_FILE = 16 * 1024 * 1024;
 const MAX_TOTAL = 64 * 1024 * 1024;
 const TEXT = /\.(java|md|txt|json|xml|tmx|tsx|frag|vert|glsl|csv|properties)$/i;
@@ -130,25 +133,25 @@ export async function fetchProjectAssets(paths: string[], resolve: (path: string
     return { files, missing: missing.sort() };
 }
 
-export async function exportProjectZip(workspace: ExportedWorkspace, extraFiles: Map<string, Uint8Array> = new Map()): Promise<Uint8Array> {
-    if (workspace.settings?.language !== 'Java' || !workspace.settings.libraries?.includes('scratch')) throw new Error('Choose a Java workspace with the Scratch library first.');
-    if (workspace.spritesheetBase64) throw new Error('Extract the legacy spritesheet into image files before exporting a portable project. Workspace JSON still preserves it.');
-    const extraLibraries = workspace.settings.libraries.filter(id => !['scratch', 'nrw'].includes(id));
-    if (extraLibraries.length) throw new Error(`These browser libraries have no portable adapter: ${extraLibraries.join(', ')}`);
+/**
+ * A Scratch for Java project Studio can open: Java with the Scratch library and
+ * at most the NRW classes next to it. Every other workspace is exported as a
+ * workspace ZIP that carries its settings for the way back.
+ */
+export function isScratchProject(workspace: ExportedWorkspace): boolean {
+    const libraries = workspace.settings?.libraries ?? [];
+    return workspace.settings?.language === 'Java' && libraries.includes('scratch')
+        && libraries.every(id => ['scratch', 'nrw'].includes(id));
+}
+
+/** Adds the workspace's files and the extra files to the ZIP, within the size limits. */
+function addFiles(zip: JSZip, workspace: ExportedWorkspace, extraFiles: Map<string, Uint8Array>, reserved: string[]) {
     const paths = workspacePaths(workspace);
-    const metadata: any = { version: 1, portableVersion: 1, libraryVersion: contract.desktopVersion,
-        browserFeatures: [], externalDependencies: [], ...workspace.settings.scratchProject,
-        flavour: workspace.settings.libraries.includes('nrw') ? 'nrw' : 'standard', sourceEnvironment: 'browser' };
-    const entry = workspace.modules.find(file => !file.isFolder && /\bvoid\s+main\s*\(/.test(file.text));
-    if (!metadata.startFile && entry) metadata.startFile = paths.get(entry);
-    if (!metadata.startStage && entry) metadata.startStage = entry.name.replace(/\.java$/i, '').split('/').pop();
-    metadataWarnings(metadata);
-    const zip = new JSZip();
-    let total = 0;
     if (paths.size > 2000) throw new Error('Project has more than 2,000 files');
+    let total = 0;
     for (const [file, name] of paths) {
         if (file.isFolder) { zip.folder(name); continue; }
-        if (name === METADATA) continue;
+        if (reserved.includes(name)) continue;
         const bytes = bytesOf(file.text);
         total += bytes.length;
         if (bytes.length > MAX_FILE || total > MAX_TOTAL) throw new Error(`Project asset limit exceeded: ${name}`);
@@ -157,13 +160,49 @@ export async function exportProjectZip(workspace: ExportedWorkspace, extraFiles:
     const names = new Set([...paths.values()].map(name => name.toLowerCase()));
     for (const [path, bytes] of extraFiles) {
         const name = projectPath(path);
-        if (name === METADATA || names.has(name.toLowerCase())) continue;
+        if (reserved.includes(name) || names.has(name.toLowerCase())) continue;
         names.add(name.toLowerCase());
         total += bytes.length;
         if (bytes.length > MAX_FILE || total > MAX_TOTAL) throw new Error(`Project asset limit exceeded: ${name}`);
         zip.file(name, bytes);
     }
+    return paths;
+}
+
+/** The workspace as a ZIP for a local IDE: a Scratch project for Studio, or a workspace ZIP. */
+export async function exportProjectZip(workspace: ExportedWorkspace, extraFiles: Map<string, Uint8Array> = new Map()): Promise<Uint8Array> {
+    return isScratchProject(workspace) ? exportScratchZip(workspace, extraFiles) : exportWorkspaceZip(workspace, extraFiles);
+}
+
+async function exportScratchZip(workspace: ExportedWorkspace, extraFiles: Map<string, Uint8Array>): Promise<Uint8Array> {
+    if (workspace.spritesheetBase64) throw new Error('Extract the legacy spritesheet into image files before exporting a portable project. Workspace JSON still preserves it.');
+    const metadata: any = { version: 1, portableVersion: 1, libraryVersion: contract.desktopVersion,
+        browserFeatures: [], externalDependencies: [], ...workspace.settings.scratchProject,
+        flavour: workspace.settings.libraries!.includes('nrw') ? 'nrw' : 'standard', sourceEnvironment: 'browser' };
+    const zip = new JSZip();
+    const paths = addFiles(zip, workspace, extraFiles, [METADATA]);
+    const entry = workspace.modules.find(file => !file.isFolder && /\bvoid\s+main\s*\(/.test(file.text));
+    if (!metadata.startFile && entry) metadata.startFile = paths.get(entry);
+    if (!metadata.startStage && entry) metadata.startStage = entry.name.replace(/\.java$/i, '').split('/').pop();
+    metadataWarnings(metadata);
     zip.file(METADATA, JSON.stringify(metadata, null, 2) + '\n');
+    return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+
+/**
+ * Any other workspace - plain Java, other libraries, assembly: its files as
+ * they are, and in .online-ide/ what the way back needs (settings, which files
+ * are binary, the legacy spritesheet).
+ */
+async function exportWorkspaceZip(workspace: ExportedWorkspace, extraFiles: Map<string, Uint8Array>): Promise<Uint8Array> {
+    const zip = new JSZip();
+    const paths = addFiles(zip, workspace, extraFiles, [WORKSPACE_METADATA, WORKSPACE_SPRITESHEET]);
+    const binaryFiles = [...paths].filter(([file]) => !file.isFolder && file.text.startsWith('data:')).map(([, name]) => name);
+    binaryFiles.push(...[...extraFiles.keys()].map(projectPath).filter(name => !binaryFiles.includes(name)));
+    if (workspace.spritesheetBase64) {
+        zip.file(WORKSPACE_SPRITESHEET, Uint8Array.from(atob(workspace.spritesheetBase64), character => character.charCodeAt(0)));
+    }
+    zip.file(WORKSPACE_METADATA, JSON.stringify({ version: 1, settings: workspace.settings ?? { language: 'Java' }, binaryFiles }, null, 2) + '\n');
     return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
 }
 
@@ -178,7 +217,7 @@ export async function importProjectZip(input: ArrayBuffer | Uint8Array, name = '
     if (!files.length || files.length > 2000) throw new Error('Project archive is empty or has more than 2,000 files');
     for (const file of files) projectPath((file as any).unsafeOriginalName || file.name);
     const prefix = files[0].name.split('/')[0] + '/';
-    const strip = files.every(file => file.name.startsWith(prefix)) && prefix !== '.scratch4j/';
+    const strip = files.every(file => file.name.startsWith(prefix)) && prefix !== '.scratch4j/' && prefix !== '.online-ide/';
     let total = 0;
     const decoded: { name: string, bytes: Uint8Array }[] = [];
     const names = new Set<string>();
@@ -195,6 +234,8 @@ export async function importProjectZip(input: ArrayBuffer | Uint8Array, name = '
         decoded.push({ name: path, bytes });
     }
     const decoder = new TextDecoder('utf-8', { fatal: true });
+    const workspaceFile = decoded.find(file => file.name === WORKSPACE_METADATA);
+    if (workspaceFile) return importWorkspaceZip(zip, decoded, JSON.parse(decoder.decode(workspaceFile.bytes)), strip ? prefix.slice(0, -1) : name, strip, prefix);
     const metadataFile = decoded.find(file => file.name === METADATA);
     const metadata: any = metadataFile ? JSON.parse(decoder.decode(metadataFile.bytes)) : { version: 1, flavour: 'standard' };
     const warnings = metadataWarnings(metadata);
@@ -227,7 +268,13 @@ export async function importProjectZip(input: ArrayBuffer | Uint8Array, name = '
         modules.push({ name: filename, text: source, id: modules.length + 1, isFolder: false, identical_to_repository_version: true });
         metadata.startFile = filename;
     }
-    // Rebuild folder IDs so the file explorer and subsequent exports retain the tree.
+    const tree = folderTree(zip, modules, strip, prefix, ['.scratch4j']);
+    return { workspace: { name: strip ? prefix.slice(0, -1) : name, id: 0, modules: tree,
+        settings: { language: 'Java', libraries: metadata.flavour === 'nrw' ? ['scratch', 'nrw'] : ['scratch'], scratchProject: metadata } }, warnings };
+}
+
+/** Rebuilds folder IDs so the file explorer and subsequent exports retain the tree. */
+function folderTree(zip: JSZip, modules: ExportedFile[], strip: boolean, prefix: string, ownDirectories: string[]): ExportedFile[] {
     const tree: ExportedFile[] = [];
     const folders = new Map<string, ExportedFile>();
     function folder(path: string): ExportedFile | undefined {
@@ -245,7 +292,7 @@ export async function importProjectZip(input: ArrayBuffer | Uint8Array, name = '
     }
     for (const entry of Object.values(zip.files).filter(file => file.dir)) {
         const path = (strip ? entry.name.slice(prefix.length) : entry.name).replace(/\/$/, '');
-        if (path && path !== '.scratch4j' && !/^(\.git|\.vscode|target|build|export|out|__MACOSX)(\/|$)/.test(path)
+        if (path && !ownDirectories.includes(path) && !/^(\.git|\.vscode|target|build|export|out|__MACOSX)(\/|$)/.test(path)
             && !/^\.scratch4j\/(build|history|trash)(\/|$)/.test(path)) folder(path);
     }
     for (const file of modules) {
@@ -254,6 +301,28 @@ export async function importProjectZip(input: ArrayBuffer | Uint8Array, name = '
         const parent = folder(parts.join('/'));
         tree.push({ ...file, name, id: tree.length + 1, parent_folder_id: parent?.id });
     }
-    return { workspace: { name: strip ? prefix.slice(0, -1) : name, id: 0, modules: tree,
-        settings: { language: 'Java', libraries: metadata.flavour === 'nrw' ? ['scratch', 'nrw'] : ['scratch'], scratchProject: metadata } }, warnings };
+    return tree;
+}
+
+/** The way back for exportWorkspaceZip: settings, binary files and spritesheet as they were. */
+function importWorkspaceZip(zip: JSZip, decoded: { name: string, bytes: Uint8Array }[], metadata: any, name: string, strip: boolean, prefix: string):
+    { workspace: ExportedWorkspace, warnings: string[] } {
+    if (!metadata || typeof metadata !== 'object' || metadata.version !== 1 || typeof metadata.settings?.language !== 'string') {
+        throw new Error('Invalid workspace metadata');
+    }
+    const binary = new Set<string>(Array.isArray(metadata.binaryFiles) ? metadata.binaryFiles : []);
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+    const modules: ExportedFile[] = [];
+    let spritesheetBase64: string | undefined;
+    for (const file of decoded) {
+        if (file.name === WORKSPACE_METADATA) continue;
+        if (file.name === WORKSPACE_SPRITESHEET) { spritesheetBase64 = dataUrl(file.bytes, 'x.zip').split(',')[1]; continue; }
+        if (/^(\.git|\.vscode)\//.test(file.name)) continue;
+        modules.push({ name: file.name, text: binary.has(file.name) ? dataUrl(file.bytes, file.name) : decoder.decode(file.bytes),
+            id: modules.length + 1, isFolder: false, identical_to_repository_version: true });
+    }
+    const workspace: ExportedWorkspace = { name, id: 0, modules: folderTree(zip, modules, strip, prefix, ['.online-ide']),
+        settings: metadata.settings };
+    if (spritesheetBase64) workspace.spritesheetBase64 = spritesheetBase64;
+    return { workspace, warnings: [] };
 }
