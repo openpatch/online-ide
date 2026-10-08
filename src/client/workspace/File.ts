@@ -133,6 +133,8 @@ export class GUIFile extends CompilerFile {
     setText(text: string) {
         if (this.monacoModel) {
             this.monacoModel.setValue(text);
+            // new content may come with another indentation style
+            this.monacoModel.detectIndentation(true, 3);
             this.notifyListeners();
         } else {
             super.setText(text);
@@ -163,6 +165,9 @@ export class GUIFile extends CompilerFile {
         let isSaved = this.isSaved();
         this.monacoModel = monaco.editor.createModel(super.getText(), language, uri);
         this.monacoModel.updateOptions({ tabSize: 3, bracketColorizationOptions: { enabled: true, independentColorPoolPerBracketType: false } });
+        // keep the file's own indentation (tabs or 2, 4 ... spaces) for Tab, Enter
+        // and the formatter; a file without indented lines gets the IDE's 3 spaces
+        this.monacoModel.detectIndentation(true, 3);
 
         this.monacoModel.onDidChangeContent(() => { this.notifyListeners() });
         this.setSaved(isSaved);

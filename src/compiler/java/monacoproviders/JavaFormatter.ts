@@ -108,7 +108,8 @@ export class JavaFormatter extends BaseMonacoProvider
 
         let lastNonSpaceToken: Token | undefined = undefined;
         let indentLevel = 0;
-        let tabSize = 3;
+        // the file's own style, as the editor detected it: n spaces or one tab per level
+        let { indentText, indentWidth } = JavaFormatter.indentation(model);
         let curlyBracesOpenAtLines: number[] = [];
         let indentLevelAtSwitchStatements: number[] = [];
         let switchHappend: boolean = false;
@@ -132,8 +133,8 @@ export class JavaFormatter extends BaseMonacoProvider
                 case TokenType.keywordCase:
                 case TokenType.keywordDefault:
                     // outdent: line with case:
-                    if (t.range.startColumn > 3) {
-                        this.deleteSpaces(edits, t.range.startLineNumber, 1, 3);
+                    if (t.range.startColumn > indentWidth) {
+                        this.deleteSpaces(edits, t.range.startLineNumber, 1, indentWidth);
                     }
                     break;
                 case TokenType.leftCurlyBracket:
@@ -165,13 +166,13 @@ export class JavaFormatter extends BaseMonacoProvider
                         indentLevelAtSwitchStatements.pop();
                         indentLevel--;
                         // if(t.range.startColumn >= 3){
-                        this.deleteSpaces(edits, t.range.startLineNumber, 1, 3);
+                        this.deleteSpaces(edits, t.range.startLineNumber, 1, indentWidth);
                         // }
                     }
                     let openedAtLine = curlyBracesOpenAtLines.pop();
                     if (openedAtLine != null && openedAtLine != t.range.startLineNumber) {
                         if (lastNonSpaceToken != null && lastNonSpaceToken.range.startLineNumber == t.range.startLineNumber) {
-                            this.replace(edits, lastNonSpaceToken.range, t.range, "\n" + " ".repeat(indentLevel * tabSize));
+                            this.replace(edits, lastNonSpaceToken.range, t.range, "\n" + indentText.repeat(indentLevel));
                         }
                     } else {
                         if (i > 0) {
@@ -268,11 +269,18 @@ export class JavaFormatter extends BaseMonacoProvider
                         }
                         if (il < 0) il = 0;
 
-                        let correctIndentation = il * tabSize + (oneTimeIndent ? tabSize : 0);
+                        let correctIndentation = (il + (oneTimeIndent ? 1 : 0)) * indentWidth;
                         oneTimeIndent = false;
 
-                        if (correctIndentation > currentIndentation) {
-                            this.insertSpacesBefore(edits, t.range.startLineNumber + 1, 0, correctIndentation - currentIndentation);
+                        if (beginNextLine.tt == TokenType.space && JavaFormatter.mixesIndentation(<string>beginNextLine.value, indentText)) {
+                            // spaces where the file uses tabs or the other way round: the whole indentation is redone
+                            edits.push({
+                                range: { startLineNumber: t.range.startLineNumber + 1, startColumn: 1,
+                                    endLineNumber: t.range.startLineNumber + 1, endColumn: currentIndentation + 1 },
+                                text: indentText[0].repeat(correctIndentation)
+                            });
+                        } else if (correctIndentation > currentIndentation) {
+                            this.insertSpacesBefore(edits, t.range.startLineNumber + 1, 0, correctIndentation - currentIndentation, indentText[0]);
                         } else if (correctIndentation < currentIndentation) {
                             this.deleteSpaces(edits, t.range.startLineNumber + 1, 0, currentIndentation - correctIndentation);
                         }
@@ -481,7 +489,7 @@ export class JavaFormatter extends BaseMonacoProvider
         });
     }
 
-    insertSpacesBefore(edits: monaco.languages.TextEdit[], line: number, column: number, numberOfSpaces: number) {
+    insertSpacesBefore(edits: monaco.languages.TextEdit[], line: number, column: number, numberOfSpaces: number, character: string = " ") {
 
         if (numberOfSpaces < 0) {
             this.deleteSpaces(edits, line, column, -numberOfSpaces);
@@ -495,7 +503,7 @@ export class JavaFormatter extends BaseMonacoProvider
                 endColumn: column,
                 endLineNumber: line
             },
-            text: " ".repeat(numberOfSpaces)
+            text: character.repeat(numberOfSpaces)
         });
     }
 
@@ -513,6 +521,23 @@ export class JavaFormatter extends BaseMonacoProvider
 
     }
 
+
+    /**
+     * One level of indentation as the editor has it for this file (detected from
+     * its content, see GUIFile): the text and how many characters that is.
+     */
+    static indentation(model: monaco.editor.ITextModel): { indentText: string, indentWidth: number } {
+        let options = model.getOptions();
+        if (!options.insertSpaces) return { indentText: "\t", indentWidth: 1 };
+        let size = options.indentSize || options.tabSize || 3;
+        return { indentText: " ".repeat(size), indentWidth: size };
+    }
+
+    static mixesIndentation(whitespace: string, indentText: string): boolean {
+        let character = indentText[0];
+        for (let c of whitespace) if (c != character) return true;
+        return false;
+    }
 
     lengthOfRange(range: IRange) {
         return range.endColumn - range.startColumn;
