@@ -85,6 +85,7 @@ import { ConsoleClass } from "./additional/ConsoleClass.ts";
 import { FilesClass } from "./additional/FilesClass.ts";
 import { GamepadClass } from "./additional/GamepadClass.ts";
 import { InputClass } from "./additional/InputClass.ts";
+import { InputMismatchExceptionClass, InputStreamClass, NoSuchElementExceptionClass, ScannerClass } from "./additional/ScannerClass.ts";
 import { KeyClass } from "./additional/KeyClass.ts";
 import { KeyListenerInterface } from "./additional/KeyListenerInterface.ts";
 import { MathToolsClass } from "./additional/MathToolsClass.ts";
@@ -209,6 +210,7 @@ export class SystemModule extends JavaLibraryModule {
             KeyClass, LocalDateTimeClass, DayOfWeekEnum, PositionClass, BigIntegerClass,
             ConsoleClass, Vector2Class, MathToolsClass, PrintStreamClass, SystemClass, IOClass,
             GamepadClass, KeyListenerInterface, SystemToolsClass, InputClass, SoundClass, FilesClass,
+            InputStreamClass, ScannerClass,
 
             // Functional
             ConsumerInterface, BiConsumerInterface, FunctionInterface, PredicateInterface,
@@ -221,7 +223,7 @@ export class SystemModule extends JavaLibraryModule {
             ThrowableClass, ExceptionClass, RuntimeExceptionClass, IllegalArgumentExceptionClass, ArithmeticExceptionClass, NullPointerExceptionClass,
             ClassCastExceptionClass, IndexOutOfBoundsExceptionClass, IllegalMonitorStateExceptionClass,
             EmptyStackExceptionClass, IllegalStateExceptionClass,
-            CloneNotSupportedExceptionClass,
+            CloneNotSupportedExceptionClass, NoSuchElementExceptionClass, InputMismatchExceptionClass,
 
             // Collections
             IteratorInterface, IterableInterface, CollectionInterface, ListInterface, ArrayListClass, CopyOnWriteArrayListClass,

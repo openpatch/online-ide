@@ -31,6 +31,9 @@ export class IntegerClass extends NumberClass {
         {type: "method", signature: "public static Integer valueOf(string s)", native: IntegerClass.valueOfString},
         {type: "method", signature: "public static Integer valueOf(string s, int radix)", native: IntegerClass.valueOfString},
         {type: "method", signature: "public static string toBinary(int number)", native: IntegerClass.toBinary},
+        {type: "method", signature: "public static string toBinaryString(int number)", native: IntegerClass.toBinary},
+        {type: "method", signature: "public static string toHexString(int number)", native: IntegerClass.toHex},
+        {type: "method", signature: "public static string toOctalString(int number)", native: IntegerClass.toOctal},
         {type: "method", signature: "public static string toHex(int number)", native: IntegerClass.toHex},
         {type: "method", signature: "public static string toOctal(int number)", native: IntegerClass.toOctal},
         {type: "method", signature: "public static string toString(int number, int radix)", native: IntegerClass.toStringRadix},
@@ -104,11 +107,12 @@ export class IntegerClass extends NumberClass {
     }   
 
     static toStringRadix(number: number, radix: number): string {
-        return (number >>> 0).toString(radix);
+        // signed, unlike toBinaryString and toHexString: Integer.toString(-255, 16) is "-ff"
+        return number.toString(radix);
     }
        
     static toString(number: number): string {
-        return (number >>> 0).toString(10);
+        return number.toString(10);
     }   
 
 }

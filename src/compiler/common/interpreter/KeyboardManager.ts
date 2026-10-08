@@ -53,8 +53,13 @@ export class KeyboardManager {
                 kpc(key, e.shiftKey, e.ctrlKey, e.altKey);
             }
 
-            // prevent <html>-Element from scrolling in embedded mode
-            if (this.main.isEmbedded() && this.main.getInterpreter().scheduler.state == SchedulerState.running && !this.main.getMainEditor().hasTextFocus()) {
+            // prevent <html>-Element from scrolling in embedded mode - but not while
+            // somebody types into a text field, e.g. the program's input line, where
+            // the space belongs to what is typed and the arrows move the cursor
+            let target = e.target as HTMLElement | null;
+            let typingIntoField = target != null && (target.tagName == "INPUT" || target.tagName == "TEXTAREA" || target.isContentEditable);
+            if (this.main.isEmbedded() && this.main.getInterpreter().scheduler.state == SchedulerState.running
+                && !this.main.getMainEditor().hasTextFocus() && !typingIntoField) {
                 if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].indexOf(e.key) >= 0) {
                     e.preventDefault();
                     return false;

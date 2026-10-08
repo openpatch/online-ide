@@ -5,6 +5,7 @@ import { ThreadState } from "../../../../common/interpreter/ThreadState";
 import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass, StringClass } from "../javalang/ObjectClassStringClass";
+import { InputStreamClass } from "../additional/ScannerClass";
 
 export class PrintStreamClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
@@ -135,6 +136,7 @@ export class SystemClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", signature: "class System extends Object", comment: JRC.SystemClassComment },
         { type: "field", signature: "static PrintStream out", comment: JRC.SystemOutComment},
+        { type: "field", signature: "static InputStream in", comment: "Die Eingaben im Ausgabefenster; gelesen mit new Scanner(System.in)." },
         { type: "method", signature: "static void exit(int status)", java: SystemClass._mj$exit$void$int, comment: JRC.SystemExitComment },
         { type: "method", signature: "static int currentTimeMillis()", native: SystemClass._currentTimeMillis, comment: JRC.SystemCurrentTimeMillisComment },
         { type: "method", signature: "static long nanoTime()", native: SystemClass._currentTimeNano, comment: JRC.SystemNanoTimeComment },
@@ -143,6 +145,7 @@ export class SystemClass extends ObjectClass {
     static type: NonPrimitiveType;
     static deltaTimeMillis: number = 0;   // when using WebSocket then the Server sends time synchronization
     static out = new PrintStreamClass();
+    static in = new InputStreamClass();
 
     static _mj$exit$void$int(t: Thread, status: number){
         t.state = ThreadState.terminated;

@@ -23,6 +23,8 @@ type InputTaskWaitForInput = {
     message: string,
     defaultValue: string | undefined,
     validator: InputManagerValidator,
+    /** gets the value instead of the thread's stack, e.g. for a Scanner that may need another line */
+    onValue?: (value: string) => void,
 }
 
 export class InputClass extends ObjectClass {
@@ -95,8 +97,14 @@ export class InputClass extends ObjectClass {
         switch(task.type){
             case "waitForInput": 
             task.thread.scheduler.interpreter.inputManager?.readInput(task.message, task.defaultValue, task.validator, (value: string) => {
-                task.thread.s.push(value);
-                task.thread.state = ThreadState.running;
+                if (task.onValue) {
+                    // running first: onValue may ask for the next line and so wait again
+                    task.thread.state = ThreadState.running;
+                    task.onValue(value);
+                } else {
+                    task.thread.s.push(value);
+                    task.thread.state = ThreadState.running;
+                }
                 task.thread.scheduler.interpreter.hideProgrampointerPosition("InputClass");
                 callback();
                 return;
@@ -124,6 +132,15 @@ export class InputClass extends ObjectClass {
                 }
             }
         })
+    }
+
+    /** Lets the user enter a line; the thread waits until onValue has it. */
+    static readLine(t: Thread, message: string, onValue: (value: string) => void) {
+        InputClass.addTask(t, {
+            type: "waitForInput", thread: t, message: message, defaultValue: undefined,
+            validator: (value: string) => ({ convertedValue: value, errorMessage: undefined }),
+            onValue: onValue
+        });
     }
 
     static _mj$readString$string$string(t: Thread, message: string) {

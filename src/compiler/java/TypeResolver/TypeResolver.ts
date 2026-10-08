@@ -99,6 +99,12 @@ export class TypeResolver {
                 }
                 module.imports.push(importStatement.importedPath);
                 let types = this.libraryModuleManager.typestore.getTypesMatchingImportPath(importStatement.importedPath, module, importStatement.pathRanges);
+                if (types.length == 0 && this.isUnpackagedJavaImport(importStatement.importedPath)) {
+                    // java.util.*: the standard classes are visible anyway
+                    if (importStatement.importedPath[importStatement.importedPath.length - 1] == "*") continue;
+                    let type = this.libraryModuleManager.typestore.getType(importStatement.importedPath[importStatement.importedPath.length - 1]);
+                    if (type instanceof NonPrimitiveType) types = [type];
+                }
                 if (types.length == 0) {
                     this.pushError(JCM.importedTypesNotFound(importStatement.importedPath.join(".")), importStatement.range, module, "error");
                 } else {
@@ -108,6 +114,15 @@ export class TypeResolver {
                 }
             }
         }
+    }
+
+    /**
+     * The standard library of this runtime has no packages: java.util.ArrayList
+     * is just ArrayList. So an import of java.lang, java.util, java.io ... that no
+     * library declares in its package stands for the class of that name.
+     */
+    isUnpackagedJavaImport(path: string[]): boolean {
+        return path.length >= 2 && (path[0] == "java" || path[0] == "javax");
     }
 
     /**
@@ -123,7 +138,7 @@ export class TypeResolver {
             if (types.length == 1) type = types[0];
             if (!type) type = this.moduleManager.typestore.getType(path.slice(0, -1));
             // java.lang.Math and friends live without package in this runtime
-            if (!type && path[0] == "java") type = this.libraryModuleManager.typestore.getType(path[path.length - 2]);
+            if (!type && this.isUnpackagedJavaImport(path.slice(0, -1))) type = this.libraryModuleManager.typestore.getType(path[path.length - 2]);
         }
         if (!(type instanceof NonPrimitiveType)) {
             this.pushError(JCM.importedTypesNotFound(path.join(".")), importStatement.range, module, "error");
