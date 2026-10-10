@@ -7,7 +7,10 @@ digest, keeping the CDN identical to the downloadable release. It excludes HTML
 examples and source maps. An existing attached ZIP is retained on reruns.
 
 Configure organization Actions secret `CLOUDFLARE_R2_CDN` with a Cloudflare API
-token permitted to read/write R2 objects and configure the bucket's CORS policy.
+token with **Account → Workers R2 Storage → Edit** (R2 **Admin Read & Write**)
+for the account holding `cdn`. Bucket-scoped **Object Read & Write** permissions
+support only the S3 API, so Wrangler needs the account permission; see
+[Cloudflare's documentation](https://developers.cloudflare.com/r2/api/tokens/#permissions).
 Set `CLOUDFLARE_ACCOUNT_ID` as an organization Actions variable or secret. Make
 both available to this repository. Wrangler uses the API token directly; S3
 credentials are unnecessary.
