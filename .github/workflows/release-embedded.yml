@@ -4,12 +4,18 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      cdn_release_tag:
+        description: 'Published release tag to upload to R2 (leave empty to test a build)'
+        required: false
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   build-and-release:
+    if: github.event_name == 'release' || !inputs.cdn_release_tag
     timeout-minutes: 15
     runs-on: ubuntu-latest
     
@@ -47,12 +53,17 @@ jobs:
           cd ..
       
       - name: Upload release asset
-        uses: softprops/action-gh-release@v1
         if: github.event_name == 'release'
-        with:
-          files: dist-embedded.zip
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          count=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" --jq '[.assets[] | select(.name == "dist-embedded.zip")] | length')
+          if [ "$count" = 0 ]; then
+            gh release upload "$RELEASE_TAG" dist-embedded.zip
+          else
+            echo "Keeping the existing release archive for reproducible CDN publication."
+          fi
       
       - name: Upload artifact (for workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
@@ -60,3 +71,47 @@ jobs:
         with:
           name: dist-embedded
           path: dist-embedded.zip
+
+  publish-cdn:
+    needs: build-and-release
+    if: >-
+      always() && !cancelled() &&
+      ((github.event_name == 'release' && needs.build-and-release.result == 'success') ||
+      (github.event_name == 'workflow_dispatch' && inputs.cdn_release_tag && needs.build-and-release.result == 'skipped'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: cdn-onlineide-${{ github.event.release.tag_name || inputs.cdn_release_tag }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_R2_CDN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.cdn_release_tag }}
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || github.event.repository.default_branch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run test:cdn
+      - name: Install Wrangler
+        run: npm install --global wrangler@4.149.0
+      - name: Check Cloudflare configuration
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'Missing CLOUDFLARE_R2_CDN Actions secret'; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo 'Missing CLOUDFLARE_ACCOUNT_ID Actions variable or secret'; exit 1; }
+      - name: Download and verify the published release
+        run: node scripts/fetch-cdn-release.mjs onlineide "$RELEASE_TAG"
+      - name: Allow browser access to runtime files
+        run: wrangler r2 bucket cors set cdn --file scripts/cdn-cors.json --force
+      - name: Publish immutable runtime files
+        run: node scripts/publish-cdn.mjs onlineide "$RELEASE_TAG" .cache/cdn-release
+      - name: Verify files through the public CDN
+        run: node scripts/verify-cdn.mjs onlineide "$RELEASE_TAG" .cache/cdn-release
