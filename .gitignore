@@ -9,6 +9,7 @@ pnpm-debug.log*
 /dist/
 /dist-embedded/
 /dist-playground/
+/.cache/cdn-release/
 dist-ssr
 *.local
 

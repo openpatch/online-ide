@@ -20,6 +20,7 @@ jobs:
           node-version: '20'
           cache: npm
       - run: npm ci
+      - run: npm run test:cdn
       - run: npm run test:ci
       - run: npm run browser:install -- --with-deps
       - run: npm run test:browser
