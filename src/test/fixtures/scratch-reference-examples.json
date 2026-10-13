@@ -1,6 +1,6 @@
 {
-  "desktopVersion": "5.8.0",
-  "browserVersion": "5.8.0-browser.1",
+  "desktopVersion": "6.0.0",
+  "browserVersion": "6.0.0-browser.1",
   "examples": [
     {
       "id": "AnimatedSprite/addAnimation#0",
