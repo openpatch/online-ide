@@ -1589,12 +1589,8 @@ export class SRC {
         "en": "The stage every sprite is shown on",
     });
     static stageConstructorComment = () => lm({
-        "de": "Erzeugt eine Bühne der Größe 480 x 360",
-        "en": "Creates a stage 480 by 360 in size",
-    });
-    static stageConstructor2Comment = () => lm({
-        "de": "Erzeugt eine Bühne mit der angegebenen Breite und Höhe",
-        "en": "Creates a stage of the given width and height",
+        "de": "Erzeugt eine Bühne. Sie ist so groß wie das Fenster, das es schon geben muss",
+        "en": "Creates a stage. It is as big as the window, which has to exist already",
     });
     static stageRunComment = () => lm({
         "de": "Wird in jedem Frame aufgerufen",
@@ -1933,10 +1929,6 @@ export class SRC {
     static boundsToStringComment = () => lm({
         "de": "Gibt das Rechteck als Text aus",
         "en": "Returns the box as text",
-    });
-    static stageConstructor3Comment = () => lm({
-        "de": "Erzeugt eine Bühne der angegebenen Größe. Der Asset-Pfad wird im Browser ignoriert",
-        "en": "Creates a stage of the given size. The assets path is ignored in the browser",
     });
     static textConstructor3Comment = () => lm({
         "de": "Erzeugt einen Text an der angegebenen Position, mit der angegebenen Breite und im angegebenen Stil",

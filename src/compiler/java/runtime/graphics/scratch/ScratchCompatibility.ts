@@ -2318,6 +2318,11 @@ export const scratchBrowserMembers = [
     "reason": "This API requires the desktop runtime. Browser declarations may report the limitation without performing the operation."
   },
   {
+    "id": "extensions/tiled/TiledMap/spawn",
+    "status": "desktop-only",
+    "reason": "This API requires the desktop runtime. Browser declarations may report the limitation without performing the operation."
+  },
+  {
     "id": "extensions/tiled/TiledMap/stampLayerToBackground",
     "status": "desktop-only",
     "reason": "This API requires the desktop runtime. Browser declarations may report the limitation without performing the operation."

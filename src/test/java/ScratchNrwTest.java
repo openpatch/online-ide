@@ -7,7 +7,6 @@
 // the Zentralabitur, with toFirst/hasAccess/getContent, and not java.util.List.
 class Spielfeld extends Stage {
     public Spielfeld() {
-        super(480, 360);
         this.add(new Gegner());
     }
 

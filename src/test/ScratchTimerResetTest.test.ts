@@ -70,7 +70,7 @@ function fakeThread(interpreter: any) {
 async function buildStage(interpreter: any): Promise<ScratchStageClass> {
     const stage = new ScratchStageClass();
     await new Promise<void>(resolve => {
-        stage._cj$_constructor_$Stage$int$int(fakeThread(interpreter), () => resolve(), 480, 360);
+        stage._cj$_constructor_$Stage$(fakeThread(interpreter), () => resolve());
     });
     return stage;
 }

@@ -28,7 +28,7 @@ import { ScratchTextClass } from "./ScratchTextClass";
 import { ScratchSortingClass } from "./ScratchSortingClass";
 import { ScratchTimerClass } from "./ScratchTimerClass";
 import {
-    beginScratchStages, IScratchStageLike, isScratchStageActive, registerScratchStage,
+    beginScratchStages, IScratchStageLike, isScratchStageActive,
     scratchStagesRunning,
 } from "./ScratchStages";
 import { ScratchShadersClass } from "./ScratchShaders";
@@ -74,8 +74,6 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         { type: "method", signature: "Stage()", java: ScratchStageClass.prototype._cj$_constructor_$Stage$, comment: SRC.stageConstructorComment },
         { type: "method", signature: "void showVariable(string name, Supplier<Object> value)", java: ScratchStageClass.prototype._mj$showVariable$void$string$Supplier },
         { type: "method", signature: "void hideVariable(string name)", native: ScratchStageClass.prototype._hideVariable },
-        { type: "method", signature: "Stage(int width, int height)", java: ScratchStageClass.prototype._cj$_constructor_$Stage$int$int, comment: SRC.stageConstructor2Comment },
-        { type: "method", signature: "Stage(int width, int height, string assets)", java: ScratchStageClass.prototype._cj$_constructor_$Stage$int$int$string, comment: SRC.stageConstructor3Comment },
 
         { type: "method", signature: "void run()", java: ScratchStageClass.prototype._mj$run$void$, comment: SRC.stageRunComment },
 
@@ -199,24 +197,19 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     private soundBank: ScratchSoundBank = new ScratchSoundBank();
     private timers: Map<string, ScratchTimerClass> = new Map();
 
-    _cj$_constructor_$Stage$(t: Thread, callback: CallbackParameter) {
-        this._cj$_constructor_$Stage$int$int(t, callback, 480, 360);
-    }
-
     /**
-     * The assets path upstream reads images and sounds from. There is no such
-     * folder in the browser: a program finds its files among the workspace's
-     * assets by their full path (see ScratchWorkspaceAssets), so the path is
-     * accepted and ignored.
+     * A stage is as big as the window it is shown in, so the window comes
+     * first, as upstream: `new Window(480, 360)`, then `setStage(new MyStage())`.
      */
-    _cj$_constructor_$Stage$int$int$string(
-        t: Thread, callback: CallbackParameter, width: number, height: number, _assets: string,
-    ) {
-        this._cj$_constructor_$Stage$int$int(t, callback, width, height);
-    }
-
-    _cj$_constructor_$Stage$int$int(t: Thread, callback: CallbackParameter, width: number, height: number) {
+    _cj$_constructor_$Stage$(t: Thread, callback: CallbackParameter) {
         const interpreter = t.scheduler.interpreter;
+        const existing = interpreter.retrieveObject("WorldClass") as IWorld;
+        if (!existing) {
+            throw new RuntimeExceptionClass(
+                "Erst das Fenster, dann die Bühne: Window myWindow = new Window(480, 360); "
+                + "myWindow.setStage(new MyStage()); / Create the Window before the first Stage: "
+                + "Window myWindow = new Window(480, 360); myWindow.setStage(new MyStage());");
+        }
 
         const finish = (world: IWorld) => {
             this.world = world;
@@ -245,9 +238,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             this.scratchLayers.root.visible = false;
             world.mouseManager.internalMouseListeners.push(this);
             this.runtime = ScratchRuntimeManager.forInterpreter(interpreter, world);
-            // the first stage of the program goes on screen, as it does upstream,
-            // where the Stage constructor calls setStage() while there is no window
-            registerScratchStage(this);
+            // off screen until Window.setStage() or transitionToStage() shows it
 
             const oldState = t.state;
             t.state = ThreadState.waiting;
@@ -269,16 +260,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             });
         };
 
-        const existing = interpreter.retrieveObject("WorldClass") as IWorld;
-        if (!existing) {
-            new t.classes["World"]()._cj$_constructor_$World$int$int(t, () => {
-                finish(t.s.pop());
-            }, width, height);
-        } else {
-            // a second stage shares the window it finds, the same way upstream's
-            // later stages get the size the window was created with
-            finish(existing);
-        }
+        finish(existing);
     }
 
     // ---- being the stage on screen ----

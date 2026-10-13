@@ -110,10 +110,9 @@ export class ScratchWindowClass extends ObjectClass {
             if (callback) callback();
         };
 
-        // A stage built before the window already opened one. Upstream refuses a
-        // second window outright; here the program simply keeps the one it has,
-        // because resizing it now would leave every sprite the stage has already
-        // placed sitting in the wrong spot.
+        // A second window in the same run. Upstream refuses it outright; here
+        // the program simply keeps the one it has, because resizing it now
+        // would leave every sprite already placed sitting in the wrong spot.
         if (interpreter.retrieveObject("WorldClass") as IWorld) {
             done();
             return;

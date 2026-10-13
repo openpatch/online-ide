@@ -68,7 +68,7 @@ try {
         const checkPage = await browser.newPage();
         await checkPage.goto(`http://127.0.0.1:${port}/src/test/browser/scratch.html`);
         await checkPage.waitForFunction(() => !!window.scratchTest);
-        const checkSource = checks + '\nvoid main(){ new Stage(); PortableBehaviorChecks.run(); println("BEHAVIOR_PASS"); Window.getInstance().pause(); }\n';
+        const checkSource = checks + '\nvoid main(){ new Window(480, 360).setStage(new Stage()); PortableBehaviorChecks.run(); println("BEHAVIOR_PASS"); Window.getInstance().pause(); }\n';
         await checkPage.evaluate(({ source, flavor }) => window.scratchTest.start(source, flavor), { source: checkSource, flavor });
         await checkPage.waitForFunction(() => {
             const value = window.scratchTest.snapshot();

@@ -233,7 +233,6 @@ print("weiter");
 // in the port resolves — i.e. that the library declarations parse into the type store.
 class MyStage extends Stage {
     public MyStage() {
-        super(480, 360);
         this.addBackdrop("tappy_plane/background");
         this.addSound("footstep_grass_000");
         this.setColor(200);
@@ -443,11 +442,10 @@ class MyButton extends UISprite {
     }
 }
 
-// Several stages in one program. The first one a program builds is the one on
-// screen; the others wait until the window is told to show them.
+// Several stages in one program: each waits off screen until the window is told
+// to show it.
 class Level2 extends Stage {
     public Level2() {
-        super(480, 360);
         this.addBackdrop("tappy_plane/background");
         this.add(new Portal());
     }
