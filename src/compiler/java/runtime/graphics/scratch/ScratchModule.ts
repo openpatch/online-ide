@@ -20,6 +20,7 @@ import {
 } from "./ScratchDesktopOnlyClasses";
 import { ScratchShaderClass, ScratchShadersClass } from "./ScratchShaders";
 import { ScratchSortingClass } from "./ScratchSortingClass";
+import { ScratchIOExceptionClass, ScratchSaveDataClass } from './ScratchSaveDataClass';
 import { ScratchExceptionClass } from "./ScratchExceptionClass";
 import { ScratchHitboxClass } from "./ScratchHitboxClass";
 import { ScratchHtmlColorClass } from "./ScratchHtmlColorClass";
@@ -67,6 +68,7 @@ export class ScratchModule extends JavaLibraryModule implements ScratchListFlavo
             TextureSamplingEnum,
             BooleanSupplierInterface,
             SupplierInterface,
+            ScratchIOExceptionClass, ScratchSaveDataClass,
             ScratchOperatorsClass, ScratchRandomClass, ScratchClockClass,
             ScratchHtmlColorClass, ScratchExceptionClass,
             ScratchColorClass, ScratchVector2Class, ScratchTimerClass, ScratchCameraClass,
@@ -115,6 +117,7 @@ export class ScratchModule extends JavaLibraryModule implements ScratchListFlavo
             ["org", "openpatch", "scratch", "extensions", "tiled", "*"],
             // Stage.waitUntil takes a java.util.function.BooleanSupplier
             ["java", "util", "function", "*"],
+            ["java", "io", "*"],
             // the declarations' List is the nrw List then; see the constructor
             ...(this.scratchNrwLists ? [["nrw", "List"]] : []),
         ];

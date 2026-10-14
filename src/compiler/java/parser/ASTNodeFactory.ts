@@ -332,6 +332,7 @@ export class ASTNodeFactory {
             visibility: modifiers.visibility,
             isFinal: modifiers.isFinal,
             isStatic: modifiers.isStatic,
+            isTransient: modifiers.isTransient,
             isAbstract: modifiers.isAbstract,
             isDefault: modifiers.isDefault,
             isSynchronized: modifiers.isSynchronized,

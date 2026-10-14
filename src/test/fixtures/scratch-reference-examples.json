@@ -1,6 +1,6 @@
 {
   "desktopVersion": "6.1.3",
-  "browserVersion": "6.1.3-browser.1",
+  "browserVersion": "6.1.3-browser.2",
   "examples": [
     {
       "id": "AnimatedSprite/addAnimation#0",
@@ -4834,6 +4834,42 @@
         {
           "name": "Example.java",
           "source": "void main() {\n\n  Window myWindow = new Window(600, 240);\n  Stage myStage = new Stage();\n  myWindow.setStage(myStage);\n  for (int i = 0; i < 12; i++) {\n    Sprite coin = new Sprite(\"coin\", \"coinGold\");\n    coin.goToRandomPosition();\n    myStage.add(coin);\n  }\n  Camera myCamera = myStage.getCamera();\n\n  myCamera.setPosition(0, 60);\n  System.out.println(\"y = 60 on the stage is drawn at y = \" + myCamera.toLocalY(60));\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/fs/SaveData/constructor#0",
+      "member": "extensions/fs/SaveData/constructor",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  SaveData<Progress> saves = new SaveData<>(\"org.openpatch.reference\", \"slot1\", Progress.class);\n  try {\n    Progress progress = saves.loadOrDefault(() -> new Progress());\n    progress.coins += 10;\n    saves.save(progress);\n    System.out.println(\"Coins: \" + progress.coins);\n  } catch (IOException error) {\n    System.out.println(\"Could not save or load progress: \" + error.getMessage());\n  }\n}\n\nclass Progress {\n  public int version = 1;\n  public int level = 1;\n  public int coins = 0;\n\n  public Progress() { }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/fs/SaveData/loadOrDefault#0",
+      "member": "extensions/fs/SaveData/loadOrDefault",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  SaveData<Progress> saves = new SaveData<>(\"org.openpatch.reference\", \"slot1\", Progress.class);\n  try {\n    Progress progress = saves.loadOrDefault(() -> new Progress());\n    progress.coins += 10;\n    saves.save(progress);\n    System.out.println(\"Coins: \" + progress.coins);\n  } catch (IOException error) {\n    System.out.println(\"Could not save or load progress: \" + error.getMessage());\n  }\n}\n\nclass Progress {\n  public int version = 1;\n  public int level = 1;\n  public int coins = 0;\n\n  public Progress() { }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/fs/SaveData/save#0",
+      "member": "extensions/fs/SaveData/save",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  SaveData<Progress> saves = new SaveData<>(\"org.openpatch.reference\", \"slot1\", Progress.class);\n  try {\n    Progress progress = saves.loadOrDefault(() -> new Progress());\n    progress.coins += 10;\n    saves.save(progress);\n    System.out.println(\"Coins: \" + progress.coins);\n  } catch (IOException error) {\n    System.out.println(\"Could not save or load progress: \" + error.getMessage());\n  }\n}\n\nclass Progress {\n  public int version = 1;\n  public int level = 1;\n  public int coins = 0;\n\n  public Progress() { }\n}\n"
         }
       ],
       "expectedDiagnostics": []

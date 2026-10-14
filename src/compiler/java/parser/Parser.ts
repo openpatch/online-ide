@@ -531,6 +531,9 @@ export class Parser extends StatementParser {
                 case TokenType.keywordFinal:
                     astNodeWithModifiers.isFinal = true;
                     break;
+                case TokenType.keywordTransient:
+                    astNodeWithModifiers.isTransient = true;
+                    break;
                 case TokenType.keywordAbstract:
                     astNodeWithModifiers.isAbstract = true;
                     break;

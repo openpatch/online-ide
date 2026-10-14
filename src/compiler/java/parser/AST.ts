@@ -76,6 +76,7 @@ export interface ASTNodeWithModifiers {
     visibility: Visibility;
     isFinal: boolean;
     isStatic: boolean;
+    isTransient?: boolean;
     isAbstract: boolean;
     isDefault: boolean;
     isSynchronized: boolean;

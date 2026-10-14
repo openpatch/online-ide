@@ -921,6 +921,7 @@ export class TypeResolver {
                                 let f: JavaField = new JavaField(field.identifier, field.range, javaClass.module, field.type.resolvedType!, field.visibility);
                                 f._isStatic = field.isStatic;
                                 f._isFinal = field.isFinal;
+                                f._isTransient = field.isTransient ?? false;
                                 f.classEnum = javaClass;
                                 javaClass.fields.push(f);
                                 field.resolvedField = f;

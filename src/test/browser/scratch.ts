@@ -1,6 +1,8 @@
 // The interpreter must load first because the runtime has circular imports.
 import { Interpreter } from '../../compiler/common/interpreter/Interpreter';
 import { GraphicsManager } from '../../compiler/common/interpreter/GraphicsManager';
+import { KeyboardManager } from '../../compiler/common/interpreter/KeyboardManager';
+import jQuery from 'jquery';
 import { SchedulerState } from '../../compiler/common/interpreter/SchedulerState';
 import { JavaCompiler } from '../../compiler/java/JavaCompiler';
 import { JavaLibraryManager } from '../../compiler/java/runtime/JavaLibraryManager';
@@ -13,6 +15,7 @@ import assetCatalog from '../../compiler/java/runtime/graphics/scratch/catalogs/
 
 let interpreter: Interpreter;
 let output: StoreOutputPrintManager;
+let keyboard: KeyboardManager;
 (window as any).scratchTest = {
     async start(source: string, flavor = 'standard') {
         const compiler = new JavaCompiler();
@@ -27,7 +30,14 @@ let output: StoreOutputPrintManager;
         const errors = executable.getAllErrors().filter(error => error.level === 'error');
         if (errors.length) throw new Error(JSON.stringify(errors));
         output = new StoreOutputPrintManager();
-        interpreter = new Interpreter(output, undefined, new GraphicsManager(document.getElementById('graphics'), undefined));
+        keyboard?.destroy();
+        keyboard = new KeyboardManager(jQuery(document), {
+            isEmbedded: () => true,
+            getInterpreter: () => interpreter,
+            getMainEditor: () => ({ hasTextFocus: () => false }),
+        } as any);
+        interpreter = new Interpreter(output, undefined,
+            new GraphicsManager(document.getElementById('graphics'), undefined), keyboard);
         interpreter.setExecutable(executable);
         if (!executable.isCompiledToJavascript) throw new Error('Executable was not compiled');
         interpreter.start();
