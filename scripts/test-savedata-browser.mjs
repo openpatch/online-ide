@@ -184,11 +184,24 @@ try {
         await waitForGame(state => state.coins >= 1);
         await page.keyboard.up('ArrowUp');
         await page.keyboard.press('s');
-        await waitForGame(state => !state.busy);
-        const saved = await page.evaluate(async () => {
+        // The key event can still be queued while busy is false. Observe the
+        // committed save before reading it, rather than treating that initial
+        // idle state as proof that the save handler has finished.
+        await page.waitForFunction(async () => {
             const { readScratchSave } = await import('/src/compiler/java/runtime/graphics/scratch/ScratchSaveDataStore.ts');
-            return JSON.parse(await readScratchSave('org.openpatch.coinquest', 'slot3'));
+            const saved = JSON.parse(await readScratchSave('org.openpatch.coinquest', 'slot3'));
+            return saved.coins >= 1 && saved.coins < 30;
+        }, undefined, { timeout: 15000 });
+        await waitForGame(state => !state.busy);
+        const demoSaves = await page.evaluate(async () => {
+            const { readScratchSave } = await import('/src/compiler/java/runtime/graphics/scratch/ScratchSaveDataStore.ts');
+            return Promise.all([1, 2, 3].map(async slot =>
+                JSON.parse(await readScratchSave('org.openpatch.coinquest', 'slot' + slot))));
         });
+        assert.deepEqual(demoSaves.slice(0, 2), [1, 2].map(slot => ({
+            version: 1, coins: slot * 10, playerX: -180, playerY: -60, coinX: 120, coinY: 0,
+        })), 'saving slot 3 preserves slots 1 and 2');
+        const saved = demoSaves[2];
         assert.ok(saved.coins >= 1 && saved.coins < 30, 'actual gameplay and save controls overwrite only the selected slot');
         await page.waitForFunction(() => window.scratchTest.snapshot().renderer === 1);
         const canvas = await page.locator('#graphics canvas').boundingBox();
