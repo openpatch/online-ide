@@ -7,7 +7,7 @@ import { Main } from "../main/Main";
 import { Patcher } from "./Patcher";
 import { Workspace } from "./Workspace";
 import * as monaco from 'monaco-editor'
-import { isAssetDataUrl } from "./AssetFile";
+import { decodeShaderSource, isAssetDataUrl } from "./AssetFile";
 
 
 export class GUIFile extends CompilerFile {
@@ -131,6 +131,7 @@ export class GUIFile extends CompilerFile {
     }
 
     setText(text: string) {
+        text = decodeShaderSource(this.name, text);
         if (this.monacoModel) {
             this.monacoModel.setValue(text);
             // new content may come with another indentation style

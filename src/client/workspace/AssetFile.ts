@@ -11,6 +11,18 @@ export function isAssetFile(file: CompilerFile): boolean {
     return isAssetDataUrl(file.getText());
 }
 
+/** Embedded pages and saved workspaces may supply shader source as an asset. */
+export function decodeShaderSource(filename: string, text: string): string {
+    if (!/\.(frag|vert|glsl)$/i.test(filename) || !isAssetDataUrl(text)) return text;
+
+    const comma = text.indexOf(",");
+    const header = text.substring(0, comma);
+    const body = text.substring(comma + 1);
+    if (!/;base64$/i.test(header)) return decodeURIComponent(body);
+    const bytes = Uint8Array.from(atob(body), character => character.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+}
+
 export function readBrowserFileAsDataUrl(file: File): Promise<string> {
     return readBlobAsDataUrl(file);
 }

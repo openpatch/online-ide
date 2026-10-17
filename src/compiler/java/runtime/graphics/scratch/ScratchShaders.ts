@@ -150,10 +150,8 @@ function compileError(fragment: string): string | undefined {
     return log;
 }
 
-/** The text of a shader file: one of the project's files, else downloaded. */
+/** The text of a shader file outside the workspace. */
 async function loadSource(path: string): Promise<string> {
-    const own = ScratchWorkspaceAssets.getText(path);
-    if (own !== undefined) return own;
     const response = await fetch(resolveAssetUrl(path));
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     return response.text();
@@ -162,6 +160,9 @@ async function loadSource(path: string): Promise<string> {
 /** Loaded sources, so that cloned sprites do not download a shader again. */
 const sources: Map<string, Promise<string>> = new Map();
 function source(path: string): Promise<string> {
+    // Workspace sources are refreshed each run and may have been edited.
+    const own = ScratchWorkspaceAssets.getText(path);
+    if (own !== undefined) return Promise.resolve(own);
     let pending = sources.get(path);
     if (!pending) {
         pending = loadSource(path);

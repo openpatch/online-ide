@@ -14,6 +14,14 @@ try {
     const port = server.httpServer.address().port;
     browser = await chromium.launch({ headless: true, args: ['--enable-unsafe-swiftshader'] });
     const page = await browser.newPage();
+    async function waitForSavedWorkspace(predicate) {
+        for (let attempt = 0; attempt < 100; attempt++) {
+            const saved = JSON.parse(await page.evaluate(() => window.transferTest.saved()) || '{}');
+            if (predicate(saved)) return;
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        assert.fail('Workspace edits were not saved');
+    }
     const errors = [];
     const alerts = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -23,6 +31,38 @@ try {
     });
     await page.goto(`http://127.0.0.1:${port}/src/test/browser/transfer.html`);
     await page.waitForFunction(() => !!window.transferTest, undefined, { timeout: 30000 });
+    const shaderText = '// Wellen: Größe\nvoid main() {\n    gl_FragColor = vec4(0.25);\n}\n';
+    for (const [name, text, readOnly] of [
+        ['assets/waves.frag', shaderText, false],
+        ['assets/default.vert', 'void main() { gl_Position = vec4(0.0); }\n', true],
+        ['assets/common.GLSL', '// Grüße\nfloat strength = 1.0;\n', false],
+    ]) {
+        await page.locator('.jo_treeviewNode_caption').filter({ hasText: name }).click();
+        assert.equal(await page.locator('.joe_monacoDiv').isVisible(), true, name + ' opens in the editor');
+        assert.deepEqual(await page.evaluate(() => window.transferTest.editor()), { text, language: 'glsl', readOnly });
+    }
+    await page.locator('.jo_treeviewNode_caption').filter({ hasText: 'assets/binary.dat' }).click();
+    assert.equal(await page.locator('.joe_assetPreview a[download="assets/binary.dat"]').count(), 1);
+    assert.ok((await page.evaluate(() => window.transferTest.shaderFragment('assets/waves.frag'))).includes('vec4(0.25)'));
+    await page.locator('.jo_treeviewNode_caption').filter({ hasText: 'assets/waves.frag' }).click();
+    await page.locator('.joe_monacoDiv .monaco-editor').click();
+    await page.keyboard.press('Control+a');
+    await page.keyboard.insertText(shaderText.replace('0.25', '0.75'));
+    const editedShader = await page.evaluate(() => window.transferTest.editor().text);
+    assert.ok(editedShader.includes('vec4(0.75)'), 'typing updates the shader source');
+    assert.ok((await page.evaluate(() => window.transferTest.shaderFragment('assets/waves.frag'))).includes('vec4(0.75)'),
+        'the next run uses edited shader source');
+    await waitForSavedWorkspace(saved => saved.modules?.some(file => file.name === 'assets/waves.frag' && file.text === editedShader));
+    await page.reload();
+    await page.waitForFunction(() => !!window.transferTest, undefined, { timeout: 30000 });
+    assert.deepEqual(alerts, [], 'restoring cached shader files succeeds');
+    assert.deepEqual(errors, [], 'restoring cached shader files has no page errors');
+    await page.locator('.jo_treeviewNode_caption').filter({ hasText: 'assets/waves.frag' }).click();
+    assert.equal(await page.locator('.joe_monacoDiv').isVisible(), true);
+    assert.deepEqual(await page.evaluate(() => window.transferTest.editor()), { text: editedShader, language: 'glsl', readOnly: false });
+    assert.equal(await page.evaluate(() => window.transferTest.snapshot().files.find(file => file.name === 'assets/binary.dat').text),
+        'data:application/octet-stream;base64,AAECA/8=');
+    console.log('Embedded shader assets open as GLSL, preserve edits after reload, and recompile edited source: passed');
     const source = 'import org.openpatch.scratch.*;\nvoid main() { println("student edit"); }\n';
     const workspace = { name: 'Classroom game', settings: { language: 'Java', libraries: ['scratch', 'nrw'],
         scratchProject: { lesson: 'roundtrip', checkpoint: '02' } }, modules: [
@@ -34,7 +74,7 @@ try {
     const bytes = Buffer.from(await page.evaluate(workspace => window.transferTest.makeZip(workspace), workspace));
     await page.locator('input[accept=".json,.zip"]').setInputFiles({ name: 'game.zip', mimeType: 'application/zip', buffer: bytes });
     await page.waitForFunction(() => window.transferTest.snapshot().settings.libraries.includes('nrw'));
-    await page.waitForFunction(async () => JSON.parse(await window.transferTest.saved() || '{}').settings?.libraries?.includes('nrw'));
+    await waitForSavedWorkspace(saved => saved.settings?.libraries?.includes('nrw'));
     const loaded = await page.evaluate(() => window.transferTest.snapshot());
     await page.reload();
     await page.waitForFunction(() => !!window.transferTest, undefined, { timeout: 30000 });
