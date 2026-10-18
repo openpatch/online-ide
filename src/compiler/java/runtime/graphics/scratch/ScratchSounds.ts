@@ -97,6 +97,8 @@ export class ScratchSound {
         return this.soundId !== undefined;
     }
 
+    getVolume(): number { return this.volume * 100; }
+
     setVolume(percent: number) {
         this.volume = Math.max(0, Math.min(1, percent / 100));
         if (this.howl && this.soundId !== undefined) this.howl.volume(this.volume, this.soundId);
@@ -165,6 +167,7 @@ export class ScratchSounds {
 export class ScratchSoundBank {
     private sounds: ScratchSound[] = [];
     private volume: number = 100;
+    private playbacks: ScratchSound[] = [];
 
     copy(): ScratchSoundBank {
         const bank = new ScratchSoundBank();
@@ -198,9 +201,31 @@ export class ScratchSoundBank {
         sound.play();
     }
 
-    stop(name: string) { this.find(name)?.stop(); }
-    stopAll() { for (const s of this.sounds) s.stop(); }
-    isPlaying(name: string): boolean { return this.find(name)?.isPlaying() ?? false; }
+    playCopy(name: string, volume: number): ScratchSound {
+        if (!Number.isFinite(volume)) throw new Error("Sound volume must be a finite percentage.");
+        const source = this.find(name);
+        if (!source) throw new Error(`No sound named '${name}'. Add it with addSound() before playing it.`);
+        this.playbacks = this.playbacks.filter(sound => sound.isPlaying());
+        const playback = source.copy();
+        playback.setVolume(volume);
+        playback.play();
+        this.playbacks.push(playback);
+        return playback;
+    }
+
+    stop(name: string) {
+        this.find(name)?.stop();
+        for (const sound of this.playbacks) if (sound.name === name) sound.stop();
+        this.playbacks = this.playbacks.filter(sound => sound.isPlaying());
+    }
+    stopAll() {
+        for (const sound of [...this.sounds, ...this.playbacks]) sound.stop();
+        this.playbacks = [];
+    }
+    isPlaying(name: string): boolean {
+        this.playbacks = this.playbacks.filter(sound => sound.isPlaying());
+        return (this.find(name)?.isPlaying() ?? false) || this.playbacks.some(sound => sound.name === name);
+    }
 
     setVolume(percent: number) {
         this.volume = Math.max(0, Math.min(100, percent));

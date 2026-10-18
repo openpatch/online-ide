@@ -146,3 +146,31 @@ test('format hints are retained and do not share incompatible groups', () => {
     expect(audio.instances[0].options.format).toEqual(['wav']);
     expect(audio.instances[1].options.format).toEqual(['ogg']);
 });
+
+test('independent plays have explicit volume and belong to their bank', () => {
+    const owner = new ScratchSoundBank();
+    owner.add('hit', 'assets/handles-hit.wav');
+    owner.setVolume(10);
+    const anotherOwner = owner.copy();
+    const quiet = owner.playCopy('hit', 30);
+    const loud = owner.playCopy('hit', 80);
+    const other = anotherOwner.playCopy('hit', 60);
+    expect(audio.instances).toHaveLength(1);
+    expect(quiet.getVolume()).toBe(30);
+    quiet.stop();
+    expect(quiet.isPlaying()).toBe(false);
+    expect(loud.isPlaying()).toBe(true);
+    loud.setVolume(25);
+    expect(loud.getVolume()).toBe(25);
+    owner.setVolume(5);
+    expect(loud.getVolume()).toBe(25);
+    owner.stop('hit');
+    expect(loud.isPlaying()).toBe(false);
+    expect(owner.isPlaying('hit')).toBe(false);
+    expect(other.isPlaying()).toBe(true);
+    anotherOwner.stopAll();
+    expect(other.isPlaying()).toBe(false);
+    expect(audio.instances[0].listeners).toHaveLength(0);
+    expect(() => owner.playCopy('missing', 50)).toThrow();
+    expect(() => owner.playCopy('hit', NaN)).toThrow();
+});

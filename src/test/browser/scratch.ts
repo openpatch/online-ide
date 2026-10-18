@@ -12,6 +12,7 @@ import { activeScratchStage } from '../../compiler/java/runtime/graphics/scratch
 import { scratchGameClock } from '../../compiler/java/runtime/graphics/scratch/ScratchGameClock';
 import { ScratchCostumes } from '../../compiler/java/runtime/graphics/scratch/ScratchCostumes';
 import assetCatalog from '../../compiler/java/runtime/graphics/scratch/catalogs/assets.json';
+import { Rectangle } from 'pixi.js';
 
 let interpreter: Interpreter;
 let output: StoreOutputPrintManager;
@@ -65,6 +66,19 @@ let keyboard: KeyboardManager;
         };
     },
     step() { scratchGameClock().step(); },
+    pixels(points: number[][]) {
+        const stage: any = activeScratchStage();
+        const renderer = stage.world.app.renderer;
+        const { pixels, width } = renderer.extract.pixels({ target: stage.world.app.stage,
+            frame: new Rectangle(0, 0, 320, 200), resolution: 1 });
+        return points.map(([x, y]) => {
+            const offset = ((100 - y) * width + 160 + x) * 4;
+            // This probe uses a white stage. Its renderer background is outside
+            // the extracted display tree, so composite transparent pixels here.
+            if (pixels[offset + 3] === 0) return [255, 255, 255];
+            return [pixels[offset], pixels[offset + 1], pixels[offset + 2]];
+        });
+    },
     pause() { scratchGameClock().pause(); },
     resume(speed = 1) { scratchGameClock().setSpeed(speed); scratchGameClock().resume(); },
     stop() { interpreter?.setState(SchedulerState.stopped); },

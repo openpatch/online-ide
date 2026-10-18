@@ -1,0 +1,15 @@
+<map orientation="orthogonal" width="2" height="1" tilewidth="16" tileheight="16">
+  <properties><property name="biome" value="forest"/></properties>
+  <tileset firstgid="7" source="extensions-tiles.tsx"/>
+  <layer name="ground" width="2" height="1"><data encoding="csv">7,2147483655</data></layer>
+  <objectgroup name="spawn">
+    <object id="11" name="from-map" class="SpawnMap" x="-120" y="60" width="8" height="12">
+      <properties><property name="power" type="int" value="42"/></properties>
+    </object>
+    <object id="12" class="SpawnXY" x="-80" y="40"><point/></object>
+    <object id="13" class="SpawnDefault" x="0" y="0"><polygon points="0,0 5,0 0,8"/></object>
+    <object id="14" class="SpawnMarker"/><object id="15" class="UnknownMarker"/><object id="16"/>
+  </objectgroup>
+  <objectgroup name="bad"><object id="21" class="SpawnBad"/></objectgroup>
+  <objectgroup name="explodes"><object id="22" class="SpawnExplodes"/></objectgroup>
+</map>

@@ -1,3 +1,7 @@
+import { ScratchTiledMapClass } from "./ScratchTiledMapClass";
+import { ScratchDrawingClass, ScratchDrawingSpriteClass } from "./ScratchDrawingClasses";
+import { ScratchBitmapTextClass } from "./ScratchBitmapTextClass";
+import { AutoCloseableInterface, ScratchSoundPlaybackClass } from "./ScratchSoundPlaybackClass";
 import { CodeFragment } from "../../../../common/disassembler/CodeFragment";
 import { JavaLibraryModule } from "../../../module/libraries/JavaLibraryModule";
 import { BooleanSupplierInterface } from "./BooleanSupplierInterface";
@@ -15,7 +19,7 @@ import { ScratchColorClass } from "./ScratchColorClass";
 import {
     ScratchFFmpegRecorderClass, ScratchFileClass, ScratchFrameRecorderClass, ScratchGifRecorderClass,
     ScratchMapObjectClass, ScratchPixelsClass, ScratchRecorderClass,
-    ScratchPropertyClass, ScratchTiledMapClass,
+    ScratchPropertyClass,
     ScratchTilesetImageClass,
 } from "./ScratchDesktopOnlyClasses";
 import { ScratchShaderClass, ScratchShadersClass } from "./ScratchShaders";
@@ -67,7 +71,8 @@ export class ScratchModule extends JavaLibraryModule implements ScratchListFlavo
             KeyCodeEnum, MouseCodeEnum, RotationStyleEnum, LayerEnum, TextAlignEnum, TextStyleEnum,
             TextureSamplingEnum,
             BooleanSupplierInterface,
-            SupplierInterface,
+            SupplierInterface, AutoCloseableInterface,
+            ScratchDrawingClass, ScratchDrawingSpriteClass, ScratchBitmapTextClass, ScratchSoundPlaybackClass,
             ScratchIOExceptionClass, ScratchSaveDataClass,
             ScratchOperatorsClass, ScratchRandomClass, ScratchClockClass,
             ScratchHtmlColorClass, ScratchExceptionClass,
@@ -108,7 +113,11 @@ export class ScratchModule extends JavaLibraryModule implements ScratchListFlavo
     getStandardImports(): string[][] {
         return [
             ["org", "openpatch", "scratch", "*"],
+            ["java", "lang", "AutoCloseable"],
             ["org", "openpatch", "scratch", "extensions", "camera", "*"],
+            ["org", "openpatch", "scratch", "extensions", "drawing", "*"],
+            ["org", "openpatch", "scratch", "extensions", "text", "*"],
+            ["org", "openpatch", "scratch", "extensions", "sound", "*"],
             ["org", "openpatch", "scratch", "extensions", "fs", "*"],
             ["org", "openpatch", "scratch", "extensions", "pixels", "*"],
             ["org", "openpatch", "scratch", "extensions", "recorder", "*"],

@@ -22,7 +22,7 @@ import { activeScratchStage } from './ScratchStages';
  * stamps piled up in reverse.
  */
 export type ScratchLayerName = "root" | "shaded" | "stageColour" | "camera" | "backdrop" | "pen" | "backgroundStamps" | "sprites"
-    | "texts" | "foregroundStamps" | "debugWorld" | "ui" | "uiTexts" | "debugScreen";
+    | "texts" | "foregroundStamps" | "debugWorld" | "uiStamps" | "ui" | "uiTexts" | "debugScreen";
 
 export type ScratchLayers = Record<ScratchLayerName, PIXI.Container>;
 
@@ -53,6 +53,7 @@ export function createScratchLayers(parent: PIXI.Container): ScratchLayers {
         texts: new PIXI.Container(),
         foregroundStamps: new PIXI.Container(),
         debugWorld: new PIXI.Container(),
+        uiStamps: new PIXI.Container(),
         ui: new PIXI.Container(),
         uiTexts: new PIXI.Container(),
         debugScreen: new PIXI.Container(),
@@ -67,6 +68,7 @@ export function createScratchLayers(parent: PIXI.Container): ScratchLayers {
     layers.shaded.addChild(layers.stageColour);
     layers.shaded.addChild(layers.camera);
     for (const name of INSIDE_CAMERA) layers.camera.addChild(layers[name]);
+    layers.root.addChild(layers.uiStamps);
     layers.root.addChild(layers.ui);
     // and above the UI sprites, the same way texts sit above the sprites
     layers.root.addChild(layers.uiTexts);

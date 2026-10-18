@@ -1,6 +1,6 @@
 {
   "desktopVersion": "6.2.1",
-  "browserVersion": "6.2.1-browser.1",
+  "browserVersion": "6.2.1-browser.2",
   "examples": [
     {
       "id": "AnimatedSprite/addAnimation#0",
@@ -2127,6 +2127,18 @@
       "expectedDiagnostics": []
     },
     {
+      "id": "Sprite/playSoundCopy#0",
+      "member": "Sprite/playSoundCopy",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
       "id": "Sprite/pointInDirection#0",
       "member": "Sprite/pointInDirection",
       "runnable": true,
@@ -3082,6 +3094,18 @@
         {
           "name": "Example.java",
           "source": "void main() {\n  Window myWindow = new Window(600, 240);\n  Stage myStage = new Stage();\n  myWindow.setStage(myStage);\n\n  myStage.addSound(\"bump\", \"impactWood_heavy_001\");\n  while (true) {\n    myStage.playSound(\"bump\");\n    myStage.wait(800);\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "Stage/playSoundCopy#0",
+      "member": "Stage/playSoundCopy",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
         }
       ],
       "expectedDiagnostics": []
@@ -4839,6 +4863,174 @@
       "expectedDiagnostics": []
     },
     {
+      "id": "extensions/drawing/Drawing/clip#0",
+      "member": "extensions/drawing/Drawing/clip",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/Drawing/constructor#0",
+      "member": "extensions/drawing/Drawing/constructor",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/Drawing/image#0",
+      "member": "extensions/drawing/Drawing/image",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/Drawing/imageHeight#0",
+      "member": "extensions/drawing/Drawing/imageHeight",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/Drawing/imageWidth#0",
+      "member": "extensions/drawing/Drawing/imageWidth",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/Drawing/noClip#0",
+      "member": "extensions/drawing/Drawing/noClip",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/Drawing/polygon#0",
+      "member": "extensions/drawing/Drawing/polygon",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/Drawing/rectangle#0",
+      "member": "extensions/drawing/Drawing/rectangle",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/DrawingSprite/changeTransparency#0",
+      "member": "extensions/drawing/DrawingSprite/changeTransparency",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/DrawingSprite/constructor#0",
+      "member": "extensions/drawing/DrawingSprite/constructor",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/DrawingSprite/draw#0",
+      "member": "extensions/drawing/DrawingSprite/draw",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/DrawingSprite/getTransparency#0",
+      "member": "extensions/drawing/DrawingSprite/getTransparency",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/DrawingSprite/setIsUI#0",
+      "member": "extensions/drawing/DrawingSprite/setIsUI",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/drawing/DrawingSprite/setTransparency#0",
+      "member": "extensions/drawing/DrawingSprite/setTransparency",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage();\n  stage.add(new Road());\n  window.setStage(stage);\n}\n\nclass Road extends DrawingSprite {\n  @Override public void draw(Drawing drawing) {\n    drawing.clip(0, 0, 320, 180);\n    drawing.rectangle(0, 0, 320, 180, new Color(90, 170, 220));\n    drawing.polygon(new double[] {-160, 160, 30, -30},\n        new double[] {-90, -90, 30, 30}, new Color(70, 70, 70));\n    drawing.image(\"slimeGreen\", 0, -50, 40, 30);\n    drawing.noClip();\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
       "id": "extensions/fs/SaveData/constructor#0",
       "member": "extensions/fs/SaveData/constructor",
       "runnable": true,
@@ -4930,6 +5122,90 @@
         {
           "name": "Example.java",
           "source": "void main() {\n  Window myWindow = new Window(600, 240);\n  Stage myStage = new Stage();\n  myWindow.setStage(myStage);\n  Sprite mySprite = new Sprite(\"slime\", \"slimeGreen\");\n  myStage.add(mySprite);\n\n  // the first shader added is the one drawn with\n  mySprite.getShaders().add(\"grayscale\", \"assets/grayscale.frag\", null);\n  mySprite.getShaders().add(\"invert\", \"assets/invert.frag\", null);\n\n  while (true) {\n    if (mySprite.isMouseDown()) {\n      mySprite.getShaders().switchTo(\"invert\");\n    } else {\n      mySprite.getShaders().switchTo(\"grayscale\");\n    }\n    myStage.wait(20);\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/sound/SoundPlayback/close#0",
+      "member": "extensions/sound/SoundPlayback/close",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/sound/SoundPlayback/constructor#0",
+      "member": "extensions/sound/SoundPlayback/constructor",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/sound/SoundPlayback/getName#0",
+      "member": "extensions/sound/SoundPlayback/getName",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/sound/SoundPlayback/getVolume#0",
+      "member": "extensions/sound/SoundPlayback/getVolume",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/sound/SoundPlayback/isPlaying#0",
+      "member": "extensions/sound/SoundPlayback/isPlaying",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/sound/SoundPlayback/setVolume#0",
+      "member": "extensions/sound/SoundPlayback/setVolume",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/sound/SoundPlayback/stop#0",
+      "member": "extensions/sound/SoundPlayback/stop",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(400, 240);\n  Stage stage = new Stage() {\n    @Override public void whenKeyPressed(KeyCode key) {\n      if (key == KeyCode.SPACE) {\n        SoundPlayback quiet = this.playSoundCopy(\"hit\", 20);\n        SoundPlayback loud = this.playSoundCopy(\"hit\", 80);\n        quiet.setVolume(30);\n        // quiet.stop() stops only this play; loud continues.\n      }\n      if (key == KeyCode.ESCAPE) this.stopAllSounds();\n    }\n  };\n  stage.addSound(\"hit\", \"impactWood_heavy_001\");\n  stage.display(\"Space: overlapping sounds. Escape: stop them.\");\n  window.setStage(stage);\n}\n"
         }
       ],
       "expectedDiagnostics": []

@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { decodeShaderSource, isAssetFile } from "../../../../../client/workspace/AssetFile";
+import { decodeTextAsset, isAssetFile } from "../../../../../client/workspace/AssetFile";
 import type { Workspace } from "../../../../../client/workspace/Workspace";
 import { trackTexture } from "./ScratchTextureSampling";
 
@@ -23,7 +23,7 @@ export class ScratchWorkspaceAssets {
     private static textures: Map<string, PIXI.Texture> = new Map();
     private static sounds: Map<string, { url: string, format?: string }> = new Map();
     private static fonts: Map<string, string> = new Map();
-    // shader sources (.frag, .vert, .glsl), which are plain text files
+    // Shader sources and Tiled maps/tilesets are text resources.
     private static texts: Map<string, string> = new Map();
 
     /** Decoded images and fonts by data URL, so a second run is instant. */
@@ -44,7 +44,7 @@ export class ScratchWorkspaceAssets {
         for (const file of workspace.getFiles()) {
             if (file.isFolder) continue;
             if (!isAssetFile(file)) {
-                if (SHADER_FILE.test(file.name)) {
+                if (TEXT_FILE.test(file.name)) {
                     this.texts.set(normalize([...workspace.getPath(file), file.name].join("/")), file.getText());
                 }
                 continue;
@@ -55,8 +55,8 @@ export class ScratchWorkspaceAssets {
 
             // A page embedding the IDE hands over every file it names with
             // `@file` as a data URL, whatever is in it - a shader as well.
-            if (SHADER_FILE.test(file.name)) {
-                this.texts.set(path, decodeShaderSource(file.name, dataUrl));
+            if (TEXT_FILE.test(file.name)) {
+                this.texts.set(path, decodeTextAsset(dataUrl));
                 continue;
             }
 
@@ -88,7 +88,7 @@ export class ScratchWorkspaceAssets {
         return this.sounds.get(normalize(path));
     }
 
-    /** The text of a shader file of the workspace. */
+    /** The text of a shader, TMX map or TSX tileset in the workspace. */
     static getText(path: string): string | undefined {
         return this.texts.get(normalize(path));
     }
@@ -128,7 +128,7 @@ export class ScratchWorkspaceAssets {
     }
 }
 
-const SHADER_FILE = /\.(frag|vert|glsl)$/i;
+const TEXT_FILE = /\.(frag|vert|glsl|tmx|tsx)$/i;
 
 /** "./a/b.png", "/a/b.png" and "a/b.png" all name the same file. */
 function normalize(path: string): string {

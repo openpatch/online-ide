@@ -14,6 +14,12 @@ export function isAssetFile(file: CompilerFile): boolean {
 /** Embedded pages and saved workspaces may supply shader source as an asset. */
 export function decodeShaderSource(filename: string, text: string): string {
     if (!/\.(frag|vert|glsl)$/i.test(filename) || !isAssetDataUrl(text)) return text;
+    return decodeTextAsset(text);
+}
+
+/** Text resources such as shaders and Tiled XML may arrive as embedded assets. */
+export function decodeTextAsset(text: string): string {
+    if (!isAssetDataUrl(text)) return text;
 
     const comma = text.indexOf(",");
     const header = text.substring(0, comma);

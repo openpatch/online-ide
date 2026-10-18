@@ -1,3 +1,4 @@
+import { ScratchSoundPlaybackClass } from "./ScratchSoundPlaybackClass";
 import * as PIXI from "pixi.js";
 import { CallbackParameter } from "../../../../common/interpreter/CallbackParameter";
 import { Thread } from "../../../../common/interpreter/Thread";
@@ -103,6 +104,7 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "void addSound(string name)", native: ScratchSpriteClass.prototype._addSound, comment: SRC.spriteAddSoundComment },
         { type: "method", signature: "void addSound(string name, string soundPath)", native: ScratchSpriteClass.prototype._addSound2, comment: SRC.spriteAddSound2Comment },
         { type: "method", signature: "void playSound(string name)", native: ScratchSpriteClass.prototype._playSound, comment: SRC.spritePlaySoundComment },
+        { type: "method", signature: "SoundPlayback playSoundCopy(string name, double volume)", native: ScratchSpriteClass.prototype._playSoundCopy },
         { type: "method", signature: "void stopSound(string name)", native: ScratchSpriteClass.prototype._stopSound, comment: SRC.spriteStopSoundComment },
         { type: "method", signature: "void stopAllSounds()", native: ScratchSpriteClass.prototype._stopAllSounds, comment: SRC.spriteStopAllSoundsComment },
         { type: "method", signature: "boolean isSoundPlaying(string name)", native: ScratchSpriteClass.prototype._isSoundPlaying, comment: SRC.spriteIsSoundPlayingComment },
@@ -1107,6 +1109,9 @@ export class ScratchSpriteClass extends ShapeClass {
     private soundBank: ScratchSoundBank = new ScratchSoundBank();
     _addSound(name: string) { this.soundBank.add(name, name); }
     _addSound2(name: string, path: string) { this.soundBank.add(name, path); }
+    _playSoundCopy(name: string, volume: number): ScratchSoundPlaybackClass {
+        return ScratchSoundPlaybackClass.start(this.soundBank, name, volume);
+    }
     _playSound(name: string) { this.soundBank.play(name); }
     _stopSound(name: string) { this.soundBank.stop(name); }
     _stopAllSounds() { this.soundBank.stopAll(); }
@@ -1343,7 +1348,7 @@ export class ScratchSpriteClass extends ShapeClass {
     _stampOnLayer(layer?: LayerEnum) {
         const where = (layer?.ordinal ?? Layer.BACKGROUND) as Layer;
         const layerName: ScratchLayerName = where === Layer.BACKGROUND ? "backgroundStamps"
-            : where === Layer.UI ? "ui" : "foregroundStamps";
+            : where === Layer.UI ? "uiStamps" : "foregroundStamps";
 
         // A stamp right after add() arrives before whenAddedToStage has run and
         // given the sprite its costume — that hook runs on its own thread here,

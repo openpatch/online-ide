@@ -1,3 +1,4 @@
+import { ScratchSoundPlaybackClass } from "./ScratchSoundPlaybackClass";
 import * as PIXI from "pixi.js";
 import { CallbackParameter } from "../../../../common/interpreter/CallbackParameter";
 import { KeyDownListener } from "../../../../common/interpreter/KeyboardManager";
@@ -116,6 +117,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         { type: "method", signature: "void addSound(string name)", native: ScratchStageClass.prototype._addSound, comment: SRC.stageAddSoundComment },
         { type: "method", signature: "void addSound(string name, string soundPath)", native: ScratchStageClass.prototype._addSound2, comment: SRC.stageAddSound2Comment },
         { type: "method", signature: "void playSound(string name)", native: ScratchStageClass.prototype._playSound, comment: SRC.stagePlaySoundComment },
+        { type: "method", signature: "SoundPlayback playSoundCopy(string name, double volume)", native: ScratchStageClass.prototype._playSoundCopy },
         { type: "method", signature: "void stopSound(string name)", native: ScratchStageClass.prototype._stopSound, comment: SRC.stageStopSoundComment },
         { type: "method", signature: "void stopAllSounds()", native: ScratchStageClass.prototype._stopAllSounds, comment: SRC.stageStopAllSoundsComment },
         { type: "method", signature: "boolean isSoundPlaying(string name)", native: ScratchStageClass.prototype._isSoundPlaying, comment: SRC.stageIsSoundPlayingComment },
@@ -607,6 +609,9 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     // ---- sound ----
     _addSound(name: string) { this.soundBank.add(name, name); }
     _addSound2(name: string, path: string) { this.soundBank.add(name, path); }
+    _playSoundCopy(name: string, volume: number): ScratchSoundPlaybackClass {
+        return ScratchSoundPlaybackClass.start(this.soundBank, name, volume);
+    }
     _playSound(name: string) { this.soundBank.play(name); }
     _stopSound(name: string) { this.soundBank.stop(name); }
     _stopAllSounds() { this.soundBank.stopAll(); }
@@ -643,7 +648,12 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     }
 
     // ---- misc ----
-    _eraseAll() { ScratchPenClass.eraseAllLayers(this.world, this); }
+    _eraseAll() {
+        ScratchPenClass.eraseAllLayers(this.world, this);
+        for (const name of ["backgroundStamps", "foregroundStamps", "uiStamps"] as const) {
+            for (const child of this.scratchLayers?.[name]?.removeChildren() ?? []) child.destroy({ children: true });
+        }
+    }
 
     _display(text: string) { this.displayText(text, undefined); }
     _displayFor(text: string, millis: number) { this.displayText(text, millis); }

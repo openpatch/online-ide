@@ -1,3 +1,5 @@
+import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
+import { ScratchShapeClass } from "./ScratchShapeClasses";
 import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
@@ -97,19 +99,18 @@ export class ScratchFileClass extends ObjectClass {
     _delete() { desktopOnly("File.delete()", FILE_HINT); }
 }
 
-const TILED_HINT = "Tiled-Karten gibt es nur in der Desktop-Version. / Tiled maps are desktop only.";
-
 /** One object out of a Tiled object layer. */
 export class ScratchMapObjectClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch.extensions.tiled", signature: "class MapObject extends Object", comment: SRC.mapObjectClassComment },
+        { type: "method", signature: "Shape getShape()", native: ScratchMapObjectClass.prototype._getShape },
         { type: "field", signature: "double height" },
         { type: "field", signature: "int id" },
-        { type: "field", signature: "String name" },
+        { type: "field", signature: "string name" },
         { type: "field", signature: "double rotation" },
         { type: "field", signature: "boolean visible" },
         { type: "field", signature: "double width" },
-        { type: "field", signature: "String type" },
+        { type: "field", signature: "string type" },
         { type: "field", signature: "double x" },
         { type: "field", signature: "double y" },
         { type: "method", signature: "int getPropertyInt(string name)", native: ScratchMapObjectClass.prototype._getPropertyInt, comment: SRC.mapObjectGetPropertyIntComment },
@@ -119,27 +120,29 @@ export class ScratchMapObjectClass extends ObjectClass {
     ];
     static type: NonPrimitiveType;
 
-    _getPropertyInt(): number { return desktopOnlyValue("MapObject.getPropertyInt()", 0, TILED_HINT); }
-    _getProperty(): string { return desktopOnlyValue("MapObject.getProperty()", "", TILED_HINT); }
-    _getPropertyFloat(): number { return desktopOnlyValue("MapObject.getPropertyFloat()", 0, TILED_HINT); }
-    _getPropertyBoolean(): boolean { return desktopOnlyValue("MapObject.getPropertyBoolean()", false, TILED_HINT); }
-}
+    id = 0; name = ""; type = ""; x = 0; y = 0; width = 0; height = 0; rotation = 0; visible = true;
+    customProperties = new Map<string, string>();
+    shape = ScratchShapeClass.of([]);
+    isPoint = false;
+    isPolygon = false;
+    _getProperty(name: string): string {
+        const value = this.customProperties.get(name);
+        if (value === undefined) throw new RuntimeExceptionClass(`Property '${name}' does not exist on map object '${this.name}'.`);
+        return value;
+    }
+    _getPropertyInt(name: string): number {
+        const value = this._getProperty(name);
+        if (!/^[+-]?\d+$/.test(value) || Number(value) < -2147483648 || Number(value) > 2147483647) throw new RuntimeExceptionClass(`Not an integer: '${value}'`);
+        return Number(value);
+    }
+    _getPropertyFloat(name: string): number {
+        const value = this._getProperty(name), result = Number(value);
+        if (Number.isNaN(result) && value !== "NaN") throw new RuntimeExceptionClass(`Not a number: '${value}'`);
+        return Math.fround(result);
+    }
+    _getPropertyBoolean(name: string): boolean { return this._getProperty(name).toLowerCase() === "true"; }
+    _getShape(): ScratchShapeClass { return ScratchShapeClass.of(this.shape.points.map(point => ({ ...point }))); }
 
-/** A map made with the Tiled editor. Loading one needs the file system. */
-export class ScratchTiledMapClass extends ObjectClass {
-    static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.tiled", signature: "class TiledMap extends Object", comment: SRC.tiledMapClassComment },
-        { type: "method", signature: "TiledMap(string path, Stage stage)", native: ScratchTiledMapClass.prototype._c2, comment: SRC.tiledMapConstructorComment },
-        { type: "method", signature: "MapObject[] getObjectsFromLayer(string name)", native: ScratchTiledMapClass.prototype._getObjectsFromLayer, comment: SRC.tiledMapGetObjectsFromLayerComment },
-        { type: "method", signature: "void stampLayerToForeground(string name)", native: ScratchTiledMapClass.prototype._stampLayerToForeground, comment: SRC.tiledMapStampLayerToForegroundComment },
-        { type: "method", signature: "void stampLayerToBackground(string name)", native: ScratchTiledMapClass.prototype._stampLayerToBackground, comment: SRC.tiledMapStampLayerToBackgroundComment },
-    ];
-    static type: NonPrimitiveType;
-
-    _c2(_path: string, _stage: ObjectClass) { desktopOnly("TiledMap", TILED_HINT); return this; }
-    _getObjectsFromLayer(): ScratchMapObjectClass[] { return desktopOnlyValue("TiledMap.getObjectsFromLayer()", [], TILED_HINT); }
-    _stampLayerToForeground() { desktopOnly("TiledMap.stampLayerToForeground()", TILED_HINT); }
-    _stampLayerToBackground() { desktopOnly("TiledMap.stampLayerToBackground()", TILED_HINT); }
 }
 
 /** A key/value pair attached to a Tiled object. */

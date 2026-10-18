@@ -402,6 +402,13 @@ export class LibraryDeclarationParser extends LibraryDeclarationLexer {
         type = this.currentTypeStore.getType(id);
         if (type) return type;
 
+        // Standard runtime collections still live without packages. Match the
+        // Java source import resolver so java.util.List can explicitly select
+        // the standard List even beside a library such as nrw.List.
+        if (/^(java|javax)\./.test(id)) {
+            type = this.currentTypeStore.getType(id.split('.').pop()!);
+            if (type?.module.isLibraryModule) return type;
+        }
 
         this.pushError("Konnte den Typ " + id + " nicht finden.");
 

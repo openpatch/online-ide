@@ -72,7 +72,7 @@ export class ScratchPenClass extends ObjectClass {
     /** false = draws below the sprites, which is upstream's default. */
     private foreground: boolean = false;
     /** Set when the pen belongs to a sprite, so stamp() knows what to print. */
-    sprite?: { _stamp(): void, _stampForeground(): void, stage?: object };
+    sprite?: { _stamp(): void, _stampForeground(): void, isUI?(): boolean, stage?: object };
     /**
      * The stage this pen draws on: the one it was added to, or the one its sprite
      * belongs to. Until then it draws on the stage that is on screen.
@@ -124,7 +124,7 @@ export class ScratchPenClass extends ObjectClass {
         if (!this.layer || this.layer.destroyed) {
             this.layer = new PIXI.Graphics();
             // draw beneath the sprites, above the backdrop
-            const penLayer = scratchLayerOf(this, this.foreground ? "foregroundStamps" : "pen");
+            const penLayer = scratchLayerOf(this, this.sprite?.isUI?.() ? "uiStamps" : this.foreground ? "foregroundStamps" : "pen");
             if (penLayer) penLayer.addChild(this.layer);
             else this.world.app.stage.addChildAt(this.layer, 0);
         }
