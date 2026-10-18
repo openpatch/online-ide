@@ -241,8 +241,8 @@ Are you sure?`
     });
 
     static uploadAsset = () => lm({
-        'de': 'Bilddatei hochladen',
-        'en': 'Upload image asset'
+        'de': 'Bild- oder Tiled-Kartendatei hochladen',
+        'en': 'Upload image or Tiled map asset'
     });
 
     static assetAlreadyExists = (filename: string) => lm({

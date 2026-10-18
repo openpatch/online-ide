@@ -88,7 +88,7 @@ export class EmbeddedFileExplorer {
         }
 
         this.treeview.captionLineAddIconButton(
-            "img_image-upload-dark", "right", () => this.uploadImageAssets(), EmbeddedMessages.UploadAsset()
+            "img_image-upload-dark", "right", () => this.uploadAssets(), EmbeddedMessages.UploadAsset()
         );
 
     }
@@ -221,10 +221,10 @@ export class EmbeddedFileExplorer {
         }
     }
 
-    private async uploadImageAssets() {
+    private async uploadAssets() {
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = "image/*";
+        input.accept = "image/*,.tmx,.tsx";
         input.multiple = true;
         input.onchange = async () => {
             const workspace = this.main.getCurrentWorkspace();

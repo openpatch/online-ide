@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isAssetFile, resolveWorkspaceAssetUrl } from "../client/workspace/AssetFile";
+import { decodeShaderSource, isAssetFile, resolveWorkspaceAssetUrl } from "../client/workspace/AssetFile";
 
 function makeFile(name: string, text: string, parent_folder_id: number | null = null, isFolder = false) {
     return { name, parent_folder_id, isFolder, getText: () => text };
@@ -36,5 +36,16 @@ describe("workspace assets", () => {
 
     test("does not mistake normal source files for assets", () => {
         expect(isAssetFile(makeFile("Main.java", "class Main {}") as any)).toBe(false);
+    });
+
+    test("decodes uploaded Tiled maps and tilesets like shader sources", () => {
+        const map = '<map orientation="orthogonal"/>';
+        const dataUrl = "data:application/xml;base64," + btoa(unescape(encodeURIComponent(map)));
+        expect(decodeShaderSource("level.tmx", dataUrl)).toBe(map);
+        expect(decodeShaderSource("assets/tiles.tsx", dataUrl)).toBe(map);
+        // A file the browser cannot treat as text stays a download/preview asset.
+        expect(decodeShaderSource("sprites.png", dataUrl)).toBe(dataUrl);
+        expect(decodeShaderSource("level.json", dataUrl)).toBe(dataUrl);
+        expect(decodeShaderSource("level.tmx", map)).toBe(map);
     });
 });

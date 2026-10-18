@@ -27,8 +27,8 @@ export class EmbeddedMessages {
     static ProjectFailed = () => lm({ de: 'Das Projekt konnte nicht übertragen werden:', en: 'The project could not be transferred:' });
 
     static UploadAsset = () => lm({
-    "de": "Bilddatei hochladen",
-    "en": "Upload image asset",
+    "de": "Bild- oder Tiled-Kartendatei hochladen",
+    "en": "Upload image or Tiled map asset",
     })
 
     static AssetAlreadyExists = (filename: string) => lm({

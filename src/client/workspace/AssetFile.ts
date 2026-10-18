@@ -11,9 +11,10 @@ export function isAssetFile(file: CompilerFile): boolean {
     return isAssetDataUrl(file.getText());
 }
 
-/** Embedded pages and saved workspaces may supply shader source as an asset. */
+/** Embedded pages and saved workspaces may supply text resources - shader
+ * sources and Tiled maps among them - as assets. */
 export function decodeShaderSource(filename: string, text: string): string {
-    if (!/\.(frag|vert|glsl)$/i.test(filename) || !isAssetDataUrl(text)) return text;
+    if (!/\.(frag|vert|glsl|tmx|tsx)$/i.test(filename) || !isAssetDataUrl(text)) return text;
     return decodeTextAsset(text);
 }
 

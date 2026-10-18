@@ -16,6 +16,8 @@ export class FileTypeManager {
         { name: "Java-Quelltext", file_type: 0, iconclass: "img_file-dark-java", language: ProgrammingLanguageData.Java.monacoLanguageSelector, suffix: "." + ProgrammingLanguageData.Java.fileEndingWithOutDot },
         { name: "JSON-Datei", file_type: 1, iconclass: "img_file-dark-json", language: "json", suffix: ".json" },
         { name: "XML-Datei", file_type: 1, iconclass: "img_file-dark-xml", language: "xml", suffix: ".xml" },
+        { name: "TMX-Karte", file_type: 1, iconclass: "img_file-dark-xml", language: "xml", suffix: ".tmx" },
+        { name: "TSX-Tileset", file_type: 1, iconclass: "img_file-dark-xml", language: "xml", suffix: ".tsx" },
         { name: "CSV-Datei", file_type: 1, iconclass: "img_file-dark-csv", language: "csv", suffix: ".csv" },
         { name: "Markup", file_type: 1, iconclass: "img_file-dark-md", language: "md", suffix: ".md" },
         { name: "PNG-Bild", file_type: 1, iconclass: "img_file-dark", language: "text", suffix: ".png" },

@@ -271,7 +271,7 @@ export class ProjectExplorer {
             }
 
         this.assetUploadButton = this.fileTreeview.captionLineAddIconButton(
-            "img_image-upload-dark", "right", () => this.uploadImageAssets(), ProjectExplorerMessages.uploadAsset()
+            "img_image-upload-dark", "right", () => this.uploadAssets(), ProjectExplorerMessages.uploadAsset()
         );
 
         this.fileTreeview.dropEventCallback =
@@ -318,7 +318,7 @@ export class ProjectExplorer {
 
     }
 
-    private async uploadImageAssets() {
+    private async uploadAssets() {
         const workspace = this.main.getCurrentWorkspace();
         if (!workspace) {
             alert(ProjectExplorerMessages.firstChooseWorkspace());
@@ -327,7 +327,7 @@ export class ProjectExplorer {
 
         const input = document.createElement("input");
         input.type = "file";
-        input.accept = "image/*";
+        input.accept = "image/*,.tmx,.tsx";
         input.multiple = true;
         input.onchange = async () => {
             let parentNode = this.fileTreeview.getCurrentlySelectedNodes()[0];
