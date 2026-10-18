@@ -26,21 +26,32 @@ const SOUND_URLS = import.meta.glob<string>("/assets/sounds/scratch/*.ogg", {
  * heard ten times at once — but a single instance only plays once at a time.
  */
 export class ScratchSound {
+    /** One Howler group per file; playback IDs belong to individual sprites. */
+    private static howls: Map<string, any> = new Map();
     private howl?: any;
     private soundId?: number;
+    private volume: number = 1;
+    private finishPlayback?: () => void;
 
     constructor(public name: string, private url: string, private format?: string) { }
 
-    copy(): ScratchSound { return new ScratchSound(this.name, this.url, this.format); }
+    copy(): ScratchSound {
+        const sound = new ScratchSound(this.name, this.url, this.format);
+        sound.volume = this.volume;
+        return sound;
+    }
 
     private getHowl(): any {
-        if (!this.howl) {
-            this.howl = new Howl({
+        const key = JSON.stringify([this.url, this.format]);
+        let howl = ScratchSound.howls.get(key);
+        if (!howl) {
+            howl = new Howl({
                 src: [this.url], preload: true, html5: false,
                 ...(this.format ? { format: [this.format] } : {}),
             });
+            ScratchSound.howls.set(key, howl);
         }
-        return this.howl;
+        return howl;
     }
 
     play() {
@@ -50,21 +61,45 @@ export class ScratchSound {
         // reached from a key/mouse handler, so resuming here is a valid user gesture.
         const ctx = (Howler as any)?.ctx;
         if (ctx && ctx.state === "suspended") ctx.resume();
-        this.soundId = this.getHowl().play();
+        const howl = this.getHowl();
+        // Passing the default sprite explicitly avoids Howler resuming another
+        // sprite's sole queued play while the shared file is still loading.
+        const id = howl.play("__default");
+        if (typeof id !== "number") return;
+        this.howl = howl;
+        this.soundId = id;
+        // A queued play counts as playing, just like desktop Sound. Otherwise a
+        // run() loop can queue hundreds of plays while the file is still loading.
+        const finish = () => {
+            howl.off("end", finish, id);
+            howl.off("stop", finish, id);
+            howl.off("playerror", finish, id);
+            howl.off("loaderror", finish);
+            if (this.soundId === id) {
+                this.soundId = undefined;
+                this.finishPlayback = undefined;
+            }
+        };
+        this.finishPlayback = finish;
+        howl.once("end", finish, id);
+        howl.once("stop", finish, id);
+        howl.once("playerror", finish, id);
+        howl.once("loaderror", finish);
+        howl.volume(this.volume, id);
     }
 
     stop() {
-        if (this.howl) this.howl.stop();
-        this.soundId = undefined;
+        if (this.howl && this.soundId !== undefined) this.howl.stop(this.soundId);
+        this.finishPlayback?.();
     }
 
     isPlaying(): boolean {
-        if (!this.howl || this.soundId === undefined) return false;
-        return this.howl.playing(this.soundId);
+        return this.soundId !== undefined;
     }
 
     setVolume(percent: number) {
-        this.getHowl().volume(Math.max(0, Math.min(1, percent / 100)));
+        this.volume = Math.max(0, Math.min(1, percent / 100));
+        if (this.howl && this.soundId !== undefined) this.howl.volume(this.volume, this.soundId);
     }
 }
 
