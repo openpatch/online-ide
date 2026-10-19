@@ -4,6 +4,7 @@ import type { Thread } from "../../../../common/interpreter/Thread";
 import { ThreadState } from "../../../../common/interpreter/ThreadState";
 import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
+import { ArrayListClass } from "../../system/collections/ArrayListClass";
 import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
 import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { resolveAssetUrl } from "./ScratchAssetUrls";
@@ -286,7 +287,14 @@ export class ScratchShaderClass extends ObjectClass {
     _setArray(name: string, values: number[], _ncoords: number) { if (values) this.store(name, Array.from(values)); }
 }
 
-/** The shaders a stage or sprite owns, of which one at a time is drawn with. */
+/**
+ * The shaders a stage or sprite owns, and which of them are drawn with.
+ *
+ * As upstream: switchTo, next and reset leave exactly one shader active (or
+ * none); activate adds one to those already active. A stage draws with all
+ * active shaders in the order they were added, each on what the one before it
+ * drew - PIXI runs a list of filters that way - and a sprite with the first.
+ */
 export class ScratchShadersClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch.extensions.shader", signature: "class Shaders extends Object", comment: SRC.shadersClassComment },
@@ -298,6 +306,10 @@ export class ScratchShadersClass extends ObjectClass {
         { type: "method", signature: "void switchTo(double index)", native: ScratchShadersClass.prototype._switchToIndex, comment: SRC.shadersSwitchTo2Comment },
         { type: "method", signature: "void next()", native: ScratchShadersClass.prototype._next, comment: SRC.shadersNextComment },
         { type: "method", signature: "void reset()", native: ScratchShadersClass.prototype._reset, comment: SRC.shadersResetComment },
+        { type: "method", signature: "void activate(string name)", native: ScratchShadersClass.prototype._activate, comment: SRC.shadersActivateComment },
+        { type: "method", signature: "void deactivate(string name)", native: ScratchShadersClass.prototype._deactivate, comment: SRC.shadersDeactivateComment },
+        { type: "method", signature: "boolean isActive(string name)", native: ScratchShadersClass.prototype._isActive, comment: SRC.shadersIsActiveComment },
+        { type: "method", signature: "java.util.List<Shader> getActive()", java: ScratchShadersClass.prototype._mj$getActive$List$, comment: SRC.shadersGetActiveComment },
         { type: "method", signature: "Shader getCurrent()", native: ScratchShadersClass.prototype._getCurrent, comment: SRC.shadersGetCurrentComment },
         { type: "method", signature: "int getCurrentIndex()", native: ScratchShadersClass.prototype._getCurrentIndex, comment: SRC.shadersGetCurrentIndexComment },
         { type: "method", signature: "string getCurrentName()", native: ScratchShadersClass.prototype._getCurrentName, comment: SRC.shadersGetCurrentNameComment },
@@ -305,22 +317,22 @@ export class ScratchShadersClass extends ObjectClass {
     static type: NonPrimitiveType;
 
     private shaders: ScratchShaderClass[] = [];
-    // as upstream: 0, so the first shader added is drawn with at once
-    private current: number = 0;
+    private active: Set<ScratchShaderClass> = new Set();
+    // as upstream: the first shader added is drawn with at once, unless reset() came first
+    private activateFirst: boolean = true;
     private owner: string = "sprite";
-    /** put the current shader's filter on whatever these shaders belong to */
-    onChange: ((filter: PIXI.Filter | undefined) => void) | undefined;
+    /** put the active shaders' filters, in order, on whatever these shaders belong to */
+    onChange: ((filters: PIXI.Filter[]) => void) | undefined;
 
     _c1(owner: string) { this.owner = owner ?? "sprite"; return this; }
 
     _cCopy(shaders: ScratchShadersClass) {
         this.owner = shaders.owner;
-        this.shaders = shaders.shaders.map(shader => new ScratchShaderClass()._cCopy(shader));
-        this.current = shaders.current;
+        this.copyChoiceOf(shaders);
         return this;
     }
 
-    static of(owner: string, onChange: (filter: PIXI.Filter | undefined) => void): ScratchShadersClass {
+    static of(owner: string, onChange: (filters: PIXI.Filter[]) => void): ScratchShadersClass {
         const shaders = new ScratchShadersClass();
         shaders.owner = owner;
         shaders.onChange = onChange;
@@ -328,16 +340,30 @@ export class ScratchShadersClass extends ObjectClass {
     }
 
     /** a copy for a cloned sprite, sharing the compiled shaders as upstream does */
-    copyFor(onChange: (filter: PIXI.Filter | undefined) => void): ScratchShadersClass {
+    copyFor(onChange: (filters: PIXI.Filter[]) => void): ScratchShadersClass {
         const copy = ScratchShadersClass.of(this.owner, onChange);
-        copy.shaders = this.shaders.map(s => new ScratchShaderClass()._cCopy(s));
-        copy.current = this.current;
+        copy.copyChoiceOf(this);
         copy.changed();
         return copy;
     }
 
+    /** the shaders of another set, and which of them are active */
+    private copyChoiceOf(other: ScratchShadersClass) {
+        this.activateFirst = other.activateFirst;
+        this.shaders = other.shaders.map(shader => {
+            const copy = new ScratchShaderClass()._cCopy(shader);
+            if (other.active.has(shader)) this.active.add(copy);
+            return copy;
+        });
+    }
+
     private changed() {
-        this.onChange?.(this._getCurrent()?.filter);
+        this.onChange?.(this.activeShaders().map(s => s.filter).filter((f): f is PIXI.Filter => !!f));
+    }
+
+    /** the active shaders in the order they were added */
+    private activeShaders(): ScratchShaderClass[] {
+        return this.shaders.filter(s => this.active.has(s));
     }
 
     _mj$add$Shader$string$string$string(t: Thread, callback: CallbackParameter,
@@ -351,6 +377,7 @@ export class ScratchShadersClass extends ObjectClass {
         const shader = new ScratchShaderClass();
         shader._cj$_constructor_$Shader$string$string$string(t, () => {
             // the constructor left the shader on the stack for us to return
+            if (this.shaders.length === 0 && this.activateFirst) this.active.add(shader);
             this.shaders.push(shader);
             this.changed();
             if (callback) callback();
@@ -361,42 +388,77 @@ export class ScratchShadersClass extends ObjectClass {
         return this.shaders.find(s => s.name === name);
     }
 
-    _switchToName(name: string) {
-        const index = this.shaders.findIndex(s => s.name === name);
-        if (index >= 0) {
-            this.current = index;
-            this.changed();
-            return;
-        }
+    /** the shader of that name, or undefined after saying which ones there are */
+    private find(name: string): ScratchShaderClass | undefined {
+        const shader = this._get(name);
+        if (shader) return shader;
         const available = this.shaders.length === 0
             ? `This ${this.owner} has no shaders. Use getShaders().add() to add one first.`
             : "Available shaders: " + this.shaders.map(s => `'${s.name}'`).join(", ");
         console.warn(`Scratch: shader '${name}' not found. ${available}`);
+        return undefined;
+    }
+
+    /** draw with only this shader */
+    private only(shader: ScratchShaderClass) {
+        this.active.clear();
+        this.active.add(shader);
+        this.changed();
+    }
+
+    _switchToName(name: string) {
+        const shader = this.find(name);
+        if (shader) this.only(shader);
     }
 
     _switchToIndex(index: number) {
         if (this.shaders.length === 0) return;
-        this.current = Math.trunc(index) % this.shaders.length;
-        this.changed();
+        const n = this.shaders.length;
+        this.only(this.shaders[((Math.trunc(index) % n) + n) % n]);
     }
 
     _next() {
         if (this.shaders.length === 0) return;
-        this.current = (this.current + 1) % this.shaders.length;
-        this.changed();
+        this.only(this.shaders[(this._getCurrentIndex() + 1) % this.shaders.length]);
     }
 
     _reset() {
-        this.current = -1;
+        this.active.clear();
+        this.activateFirst = false;
         this.changed();
     }
 
-    _getCurrent(): ScratchShaderClass | undefined {
-        if (this.shaders.length === 0 || this.current < 0) return undefined;
-        return this.shaders[this.current];
+    _activate(name: string) {
+        const shader = this.find(name);
+        if (!shader || this.active.has(shader)) return;
+        this.active.add(shader);
+        this.changed();
     }
 
-    _getCurrentIndex(): number { return this.current; }
+    _deactivate(name: string) {
+        const shader = this.find(name);
+        if (!shader || !this.active.delete(shader)) return;
+        this.changed();
+    }
+
+    _isActive(name: string): boolean {
+        const shader = this._get(name);
+        return !!shader && this.active.has(shader);
+    }
+
+    _mj$getActive$List$(t: Thread, callback: CallbackParameter) {
+        t.s.push(new ArrayListClass(this.activeShaders()));
+        if (callback) callback();
+    }
+
+    _getCurrent(): ScratchShaderClass | undefined {
+        return this.activeShaders()[0];
+    }
+
+    _getCurrentIndex(): number {
+        const current = this._getCurrent();
+        return current ? this.shaders.indexOf(current) : -1;
+    }
 
     _getCurrentName(): string | null {
         return this._getCurrent()?.name ?? null;

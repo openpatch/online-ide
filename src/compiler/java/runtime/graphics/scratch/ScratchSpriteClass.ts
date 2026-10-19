@@ -316,7 +316,7 @@ export class ScratchSpriteClass extends ShapeClass {
                 // pen keeps its colour, size and whether it is down
                 if (other.container && !other.container.destroyed) this.container.visible = other.container.visible;
                 // a clone is drawn with the same shaders, as upstream's copy is
-                if (other.shaders) this.shaders = other.shaders.copyFor(filter => this.applyShader(filter));
+                if (other.shaders) this.shaders = other.shaders.copyFor(filters => this.applyShader(filters[0]));
                 if (other.penObj) {
                     // from where the clone is, not from where its pen was made
                     const pen = this._getPen();
@@ -658,12 +658,12 @@ export class ScratchSpriteClass extends ShapeClass {
         return this.spriteText;
     }
 
-    /** Created on first use; the current shader is this sprite's filter. */
+    /** Created on first use; the first active shader is this sprite's filter, as upstream. */
     private shaders: ScratchShadersClass | undefined;
 
     _getShaders(): ScratchShadersClass {
         if (!this.shaders) {
-            this.shaders = ScratchShadersClass.of("sprite", filter => this.applyShader(filter));
+            this.shaders = ScratchShadersClass.of("sprite", filters => this.applyShader(filters[0]));
         }
         return this.shaders;
     }
@@ -1542,7 +1542,7 @@ export class ScratchSpriteClass extends ShapeClass {
             if (original.penObj._isInBackground()) this.penObj._goToBackground();
             else this.penObj._goToForeground();
         }
-        this.shaders = original.shaders?.copyFor(filter => this.applyShader(filter));
+        this.shaders = original.shaders?.copyFor(filters => this.applyShader(filters[0]));
         // Object's synchronization state belongs to this object alone.
         for (const key of ['runnableOrWaitingThreads', 'threadHoldingLockToThisObject', 'reentranceCounter']) delete this[key];
         this.syncWorldRegistration(!this.stage?.scratchLayers || isScratchStageActive(this.stage as any));

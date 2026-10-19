@@ -455,8 +455,8 @@ export class SRC {
 
     // ---- Shaders ----
     static shadersClassComment = () => lm({
-        "de": "Die Shader einer Figur oder der Bühne; mit einem davon wird gezeichnet",
-        "en": "The shaders of a sprite or the stage, one of which it is drawn with",
+        "de": "Die Shader einer Figur oder der Bühne und welche davon aktiv sind. Die Bühne zeichnet mit allen aktiven nacheinander, eine Figur mit dem ersten",
+        "en": "The shaders of a sprite or the stage and which of them are active. A stage draws with all active ones in turn, a sprite with the first",
     });
     static shadersConstructorComment = () => lm({
         "de": "Erzeugt eine leere Sammlung von Shadern",
@@ -471,12 +471,12 @@ export class SRC {
         "en": "Returns the shader of that name, or null",
     });
     static shadersSwitchToComment = () => lm({
-        "de": "Zeichnet ab jetzt mit dem Shader dieses Namens",
-        "en": "Draws with the shader of that name from now on",
+        "de": "Zeichnet ab jetzt nur mit dem Shader dieses Namens",
+        "en": "Draws with only the shader of that name from now on",
     });
     static shadersSwitchTo2Comment = () => lm({
-        "de": "Zeichnet ab jetzt mit dem Shader an dieser Position",
-        "en": "Draws with the shader at that position from now on",
+        "de": "Zeichnet ab jetzt nur mit dem Shader an dieser Position",
+        "en": "Draws with only the shader at that position from now on",
     });
     static shadersNextComment = () => lm({
         "de": "Wechselt zum nächsten Shader",
@@ -486,9 +486,25 @@ export class SRC {
         "de": "Zeichnet wieder ohne Shader",
         "en": "Draws without a shader again",
     });
+    static shadersActivateComment = () => lm({
+        "de": "Zeichnet zusätzlich mit dem Shader dieses Namens. Aktive Shader wirken nacheinander, in der Reihenfolge, in der sie hinzugefügt wurden",
+        "en": "Draws with the shader of that name as well. Active shaders take turns in the order they were added",
+    });
+    static shadersDeactivateComment = () => lm({
+        "de": "Zeichnet nicht mehr mit dem Shader dieses Namens; die anderen aktiven bleiben",
+        "en": "Stops drawing with the shader of that name; the other active ones stay",
+    });
+    static shadersIsActiveComment = () => lm({
+        "de": "Gibt zurück, ob mit dem Shader dieses Namens gezeichnet wird",
+        "en": "Returns whether the shader of that name is drawn with",
+    });
+    static shadersGetActiveComment = () => lm({
+        "de": "Gibt die aktiven Shader in der Reihenfolge zurück, in der sie wirken",
+        "en": "Returns the active shaders in the order they take turns",
+    });
     static shadersGetCurrentComment = () => lm({
-        "de": "Gibt den Shader zurück, mit dem gezeichnet wird, oder null",
-        "en": "Returns the shader drawn with, or null",
+        "de": "Gibt den ersten aktiven Shader zurück, oder null",
+        "en": "Returns the first active shader, or null",
     });
     static shadersGetCurrentIndexComment = () => lm({
         "de": "Gibt die Position des aktuellen Shaders zurück, oder -1",

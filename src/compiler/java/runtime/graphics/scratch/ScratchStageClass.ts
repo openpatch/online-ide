@@ -645,7 +645,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
 
     private applyBgColor() {
         this.world._setBackgroundColor(this.bgColor._get() & 0xffffff);
-        if (this.stageFilter) this.applyStageShader();
+        if (this.stageFilters.length > 0) this.applyStageShader();
     }
     _setColorHue(h: number) { this.bgColor = ScratchColorClass.fromHue(h); this.applyBgColor(); }
     _setColorRGB(r: number, g: number, b: number) { this.bgColor = ScratchColorClass.fromRGB(r, g, b); this.applyBgColor(); }
@@ -1036,14 +1036,14 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
 
     // ---- desktop-only extensions ----
     _getPixels() { return desktopOnlyValue("Stage.getPixels()", undefined, "Der Bildpuffer ist im Browser nicht zugänglich. / The pixel buffer is not reachable in the browser."); }
-    /** Created on first use; the current shader filters everything but the UI. */
+    /** Created on first use; the active shaders filter everything but the UI, in turn. */
     private shaders: ScratchShadersClass | undefined;
-    private stageFilter: PIXI.Filter | undefined;
+    private stageFilters: PIXI.Filter[] = [];
 
     _getShaders(): ScratchShadersClass {
         if (!this.shaders) {
-            this.shaders = ScratchShadersClass.of("stage", filter => {
-                this.stageFilter = filter;
+            this.shaders = ScratchShadersClass.of("stage", filters => {
+                this.stageFilters = filters;
                 this.applyStageShader();
             });
         }
@@ -1057,15 +1057,15 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     private applyStageShader() {
         const layers = this.scratchLayers;
         if (!layers || layers.shaded.destroyed) return;
-        const filter = this.stageFilter;
-        layers.shaded.filters = filter ? [filter] : [];
-        layers.shaded.filterArea = filter ? new PIXI.Rectangle(0, 0, this.world.width, this.world.height) : undefined as any;
+        const filtered = this.stageFilters.length > 0;
+        layers.shaded.filters = this.stageFilters.slice();
+        layers.shaded.filterArea = filtered ? new PIXI.Rectangle(0, 0, this.world.width, this.world.height) : undefined as any;
         const colour = layers.stageColour as PIXI.Graphics;
         colour.clear();
-        if (filter) {
+        if (filtered) {
             colour.rect(0, 0, this.world.width, this.world.height).fill(this.bgColor._get() & 0xffffff);
         }
-        colour.visible = !!filter;
+        colour.visible = filtered;
     }
     _getSorting(): ScratchSortingClass { return this.sorting; }
 
