@@ -1,6 +1,6 @@
 {
-  "desktopVersion": "6.3.0",
-  "browserVersion": "6.3.0-browser.1",
+  "desktopVersion": "6.4.0",
+  "browserVersion": "6.4.0-browser.1",
   "examples": [
     {
       "id": "AnimatedSprite/addAnimation#0",
@@ -5091,6 +5091,18 @@
       "expectedDiagnostics": []
     },
     {
+      "id": "extensions/shader/Shaders/activate#0",
+      "member": "extensions/shader/Shaders/activate",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window myWindow = new Window(600, 240);\n  Stage myStage = new Stage();\n  myWindow.setStage(myStage);\n  myStage.addBackdrop(\"forest\", \"background\");\n  myStage.add(new Sprite(\"slime\", \"slimeGreen\"));\n\n  // the first shader added is active at once: the stage is gray\n  myStage.getShaders().add(\"grayscale\", \"assets/grayscale.frag\", null);\n  Shader waves = myStage.getShaders().add(\"waves\", \"assets/waves.frag\", null);\n\n  while (true) {\n    // while the mouse is down, the gray stage wobbles as well\n    if (myStage.isMouseDown()) {\n      myStage.getShaders().activate(\"waves\");\n    } else {\n      myStage.getShaders().deactivate(\"waves\");\n    }\n    waves.set(\"time\", Timer.millis() / 1000.0);\n    myStage.wait(20);\n  }\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
       "id": "extensions/shader/Shaders/add#0",
       "member": "extensions/shader/Shaders/add",
       "runnable": true,
@@ -5098,6 +5110,18 @@
         {
           "name": "Example.java",
           "source": "void main() {\n  Window myWindow = new Window(600, 240);\n  Stage myStage = new Stage();\n  myWindow.setStage(myStage);\n  Sprite mySprite = new Sprite(\"slime\", \"slimeGreen\");\n  myStage.add(mySprite);\n\n  // a fragment shader file, and null for Processing's default vertex shader\n  mySprite.getShaders().add(\"invert\", \"assets/invert.frag\", null);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "extensions/shader/Shaders/deactivate#0",
+      "member": "extensions/shader/Shaders/deactivate",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window myWindow = new Window(600, 240);\n  Stage myStage = new Stage();\n  myWindow.setStage(myStage);\n  myStage.addBackdrop(\"forest\", \"background\");\n  myStage.add(new Sprite(\"slime\", \"slimeGreen\"));\n\n  // the first shader added is active at once: the stage is gray\n  myStage.getShaders().add(\"grayscale\", \"assets/grayscale.frag\", null);\n  Shader waves = myStage.getShaders().add(\"waves\", \"assets/waves.frag\", null);\n\n  while (true) {\n    // while the mouse is down, the gray stage wobbles as well\n    if (myStage.isMouseDown()) {\n      myStage.getShaders().activate(\"waves\");\n    } else {\n      myStage.getShaders().deactivate(\"waves\");\n    }\n    waves.set(\"time\", Timer.millis() / 1000.0);\n    myStage.wait(20);\n  }\n}\n"
         }
       ],
       "expectedDiagnostics": []
