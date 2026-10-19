@@ -42,6 +42,38 @@ try {
                 frame===6?red:white,frame===14?red:white,frame===6?red:white,frame===14?red:white,frame<24?[160,0,160]:white];
             assert.deepEqual(actual, expected, `${flavor}, frame ${frame}: drawing, UI redraw, persistent pen/stamps and bitmap text`);
         }
+        const tiled = await page.evaluate(async () => {
+            const { ScratchTiledMapClass } = await import('/src/compiler/java/runtime/graphics/scratch/ScratchTiledMapClass.ts');
+            const { activeScratchStage } = await import('/src/compiler/java/runtime/graphics/scratch/ScratchStages.ts');
+            const stage = activeScratchStage();
+            const map = new ScratchTiledMapClass();
+            map.stage = stage;
+            await map.load('/test/extensions-map.tmx');
+            const ground = map.layers.get('ground');
+            ground.data = ground.data.map(raw => (raw | 0x10000000) >>> 0);
+            const stamp = () => map._mj$stampLayerToBackground$void$string({}, undefined, 'ground');
+            stage._eraseAll();
+            stamp();
+            const layer = stage.scratchLayers.backgroundStamps;
+            const snapshot = layer.children[0], sprite = snapshot.children[0];
+            const source = sprite.texture.source;
+            const listeners = source.listenerCount('resize');
+            const expected = window.scratchTest.pixels([[8, -8], [24, -8]]);
+            let reused = true;
+            for (let frame = 0; frame < 120; frame++) {
+                stage._eraseAll();
+                stamp();
+                reused &&= layer.children[0] === snapshot && snapshot.children[0] === sprite;
+            }
+            const actual = window.scratchTest.pixels([[8, -8], [24, -8]]);
+            stamp();
+            return { reused, expected, actual, extraListeners: source.listenerCount('resize') - listeners,
+                independentCopies: layer.children.length === 2 && layer.children[0] !== layer.children[1] };
+        });
+        assert.equal(tiled.reused, true, `${flavor}: erased Tiled snapshots reuse their sprites`);
+        assert.equal(tiled.extraListeners, 0, `${flavor}: repeated stamps do not retain more tile textures`);
+        assert.equal(tiled.independentCopies, true, `${flavor}: stamps without an erase remain separate copies`);
+        assert.deepEqual(tiled.actual, tiled.expected, `${flavor}: cached map rendering matches the first stamp`);
         assert.deepEqual(errors, []);
         await page.evaluate(() => window.scratchTest.stop());
         await page.close();

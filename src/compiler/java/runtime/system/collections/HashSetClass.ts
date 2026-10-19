@@ -7,6 +7,7 @@ import { ConsumerInterface } from "../functional/ConsumerInterface.ts";
 import { NullPointerExceptionClass } from "../javalang/NullPointerExceptionClass.ts";
 import { ObjectClass, ObjectClassOrNull, StringClass } from "../javalang/ObjectClassStringClass.ts";
 import { CollectionInterface } from "./CollectionInterface.ts";
+import { internalHash } from "./internalHash.ts";
 import { IteratorInterface } from "./IteratorInterface.ts";
 import { SystemCollection } from "./SystemCollection.ts";
 
@@ -61,7 +62,7 @@ export class HashSetClass extends ObjectClass {
         if (element == null) {
             t.s.push((typeof this.map.get(null)) != "undefined");
         } else {
-            let hashCode = element.__internalHashCode();
+            let hashCode = internalHash(element);
             t.s.push((typeof this.map.get(hashCode)) != "undefined");
         }
         if (callback) callback();
@@ -112,7 +113,7 @@ export class HashSetClass extends ObjectClass {
             this.map.set(null, element);
             return typeof oldValue == "undefined";
         } else {
-            let hashCode = element.__internalHashCode();
+            let hashCode = internalHash(element);
             let oldValue = this.map.get(hashCode);
             this.map.set(hashCode, element);
             return typeof oldValue == "undefined";
@@ -148,7 +149,7 @@ export class HashSetClass extends ObjectClass {
             t.s.push(typeof oldValue == "undefined");
             this.map.delete(null);
         } else {
-            let hashCode = element.__internalHashCode();
+            let hashCode = internalHash(element);
             let oldValue = this.map.get(hashCode);
             t.s.push(typeof oldValue == "undefined");
             this.map.delete(hashCode);

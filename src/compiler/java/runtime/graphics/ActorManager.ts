@@ -7,6 +7,7 @@ import { StringClass } from "../system/javalang/ObjectClassStringClass";
 import { ActorType, ActorTypes, IActor } from "./IActor";
 import { ShapeClass } from './ShapeClass';
 import { ContainerProxy } from './ContainerProxy';
+import { WeakIterableSet } from './WeakIterableSet';
 
 export class ActorManager {
     
@@ -21,6 +22,16 @@ export class ActorManager {
         "keyUp": [],
         "keyPressed": []
     };
+
+    // Scratch stages own their sprites. Global dispatch must not keep rooms
+    // alive after the program drops them; other Actor libraries keep their
+    // existing lifetime, including actors constructed just for their act().
+    private scratchActors = Object.fromEntries(ActorTypes.map(type => [type, new WeakIterableSet<IActor>()])) as
+        Record<ActorType, WeakIterableSet<IActor>>;
+
+    private registeredActors(type: ActorType): IActor[] {
+        return [...this.actors[type], ...this.scratchActors[type]];
+    }
 
     keyDownListener: KeyDownListener = (key: string, isShift: boolean, isCtrl: boolean, isAlt: boolean) => {
         this.onKeyDown(key, isShift, isCtrl, isAlt);
@@ -61,6 +72,10 @@ export class ActorManager {
     }
 
     registerActor(actor: IActor, type: ActorType): void {
+        if (actor.usesScratchGameClock) {
+            this.scratchActors[type].add(actor);
+            return;
+        }
         let list = this.actors[type];
         list.push(actor);
     }
@@ -108,17 +123,21 @@ export class ActorManager {
 
         this.tickHappenedWhenThreadNotEmpty = false;
 
-        if (this.actors["act"].length == 0 && this.actors["actWithTime"].length == 0) return;
+        const scratchClock = this.interpreter.retrieveObject('ScratchGameClock') as
+            { runFrame(thread: Thread, actors: { has(actor: IActor): boolean }): void } | undefined;
+        const acting = scratchClock ? this.actors.act : this.registeredActors('act');
+        const actingWithTime = scratchClock ? this.actors.actWithTime : this.registeredActors('actWithTime');
+        if (acting.length == 0 && actingWithTime.length == 0 && !scratchClock) return;
 
         this.runningactThread = this.interpreter.scheduler.createThread("act method-thread");
-        const scratchClock = this.interpreter.retrieveObject('ScratchGameClock') as
-            { runFrame(thread: Thread, actors: IActor[]): void } | undefined;
-        scratchClock?.runFrame(this.runningactThread, this.actors.act);
-        for (let actor of this.actors["act"]) {
+        // Pass weak membership, not a snapshot of every room. The frame's
+        // continuation survives in the interpreter thread until the next frame.
+        scratchClock?.runFrame(this.runningactThread, this.scratchActors.act);
+        for (let actor of acting) {
             if (scratchClock && actor.usesScratchGameClock) continue;
             if (actor.isActing) actor._mj$act$void$(this.runningactThread, undefined);
         }
-        for (let actor of this.actors["actWithTime"]) {
+        for (let actor of actingWithTime) {
             if (scratchClock && actor.usesScratchGameClock) continue;
             if (actor.isActing) actor._mj$act$void$double(this.runningactThread, undefined, dt);
         }
@@ -139,10 +158,12 @@ export class ActorManager {
 
     clear() {
         ActorTypes.forEach(at => this.actors[at] = []);
+        ActorTypes.forEach(at => this.scratchActors[at].clear());
     }
 
     unregisterActor(actor: IActor) {
         ActorTypes.forEach(at => {
+            this.scratchActors[at].delete(actor);
             let actorList = this.actors[at];
             let index = actorList.indexOf(actor);
             if (index >= 0) actorList.splice(index, 1);
@@ -152,7 +173,7 @@ export class ActorManager {
 
     hasActors(): boolean {
         for (let at of ActorTypes) {
-            if (this.actors[at].length > 0) {
+            if (this.registeredActors(at).length > 0) {
                 return true;
             }
         }
@@ -160,30 +181,33 @@ export class ActorManager {
     }
 
     onKeyPressed(key: string): void {
-        if (this.actors["keyPressed"].length == 0) return;
+        const actors = this.registeredActors('keyPressed');
+        if (actors.length == 0) return;
         let t = this.interpreter.scheduler.createThread("key pressed event thread");
 
-        for (let actor of this.actors["keyPressed"]) {
+        for (let actor of actors) {
             actor._mj$onKeyTyped$void$String(t, undefined, new StringClass(key));
         }
         t.state = ThreadState.running;
     }
 
     onKeyUp(key: string): void {
-        if (this.actors["keyUp"].length == 0) return;
+        const actors = this.registeredActors('keyUp');
+        if (actors.length == 0) return;
         let t = this.interpreter.scheduler.createThread("key up event thread");
 
-        for (let actor of this.actors["keyUp"]) {
+        for (let actor of actors) {
             actor._mj$onKeyUp$void$String(t, undefined, new StringClass(key));
         }
         t.state = ThreadState.running;
     }
 
     onKeyDown(key: string, isShift: boolean, isCtrl: boolean, isAlt: boolean): void {
-        if (this.actors["keyDown"].length == 0) return;
+        const actors = this.registeredActors('keyDown');
+        if (actors.length == 0) return;
         let t = this.interpreter.scheduler.createThread("key down event thread");
 
-        for (let actor of this.actors["keyDown"]) {
+        for (let actor of actors) {
             actor._mj$onKeyDown$void$String(t, undefined, new StringClass(key));
         }
         t.state = ThreadState.running;

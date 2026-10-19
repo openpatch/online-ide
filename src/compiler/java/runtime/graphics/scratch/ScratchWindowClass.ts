@@ -5,13 +5,17 @@ import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass, StringClass } from "../../system/javalang/ObjectClassStringClass";
 import { IWorld } from "../IWorld";
 import { ScratchStageClass } from "./ScratchStageClass";
-import { setActiveScratchStage, transitionToScratchStage } from "./ScratchStages";
+import { scratchStageTransitioning, setActiveScratchStage, transitionToScratchStage } from "./ScratchStages";
 import { currentScratchStage, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
 import { TextureSampling, TextureSamplingEnum } from "./TextureSamplingEnum";
 import { getTextureSampling, setTextureSampling } from "./ScratchTextureSampling";
 import { SRC } from "./ScratchLibraryComments";
 import { scratchBrowserVersion } from './ScratchCompatibility';
 import { scratchGameClock } from './ScratchGameClock';
+import { SupplierInterface } from './SupplierInterface';
+import { Program } from '../../../../common/interpreter/Program';
+import { ThreadState } from '../../../../common/interpreter/ThreadState';
+import { NullPointerExceptionClass } from '../../system/javalang/NullPointerExceptionClass';
 
 /**
  * The application window, mirroring org.openpatch.scratch.Window.
@@ -50,6 +54,8 @@ export class ScratchWindowClass extends ObjectClass {
         { type: "method", signature: "Stage getStage()", native: ScratchWindowClass.prototype._getStage, comment: SRC.windowGetStageComment },
         { type: "method", signature: "void setStage(Stage stage)", native: ScratchWindowClass.prototype._setStage, comment: SRC.windowSetStageComment },
         { type: "method", signature: "void transitionToStage(Stage stage, int duration)", native: ScratchWindowClass.prototype._transitionToStage, comment: SRC.windowTransitionToStageComment },
+        { type: "method", signature: "void transitionToStage(Supplier<? extends Stage> stage, int duration)", java: ScratchWindowClass.prototype._transitionToStageSupplier, comment: SRC.windowTransitionToStageSupplierComment },
+        { type: "method", signature: "static boolean isTransitioning()", native: ScratchWindowClass.isTransitioning, comment: SRC.windowIsTransitioningComment },
 
         { type: "method", signature: "void setDebug(boolean debug)", native: ScratchWindowClass.prototype._setDebug, comment: SRC.windowSetDebugComment },
         { type: "method", signature: "boolean isDebug()", native: ScratchWindowClass.prototype._isDebug, comment: SRC.windowIsDebugComment },
@@ -152,6 +158,45 @@ export class ScratchWindowClass extends ObjectClass {
     /** Fade to black, swap stages, fade back. */
     _transitionToStage(stage: ScratchStageClass, duration: number) {
         transitionToScratchStage(stage, duration);
+    }
+
+    _transitionToStageSupplier(t: Thread, callback: CallbackParameter, supplier: SupplierInterface, duration: number) {
+        if (!supplier) throw new NullPointerExceptionClass('Stage supplier must not be null');
+        const module = t.currentProgramState.program.module;
+        transitionToScratchStage((ready, failed) => {
+            const program = new Program(module, undefined, 'stage transition supplier');
+            module.programsToCompileToFunctions.splice(module.programsToCompileToFunctions.indexOf(program), 1);
+            program.addCompiledSteps([
+                thread => {
+                    thread.beginTryBlock({ catchBlockInfos: [{ exceptionTypes: { Throwable: true }, catchBlockBeginsWithStepIndex: 2 }], stackSize: 0 });
+                    supplier._mj$get$T$(thread, undefined);
+                    return 1;
+                },
+                (thread, stack) => {
+                    const stage = stack.pop();
+                    if (!stage) throw new NullPointerExceptionClass('Stage supplier returned null');
+                    thread.endCatchTryBlock();
+                    ready(stage);
+                    thread.return(undefined);
+                    return -1;
+                },
+                thread => {
+                    const error = thread.getExceptionAndTrimStack(true);
+                    failed();
+                    throw error;
+                },
+            ]);
+            const thread = t.scheduler.createThread('stage transition supplier');
+            thread.pushProgram(program);
+            thread.state = ThreadState.running;
+            return () => { thread.state = ThreadState.terminated; };
+        }, duration);
+        callback?.();
+    }
+
+    /** While a transition is fading, transitionToStage() requests are ignored. */
+    static isTransitioning(): boolean {
+        return scratchStageTransitioning();
     }
 
     // Upstream keeps one debug flag on the Applet that Window and Stage share,

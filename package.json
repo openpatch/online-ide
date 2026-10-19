@@ -22,7 +22,7 @@
     "test": "vitest --config vitest.config.ts",
     "deploy": "node src/development/ZipAndUpload.js",
     "test:ci": "vitest run --config vitest.config.ts",
-    "test:browser": "node scripts/test-scratch-browser.mjs && node scripts/test-scratch-extensions.mjs && node scripts/test-project-transfer-browser.mjs && node scripts/test-savedata-browser.mjs",
+    "test:browser": "node scripts/test-scratch-browser.mjs && node scripts/test-scratch-extensions.mjs && node scripts/test-scratch-transitions.mjs && node scripts/test-project-transfer-browser.mjs && node scripts/test-savedata-browser.mjs",
     "browser:install": "node node_modules/playwright-core/cli.js install chromium"
   },
   "devDependencies": {

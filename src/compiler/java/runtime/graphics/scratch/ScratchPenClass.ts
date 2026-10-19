@@ -10,6 +10,7 @@ import { scratchLayerOf } from "./ScratchLayers";
 import { activeScratchStage } from "./ScratchStages";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
+import { WeakIterableSet } from '../WeakIterableSet';
 
 /**
  * Pen for drawing lines, mirroring org.openpatch.scratch.Pen (core subset).
@@ -56,7 +57,7 @@ export class ScratchPenClass extends ObjectClass {
     private layer?: PIXI.Graphics;
 
     /** Every live pen, so Stage.eraseAll() can clear all of them at once. */
-    private static allPens = new WeakMap<IWorld, Set<ScratchPenClass>>();
+    private static allPens = new WeakMap<IWorld, WeakIterableSet<ScratchPenClass>>();
 
     px: number = 0;   // pen position in Scratch coords (centre origin, y up)
     py: number = 0;
@@ -107,7 +108,7 @@ export class ScratchPenClass extends ObjectClass {
         this.world = world;
         if (!world) return;
         let pens = ScratchPenClass.allPens.get(world);
-        if (!pens) ScratchPenClass.allPens.set(world, pens = new Set());
+        if (!pens) ScratchPenClass.allPens.set(world, pens = new WeakIterableSet());
         pens.add(this);
     }
 

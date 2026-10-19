@@ -58,18 +58,19 @@ export class ScratchGameClock {
     }
 
     /** Run one stage and then its sprites, with Java callbacks preserving order. */
-    runFrame(thread: Thread, registered: IActor[]) {
+    runFrame(thread: Thread, registered: IActor[] | { has(actor: IActor): boolean }) {
+        const includes = (actor: IActor) => Array.isArray(registered) ? registered.includes(actor) : registered.has(actor);
         const now = performance.now();
         const elapsed = (now - this.lastFrame) / 1000;
         this.lastFrame = now;
         const stage = activeScratchStage<IActor & { sprites: IActor[] }>();
-        if (!stage || !registered.includes(stage) || !scratchStagesRunning()) return;
+        if (!stage || !includes(stage) || !scratchStagesRunning()) return;
         let steps = this.frame(elapsed);
         const nextStep = () => {
             if (!steps--) return;
             this.advance();
             const runSprites = () => {
-                const sprites = stage.sprites.filter(sprite => registered.includes(sprite));
+                const sprites = stage.sprites.filter(includes);
                 let index = 0;
                 const nextSprite = () => {
                     const sprite = sprites[index++];

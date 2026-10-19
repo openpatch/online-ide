@@ -336,7 +336,8 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
 
     }
 
-    castParameterValuesAndPackEllipsis(parameterValues: (CodeSnippet | undefined)[], method: JavaMethod): CodeSnippet[] {
+    castParameterValuesAndPackEllipsis(parameterValues: (CodeSnippet | undefined)[], method: JavaMethod,
+        callRange?: IRange): CodeSnippet[] {
 
         let ellipsisType: JavaType | undefined;
         let castParameters: CodeSnippet[] = [];
@@ -358,14 +359,21 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
             push(this.compileCast(parameterValues[i]!, destinationType, "implicit"));
         }
 
-        if (!ellipsisType) return castParameters;
+        // The ellipsis parameter stands for every argument the call leaves off,
+        // so a call that passes none of them still has to hand over an empty
+        // array — without it the callee would read one value too few off the stack.
+        let ellipsisParameter = method.parameters[method.parameters.length - 1];
+        if (!ellipsisParameter?.isEllipsis) return castParameters;
 
         let methodParameterCountMinusOne = method.parameters.length - 1;
 
         let parametersBeforeEllipsis = castParameters.slice(0, methodParameterCountMinusOne);
         let ellipsisParameters = castParameters.slice(methodParameterCountMinusOne);
 
-        let ellipsisParameterSnippet = ParametersJoinedTemplate.applyToSnippet(method.parameters[methodParameterCountMinusOne].type, ellipsisParameters[0].range!, "[", ", ", "]", ...ellipsisParameters);
+        let ellipsisParameterSnippet = ParametersJoinedTemplate.applyToSnippet(
+            ellipsisParameter.type,
+            ellipsisParameters[0]?.range ?? callRange ?? EmptyRange.instance,
+            "[", ", ", "]", ...ellipsisParameters);
 
         parametersBeforeEllipsis.push(ellipsisParameterSnippet);
 
@@ -380,7 +388,7 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
             klassType = (<JavaClass>klassType).getMinimumConcreteGenericType(this.libraryTypestore);
         }
 
-        parameterValues = this.castParameterValuesAndPackEllipsis(parameterValues, method);
+        parameterValues = this.castParameterValuesAndPackEllipsis(parameterValues, method, node.range);
 
         let classHasOuterType: boolean = (klassType.outerType && !klassType.isStatic) ? true : false;
 
@@ -1403,7 +1411,7 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
             }
         }
 
-        parameterValueSnippets = this.castParameterValuesAndPackEllipsis(parameterValueSnippets, method);
+        parameterValueSnippets = this.castParameterValuesAndPackEllipsis(parameterValueSnippets, method, node.range);
         let returnParameterType = method.returnParameterType;
         if (returnParameterType == ThisType.this()) {
             returnParameterType = objectSnippet.type;
@@ -1631,7 +1639,19 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
             for (let i = 0; i < parameterTypes.length; i++) {
                 let fromType = parameterTypes[i];
 
-                if (!fromType) continue;
+                if (!fromType) {
+                    // Lambdas are compiled after overload selection. They can
+                    // only target a functional interface, never an ordinary
+                    // class overload with the same number of arguments.
+                    const parameter = method.parameters[Math.min(i, method.parameters.length - 1)];
+                    const target = parameter?.isEllipsis
+                        ? (<JavaArrayType>parameter.type).getElementType() : parameter?.type;
+                    if (!(target instanceof IJavaInterface) || !target.isFunctionalInterface()) {
+                        suitable = false;
+                        break;
+                    }
+                    continue;
+                }
 
                 let toType = ellipsisType;
                 if (!toType) {

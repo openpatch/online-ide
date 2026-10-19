@@ -43,6 +43,7 @@ import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 import { scratchGameClock } from './ScratchGameClock';
 import { ScratchMonitors } from './ScratchMonitors';
 import { SupplierInterface } from './SupplierInterface';
+import { clearScratchStampLayer } from './ScratchTiledRendering';
 
 /** Processing's default frame rate, which upstream never changes. */
 const SCRATCH_FRAMES_PER_SECOND = 60;
@@ -185,6 +186,8 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
 
     world!: IWorld;
     sprites: ScratchSpriteClass[] = [];
+    private pens = new Set<ScratchPenClass>();
+    private texts = new Set<ScratchTextClass>();
     runtime!: ScratchRuntimeManager;
 
     /** Read by sprites and pens via scratchLayerOf(); see ScratchLayers.ts. */
@@ -238,7 +241,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             }
             this.scratchLayers = createScratchLayers(world.app.stage);
             this.scratchLayers.root.visible = false;
-            world.mouseManager.internalMouseListeners.push(this);
+            this.scratchLayers.root.removeFromParent();
             this.runtime = ScratchRuntimeManager.forInterpreter(interpreter, world);
             // off screen until Window.setStage() or transitionToStage() shows it
 
@@ -275,14 +278,27 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      * its own values.
      */
     _activate(): void {
-        if (this.scratchLayers) this.scratchLayers.root.visible = true;
         if (!this.world) return;
+        if (this.scratchLayers) {
+            this.world.app.stage.addChild(this.scratchLayers.root);
+            this.scratchLayers.root.visible = true;
+        }
+        const listeners = this.world.mouseManager.internalMouseListeners;
+        if (!listeners.includes(this)) listeners.push(this);
+        for (const sprite of this.sprites) if (sprite.stage === this) sprite.syncWorldRegistration(true);
         this.applyBgColor();
         this._applyCamera();
     }
 
     _deactivate(): void {
-        if (this.scratchLayers) this.scratchLayers.root.visible = false;
+        if (this.scratchLayers) {
+            this.scratchLayers.root.visible = false;
+            this.scratchLayers.root.removeFromParent();
+        }
+        const listeners = this.world?.mouseManager.internalMouseListeners;
+        const index = listeners?.indexOf(this) ?? -1;
+        if (index >= 0) listeners!.splice(index, 1);
+        for (const sprite of this.sprites) if (sprite.stage === this) sprite.syncWorldRegistration(false);
         if (this.debugEnabled) this.clearDebugOverlay();
     }
 
@@ -442,6 +458,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     /** A stage-owned Pen simply needs a world to draw into. */
     _addPen(pen: ScratchPenClass) {
         if (!pen) return;
+        this.pens.add(pen);
         pen.stage = this;
         pen.attachToWorld(this.world);
     }
@@ -452,16 +469,19 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             if (callback) callback();
             return;
         }
+        this.texts.add(text);
         text.world = this.world;
         text.attachToStage(this);
         text._mj$addedToStage$void$Stage(t, callback, this);
     }
     _removeText(text: ScratchTextClass) {
         if (!text) return;
+        this.texts.delete(text);
         text._remove();
         if (text.stage === this) text.stage = undefined;
     }
     _removePen(pen: ScratchPenClass) {
+        this.pens.delete(pen);
         pen?._removedFromStage(this);
         if (pen) pen.stage = undefined;
     }
@@ -650,8 +670,13 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     // ---- misc ----
     _eraseAll() {
         ScratchPenClass.eraseAllLayers(this.world, this);
+        // Painted marks outlive their Pen, as pixels do on the desktop. Erase
+        // those too when an unowned pen has already been collected.
+        for (const marks of this.scratchLayers?.pen.children ?? []) {
+            if (marks instanceof PIXI.Graphics) marks.clear();
+        }
         for (const name of ["backgroundStamps", "foregroundStamps", "uiStamps"] as const) {
-            for (const child of this.scratchLayers?.[name]?.removeChildren() ?? []) child.destroy({ children: true });
+            clearScratchStampLayer(this.scratchLayers?.[name]);
         }
     }
 

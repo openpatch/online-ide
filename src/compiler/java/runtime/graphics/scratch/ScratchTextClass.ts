@@ -14,6 +14,7 @@ import { TextStyle, TextStyleEnum } from "./TextStyleEnum";
 import { SRC } from "./ScratchLibraryComments";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 import type { ScratchSpriteClass } from './ScratchSpriteClass';
+import { WeakIterableSet } from '../WeakIterableSet';
 
 /** Font shipped with the Scratch library (see src/development/scratchAssetsGenerator.js). */
 const DEFAULT_FONT = "UbuntuMono, monospace";
@@ -160,7 +161,7 @@ export class ScratchTextClass extends ObjectClass {
     private container?: PIXI.Container;
     private hideTimeout?: any;
     private sprite?: ScratchSpriteClass;
-    private static attached = new WeakMap<IWorld, Set<ScratchTextClass>>();
+    private static attached = new WeakMap<IWorld, WeakIterableSet<ScratchTextClass>>();
 
     _cj$_constructor_$Text$Sprite(t: Thread, callback: CallbackParameter, sprite: ScratchSpriteClass) {
         this.sprite = sprite;
@@ -219,7 +220,7 @@ export class ScratchTextClass extends ObjectClass {
             this.stage = this.sprite.stage;
             if (this.world) {
                 let texts = ScratchTextClass.attached.get(this.world);
-                if (!texts) ScratchTextClass.attached.set(this.world, texts = new Set());
+                if (!texts) ScratchTextClass.attached.set(this.world, texts = new WeakIterableSet());
                 texts.add(this);
             }
         }

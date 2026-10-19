@@ -2386,6 +2386,14 @@ export class SRC {
         "de": "Blendet über Schwarz zur angegebenen Bühne über",
         "en": "Fades through black to the given stage",
     });
+    static windowIsTransitioningComment = () => lm({
+        "de": "Gibt an, ob ein Bühnenwechsel noch läuft, einschließlich der Erstellung der neuen Bühne",
+        "en": "Whether a stage transition is in progress, including creation of the destination stage",
+    });
+    static windowTransitionToStageSupplierComment = () => lm({
+        "de": "Blendet zu Schwarz, erstellt dann die neue Bühne und blendet sie ein; während eines Wechsels wird der Supplier nicht aufgerufen",
+        "en": "Fades to black, creates the next stage, then fades it in; the supplier is not called while another transition is running",
+    });
     static windowSetDebugComment = () => lm({
         "de": "Schaltet die Ausgabe von debug() ein oder aus",
         "en": "Turns what debug() prints on or off",

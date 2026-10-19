@@ -7,6 +7,7 @@ import { BiConsumerInterface } from "../functional/BiConsumerInterface.ts";
 import { ObjectClass, ObjectClassOrNull, StringClass } from "../javalang/ObjectClassStringClass.ts";
 import { ArrayListClass } from "./ArrayListClass.ts";
 import { HashSetClass } from "./HashSetClass.ts";
+import { internalHash } from "./internalHash.ts";
 
 type Value = {
     k: ObjectClass | null;
@@ -61,7 +62,7 @@ export class HashMapClass extends ObjectClass {
         if (key == null) {
             return (typeof this.map.get(null)) !== "undefined";
         } else {
-            let hashCode = key.__internalHashCode();
+            let hashCode = internalHash(key);
             return (typeof this.map.get(hashCode)) !== "undefined";
         }
     }
@@ -87,7 +88,7 @@ export class HashMapClass extends ObjectClass {
         if (key == null) {
             return this.map.get(null)?.v || null;
         } else {
-            let hashCode = key.__internalHashCode();
+            let hashCode = internalHash(key);
             return this.map.get(hashCode)?.v || null;
         }
     }
@@ -98,7 +99,7 @@ export class HashMapClass extends ObjectClass {
             this.map.set(null, { k: null, v: value });
             return oldValue;
         } else {
-            let hashCode = key.__internalHashCode();
+            let hashCode = internalHash(key);
             let oldValue = this.map.get(hashCode);
             this.map.set(hashCode, { k: key, v: value });
             return oldValue;
@@ -204,7 +205,7 @@ export class HashMapClass extends ObjectClass {
         if (key == null) {
             value = this.map.get(null);
         } else {
-            hashCode = key.__internalHashCode();
+            hashCode = internalHash(key);
             value = this.map.get(hashCode);
         }
 
@@ -225,7 +226,7 @@ export class HashMapClass extends ObjectClass {
         if (key == null) {
             value1 = this.map.get(null);
         } else {
-            hashCode = key.__internalHashCode();
+            hashCode = internalHash(key);
             value1 = this.map.get(hashCode);
         }
 

@@ -8,6 +8,7 @@ import { InternalMouseListener, MouseEventKind } from "../MouseManager2D";
 import { KeyCodeEnum } from "./KeyCodeEnum";
 import { MouseCodeEnum } from "./MouseCodeEnum";
 import { activeScratchStage, isScratchStageActive } from "./ScratchStages";
+import { WeakIterableSet } from '../WeakIterableSet';
 
 /**
  * Any Stage/Sprite can receive Scratch events. These are the interpreter-aware
@@ -42,9 +43,10 @@ type ListenerKind = "iReceive" | "keyPressed" | "keyReleased" | "clicked" | "mou
  * Java. Created by the Stage; sprites/stages register themselves via register().
  */
 export class ScratchRuntimeManager implements InternalMouseListener {
-    private lists: Record<ListenerKind, IScratchEventReceiver[]> = {
-        iReceive: [], keyPressed: [], keyReleased: [], clicked: [], mouseClicked: [], backdropSwitches: [],
-        mouseMoved: [], mouseWheelMoved: [],
+    private lists: Record<ListenerKind, WeakIterableSet<IScratchEventReceiver>> = {
+        iReceive: new WeakIterableSet(), keyPressed: new WeakIterableSet(), keyReleased: new WeakIterableSet(),
+        clicked: new WeakIterableSet(), mouseClicked: new WeakIterableSet(), backdropSwitches: new WeakIterableSet(),
+        mouseMoved: new WeakIterableSet(), mouseWheelMoved: new WeakIterableSet(),
     };
 
     private keyPressedListener: KeyPressedListener = (key) => this.onKeyPressed(key);
@@ -70,7 +72,7 @@ export class ScratchRuntimeManager implements InternalMouseListener {
      * straight through: positive when the wheel is rolled down (toward the user).
      */
     private wheelListener = (e: WheelEvent) => {
-        const list = this.lists.mouseWheelMoved.filter(o => this.receivesInput(o));
+        const list = [...this.lists.mouseWheelMoved].filter(o => this.receivesInput(o));
         if (list.length === 0 || e.deltaY === 0) return;
         const steps = e.deltaY > 0 ? 1 : -1;
         const t = this.interpreter.scheduler.createThread("scratch whenMouseWheelMoved");
@@ -116,14 +118,13 @@ export class ScratchRuntimeManager implements InternalMouseListener {
     /** Register an object for exactly the hooks it overrides. */
     register(obj: IScratchEventReceiver, overrides: Partial<Record<ListenerKind, boolean>>) {
         for (const kind of Object.keys(overrides) as ListenerKind[]) {
-            if (overrides[kind] && this.lists[kind].indexOf(obj) < 0) this.lists[kind].push(obj);
+            if (overrides[kind]) this.lists[kind].add(obj);
         }
     }
 
     unregister(obj: IScratchEventReceiver) {
         for (const kind of Object.keys(this.lists) as ListenerKind[]) {
-            const i = this.lists[kind].indexOf(obj);
-            if (i >= 0) this.lists[kind].splice(i, 1);
+            this.lists[kind].delete(obj);
         }
     }
 
@@ -147,7 +148,7 @@ export class ScratchRuntimeManager implements InternalMouseListener {
      * prints as "[object Object]" — so normalise first.
      */
     broadcast(message: string | StringClass, sender?: object) {
-        const list = this.lists.iReceive.filter(o => this.belongsTo(o, sender));
+        const list = [...this.lists.iReceive].filter(o => this.belongsTo(o, sender));
         if (list.length === 0) return;
         const t = this.interpreter.scheduler.createThread("scratch whenIReceive");
         const msg = message instanceof StringClass ? message : new StringClass(String(message));
@@ -157,7 +158,7 @@ export class ScratchRuntimeManager implements InternalMouseListener {
 
     /** Notify every receiver on `sender` that overrides whenBackdropSwitches(String). */
     backdropSwitch(name: string, sender?: object) {
-        const list = this.lists.backdropSwitches.filter(o => this.belongsTo(o, sender));
+        const list = [...this.lists.backdropSwitches].filter(o => this.belongsTo(o, sender));
         if (list.length === 0) return;
         const t = this.interpreter.scheduler.createThread("scratch whenBackdropSwitches");
         const msg = new StringClass(name);
@@ -188,7 +189,7 @@ export class ScratchRuntimeManager implements InternalMouseListener {
 
     onKeyPressed(browserKey: string) {
         if (this.stageIsAsking()) return;
-        const list = this.lists.keyPressed.filter(o => this.receivesInput(o));
+        const list = [...this.lists.keyPressed].filter(o => this.receivesInput(o));
         if (list.length === 0) return;
         const code = this.keyCodeFor(browserKey);
         if (!code) return;
@@ -199,7 +200,7 @@ export class ScratchRuntimeManager implements InternalMouseListener {
 
     onKeyReleased(browserKey: string) {
         if (this.stageIsAsking()) return;
-        const list = this.lists.keyReleased.filter(o => this.receivesInput(o));
+        const list = [...this.lists.keyReleased].filter(o => this.receivesInput(o));
         if (list.length === 0) return;
         const code = this.keyCodeFor(browserKey);
         if (!code) return;
@@ -212,8 +213,8 @@ export class ScratchRuntimeManager implements InternalMouseListener {
     onMouseEvent(kind: MouseEventKind, x: number, y: number): void {
         if (kind === "mousemove") { this.fireMouseMoved(x, y); return; }
         if (kind !== "mouseup") return;
-        const clicked = this.lists.clicked.filter(o => this.receivesInput(o));
-        const mouseClicked = this.lists.mouseClicked.filter(o => this.receivesInput(o));
+        const clicked = [...this.lists.clicked].filter(o => this.receivesInput(o));
+        const mouseClicked = [...this.lists.mouseClicked].filter(o => this.receivesInput(o));
         if (clicked.length === 0 && mouseClicked.length === 0) return;
 
         const t = this.interpreter.scheduler.createThread("scratch click");
@@ -227,7 +228,7 @@ export class ScratchRuntimeManager implements InternalMouseListener {
 
     /** whenMouseMoved receives Scratch coordinates (centre origin, y up). */
     private fireMouseMoved(screenX: number, screenY: number) {
-        const list = this.lists.mouseMoved.filter(o => this.receivesInput(o));
+        const list = [...this.lists.mouseMoved].filter(o => this.receivesInput(o));
         if (list.length === 0) return;
         const x = screenX - this.world.width / 2;
         const y = this.world.height / 2 - screenY;

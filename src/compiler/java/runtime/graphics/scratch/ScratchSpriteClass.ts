@@ -11,7 +11,7 @@ import { ObjectClass, StringClass } from "../../system/javalang/ObjectClassStrin
 import { ShapeClass } from "../ShapeClass";
 import { KeyCodeEnum } from "./KeyCodeEnum";
 import { Layer, LayerEnum } from "./LayerEnum";
-import { ScratchLayerName, scratchLayerOf, spriteLayerOf } from "./ScratchLayers";
+import { ScratchLayerName, ScratchLayers, scratchLayerOf, spriteLayerOf } from "./ScratchLayers";
 import { activeScratchStage, isScratchStageActive, scratchStagesRunning } from "./ScratchStages";
 import { MouseCodeEnum } from "./MouseCodeEnum";
 import { RotationStyle, RotationStyleEnum } from "./RotationStyleEnum";
@@ -41,6 +41,7 @@ type Costume = { name: string; texture: PIXI.Texture };
  * ScratchStageClass, which imports this module in turn.
  */
 type ScratchStageLike = {
+    scratchLayers?: ScratchLayers;
     _broadcast(message: StringClass): void;
     _mj$broadcast$void$String(t: Thread, callback: CallbackParameter, message: StringClass): void;
     _ask(question: string): void;
@@ -600,13 +601,25 @@ export class ScratchSpriteClass extends ShapeClass {
         if (this.stage === stage) return;
         this.stage = stage;
         if (this.penObj) { this.penObj.stage = stage; this.penObj.attachToWorld(this.world as any); }
-        const shapes = this.world?.shapesWhichBelongToNoGroup;
-        if (shapes && !shapes.includes(this)) shapes.push(this);
+        this.syncWorldRegistration(!stage.scratchLayers || isScratchStageActive(stage as any));
         const layer = spriteLayerOf(this, this.isUI());
         if (layer && this.container && !this.container.destroyed) layer.addChild(this.container);
         if (this.speechBubble && !this.speechBubble.destroyed) layer?.addChild(this.speechBubble);
         this.spriteText?.attachToStage(stage as object);
         this.removing = false;
+    }
+
+    /** Hidden stages own their sprites without leaving roots in the World. */
+    syncWorldRegistration(registered: boolean): void {
+        const shapes = this.world?.shapesWhichBelongToNoGroup;
+        if (registered) {
+            if (shapes && !shapes.includes(this)) shapes.push(this);
+        } else {
+            for (const list of [shapes, this.world?.shapesNotAffectedByWorldTransforms]) {
+                const index = list?.indexOf(this) ?? -1;
+                if (index >= 0) list!.splice(index, 1);
+            }
+        }
     }
 
     /** The stage that answers for this sprite: its own, or the one on screen. */
@@ -1156,6 +1169,43 @@ export class ScratchSpriteClass extends ShapeClass {
         if (!this.hitboxEnabled || !other.hitboxEnabled) return false;
         return this._collidesWith(other);
     }
+
+    /**
+     * A scratch sprite's bounding box is its collision outline, not what its
+     * container happens to render. A Tiled map's wall has a hitbox and no
+     * costume at all, and its empty container's bounds are a single point,
+     * so the pre-check would wave every collision through as a miss.
+     */
+    override hasOverlappingBoundingBoxWith(otherShape: ShapeClass, bb?: PIXI.Bounds): boolean {
+        if (bb) return super.hasOverlappingBoundingBoxWith(otherShape, bb);
+        const mine = this.hitboxWorldBounds();
+        const other = otherShape instanceof ScratchSpriteClass
+            ? otherShape.hitboxWorldBounds()
+            : otherShape.container.getBounds();
+        return !(mine.left > other.right || other.left > mine.right
+            || mine.top > other.bottom || other.top > mine.bottom);
+    }
+
+    /** The world-space bounds of the sprite's collision outline. */
+    private collisionBounds?: {
+        polygon: { x: number, y: number }[];
+        left: number, top: number, right: number, bottom: number;
+    };
+
+    private hitboxWorldBounds() {
+        this.transformHitPolygon();
+        const polygon = this.hitPolygonTransformed?.length ? this.hitPolygonTransformed : this.hitPolygonInitial;
+        if (!polygon?.length) return this.container.getBounds();
+        if (this.collisionBounds?.polygon === polygon) return this.collisionBounds;
+        let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+        for (const point of polygon) {
+            left = Math.min(left, point.x);
+            right = Math.max(right, point.x);
+            top = Math.min(top, point.y);
+            bottom = Math.max(bottom, point.y);
+        }
+        return this.collisionBounds = { polygon, left, top, right, bottom };
+    }
     /**
      * Upstream asks the hitbox whether it reaches any of the four border strips
      * the stage keeps just outside its edges, so a sprite counts as touching the
@@ -1495,7 +1545,7 @@ export class ScratchSpriteClass extends ShapeClass {
         this.shaders = original.shaders?.copyFor(filter => this.applyShader(filter));
         // Object's synchronization state belongs to this object alone.
         for (const key of ['runnableOrWaitingThreads', 'threadHoldingLockToThisObject', 'reentranceCounter']) delete this[key];
-        this.world.shapesWhichBelongToNoGroup.push(this);
+        this.syncWorldRegistration(!this.stage?.scratchLayers || isScratchStageActive(this.stage as any));
         (spriteLayerOf(this, this.isUI()) ?? this.world.app.stage).addChild(this.container);
         if (this.currentCostume >= 0) this._applyCostumeIndex(this.currentCostume);
         this.container.visible = original.container.visible;

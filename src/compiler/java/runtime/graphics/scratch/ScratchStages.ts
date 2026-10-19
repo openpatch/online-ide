@@ -30,10 +30,17 @@ export interface IScratchStageLike {
 let registryWorld: IWorld | undefined;
 let active: IScratchStageLike | undefined;
 
+/** A factory may finish later while interpreted constructors load their assets. */
+export type ScratchStageFactory = (ready: (stage: IScratchStageLike) => void,
+    failed: () => void) => void | (() => void);
+
 type Transition = {
-    target: IScratchStageLike;
+    target?: IScratchStageLike;
+    factory?: ScratchStageFactory;
+    cancelFactory?: () => void;
+    detachStop?: () => void;
     /** "out" fades the old stage away, "in" fades the new one up. */
-    phase: "out" | "in";
+    phase: "out" | "creating" | "in";
     start: number;
     duration: number;
     overlay: PIXI.Graphics;
@@ -125,7 +132,12 @@ export function isScratchStageActive(stage: IScratchStageLike | undefined): bool
  * transition, so the picture that fades away is frozen.
  */
 export function scratchStagesRunning(): boolean {
-    return transition?.phase !== "out";
+    return !transition || transition.phase === "in";
+}
+
+/** Whether a transition is still fading, upstream's Window.isTransitioning(). */
+export function scratchStageTransitioning(): boolean {
+    return transition !== undefined;
 }
 
 export function setActiveScratchStage(stage: IScratchStageLike | undefined): void {
@@ -146,7 +158,7 @@ export function setActiveScratchStage(stage: IScratchStageLike | undefined): voi
  * certainly not what the parameter name suggests, but a program has to take the
  * same time in both places, so the formula is copied as it stands.
  */
-export function transitionToScratchStage(stage: IScratchStageLike | undefined, duration: number): void {
+export function transitionToScratchStage(stage: IScratchStageLike | ScratchStageFactory | undefined, duration: number): void {
     // upstream only transitions while the applet is in its RUNNING state, which
     // rules out starting a second transition on top of a running one
     if (!stage || transition || !registryWorld || stage === active) return;
@@ -161,9 +173,17 @@ export function transitionToScratchStage(stage: IScratchStageLike | undefined, d
 
     const tick = () => stepTransition();
     transition = {
-        target: stage, phase: "out", start: performance.now(),
+        target: typeof stage === "function" ? undefined : stage,
+        factory: typeof stage === "function" ? stage : undefined,
+        phase: "out", start: performance.now(),
         duration: Math.max(1, duration), overlay, tick, world,
     };
+    const events = world.interpreter?.eventManager;
+    if (events) {
+        const stop = () => endTransition(false);
+        events.once("stop", stop);
+        transition.detachStop = () => events.off(stop);
+    }
     app.ticker.add(tick);
 }
 
@@ -187,9 +207,38 @@ function stepTransition() {
             return;
         }
         tr.overlay.alpha = 1;
-        tr.phase = "in";
-        tr.start = performance.now();
-        setActiveScratchStage(tr.target);
+        if (tr.factory) {
+            // Leave a fully black frame on screen before a constructor starts.
+            tr.phase = "creating";
+        } else {
+            tr.phase = "in";
+            tr.start = performance.now();
+            setActiveScratchStage(tr.target);
+        }
+        return;
+    }
+    if (tr.phase === "creating") {
+        const factory = tr.factory;
+        tr.factory = undefined;
+        const ready = (stage: IScratchStageLike) => {
+            if (transition !== tr || tr.phase !== "creating") return;
+            tr.target = stage;
+            tr.cancelFactory = undefined;
+            setActiveScratchStage(stage);
+            tr.phase = "in";
+            tr.start = performance.now();
+        };
+        if (factory) {
+            try {
+                const cancel = factory(ready, () => {
+                    if (transition === tr) endTransition(false);
+                });
+                if (transition === tr && tr.phase === "creating") tr.cancelFactory = cancel || undefined;
+            } catch (error) {
+                endTransition(false);
+                throw error;
+            }
+        } else if (tr.target) ready(tr.target);
         return;
     }
     if (amount < 1) {
@@ -204,6 +253,8 @@ function endTransition(switchNow: boolean) {
     const tr = transition;
     transition = undefined;
     if (!tr) return;
+    tr.detachStop?.();
+    tr.cancelFactory?.();
     if (switchNow) setActiveScratchStage(tr.target);
     try {
         tr.world.app?.ticker?.remove(tr.tick);

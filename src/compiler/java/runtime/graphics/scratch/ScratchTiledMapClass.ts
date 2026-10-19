@@ -18,10 +18,13 @@ import { JavaClass } from "../../../types/JavaClass";
 import type { StaticNonPrimitiveType } from "../../../types/StaticNonPrimitiveType";
 import { ArrayListClass } from "../../system/collections/ArrayListClass";
 import { ScratchSpriteClass } from "./ScratchSpriteClass";
+import { ScratchTiledStamp, tiledTexture } from "./ScratchTiledRendering";
 
 const children = (element: Element, tag: string) => Array.from(element.children).filter(child => child.tagName === tag);
 const child = (element: Element, tag: string) => children(element, tag)[0];
 const number = (element: Element, key: string) => Number(element.getAttribute(key) ?? 0);
+// Match desktop TiledMap.GID_MASK: even orthogonal maps can retain bit 29.
+const GID_MASK = 0x0fffffff;
 
 /** Resolve TSX and image paths relative to the file that names them. */
 export function tiledPath(file: string, relative: string): string {
@@ -66,7 +69,7 @@ export function tiledObject(element: Element): ScratchMapObjectClass {
 }
 
 type Tile = { width: number, height: number, image: string, x: number, y: number, collisions: ScratchMapObjectClass[] };
-type TileLayer = { width: number, height: number, data: number[] };
+type TileLayer = { width: number, height: number, data: number[], paths?: string[], stamps?: ScratchTiledStamp[] };
 
 /** Finite orthogonal TMX maps, supplied as workspace assets or fetched by URL. */
 export class ScratchTiledMapClass extends ObjectClass {
@@ -228,12 +231,12 @@ export class ScratchTiledMapClass extends ObjectClass {
         const layer = this.layer(name);
         return column < 0 || row < 0 || column >= layer.width || row >= layer.height ? 0 : layer.data[row * layer.width + column];
     }
-    _getTileId(name: string, column: number, row: number): number { return this.raw(name, column, row) & 0x1fffffff; }
+    _getTileId(name: string, column: number, row: number): number { return this.raw(name, column, row) & GID_MASK; }
     _getTileCollisionShapes(id: number): ScratchShapeClass[] {
         return (this.tiles.get(id)?.collisions ?? []).map(object => object._getShape()._rotate(object.rotation, 0, 0)._translate(object.x, object.y)._scale(1, -1));
     }
     _getCellCollisionShapes(name: string, column: number, row: number): ScratchShapeClass[] {
-        const raw = this.raw(name, column, row), id = raw & 0x1fffffff;
+        const raw = this.raw(name, column, row), id = raw & GID_MASK;
         const tile = this.tiles.get(id);
         if (!tile) return [];
         return this._getTileCollisionShapes(id).map(shape => {
@@ -319,14 +322,22 @@ export class ScratchTiledMapClass extends ObjectClass {
         const stage = this.stage;
         if (!stage) throw new RuntimeExceptionClass("This map has no stage. Use new TiledMap(path, stage) to stamp or spawn.");
         const layer = this.layer(name);
-        const paths = layer.data.map(raw => this.tiles.get(raw & 0x1fffffff)?.image).filter((p): p is string => !!p);
+        const paths = layer.paths ??= [...new Set(layer.data.map(raw => this.tiles.get(raw & GID_MASK)?.image)
+            .filter((p): p is string => !!p))];
         ScratchCostumes.whenLoaded(t, paths, callback, () => {
+            const stamps = layer.stamps ??= [];
+            const reusable = stamps.find(stamp => !stamp.parent && !stamp.destroyed);
+            const target = stage.scratchLayers[foreground ? "foregroundStamps" : "backgroundStamps"];
+            if (reusable) {
+                target.addChild(reusable);
+                return;
+            }
+            const stamp = new ScratchTiledStamp();
             for (let i = 0; i < layer.data.length; i++) {
-                const raw = layer.data[i], tile = this.tiles.get(raw & 0x1fffffff);
+                const raw = layer.data[i], tile = this.tiles.get(raw & GID_MASK);
                 if (!tile) continue;
                 const image = ScratchCostumes.getTexture(tile.image)!;
-                const texture = new PIXI.Texture({ source: image.source,
-                    frame: new PIXI.Rectangle(image.frame.x + tile.x, image.frame.y + tile.y, tile.width, tile.height) });
+                const texture = tiledTexture(image, tile.x, tile.y, tile.width, tile.height);
                 const sprite = new PIXI.Sprite(texture);
                 sprite.anchor.set(0.5);
                 const horizontal = raw & 0x80000000 ? -1 : 1, vertical = raw & 0x40000000 ? -1 : 1;
@@ -336,8 +347,10 @@ export class ScratchTiledMapClass extends ObjectClass {
                     diagonal ? horizontal * sy : 0, diagonal ? 0 : vertical * sy,
                     stage.world.width / 2 + (i % layer.width) * this.tileWidth + tile.width / 2,
                     stage.world.height / 2 + Math.floor(i / layer.width) * this.tileHeight + tile.height / 2));
-                stage.scratchLayers[foreground ? "foregroundStamps" : "backgroundStamps"].addChild(sprite);
+                stamp.addChild(sprite);
             }
+            stamps.push(stamp);
+            target.addChild(stamp);
         });
     }
     _mj$stampLayerToForeground$void$string(t: Thread, callback: CallbackParameter, name: string) { this.stamp(t, callback, name, true); }

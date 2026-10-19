@@ -1,6 +1,6 @@
 {
-  "desktopVersion": "6.2.1",
-  "browserVersion": "6.2.1-browser.2",
+  "desktopVersion": "6.3.0",
+  "browserVersion": "6.3.0-browser.1",
   "examples": [
     {
       "id": "AnimatedSprite/addAnimation#0",
@@ -4570,6 +4570,18 @@
         {
           "name": "Example.java",
           "source": "void main() {\n  Window myWindow = new Window(600, 240);\n  Stage first = new Stage();\n  first.setColor(140);\n  Stage second = new Stage();\n  second.setColor(20);\n  myWindow.setStage(first);\n  first.wait(1500);\n  // The same as switching, but fading over the given number of milliseconds.\n  myWindow.transitionToStage(second, 1000);\n}\n"
+        }
+      ],
+      "expectedDiagnostics": []
+    },
+    {
+      "id": "Window/transitionToStage#1",
+      "member": "Window/transitionToStage",
+      "runnable": true,
+      "files": [
+        {
+          "name": "Example.java",
+          "source": "void main() {\n  Window window = new Window(600, 240);\n  Stage first = new Stage();\n  first.setColor(140);\n  window.setStage(first);\n  first.wait(1500);\n\n  // Build the next stage only when the screen is black.\n  // Further requests during the fade never call their supplier.\n  window.transitionToStage(() -> {\n    Stage next = new Stage();\n    next.setColor(20);\n    return next;\n  }, 1000);\n}\n"
         }
       ],
       "expectedDiagnostics": []
