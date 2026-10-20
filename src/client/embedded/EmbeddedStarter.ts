@@ -26,6 +26,7 @@ import spritesheetjson from '/assets/graphics/spritesheet.json.txt';
 import spritesheetpng from '/assets/graphics/spritesheet.png';
 import { PixiSpritesheetData } from "../spritemanager/PixiSpritesheetData.js";
 import * as monaco from 'monaco-editor'
+import { assignScriptTitles } from './ScriptTitles';
 
 declare global {
     // Note the capital "W"
@@ -151,6 +152,7 @@ export class EmbeddedStarter {
         jQuery('.java-online').addClass('notranslate').each((index: number, element: HTMLElement) => {
             let $div = jQuery(element);
             let scriptList: JOScript[] = [];
+            let hints: boolean[] = [];
 
             $div.find('script').each((index: number, element: HTMLElement) => {
                 let $script = jQuery(element);
@@ -166,10 +168,6 @@ export class EmbeddedStarter {
                 };
 
                 const dataType = $script.data('type');
-                if (dataType == "hint" && !script.title.endsWith(".md")) {
-                    script.title += ".md";
-                }
-
                 script.asset = dataType == "image" || dataType == "asset";
 
                 if($script.data('online-ide')){
@@ -183,7 +181,12 @@ export class EmbeddedStarter {
                 }
                 script.text = this.eraseDokuwikiSearchMarkup(script.text);
                 scriptList.push(script);
+                hints.push(dataType == "hint");
             });
+
+            const titled = scriptList.map((script, index) => ({ title: script.title, isHint: hints[index] }));
+            assignScriptTitles(titled);
+            scriptList.forEach((script, index) => script.title = titled[index].title);
 
             divsWithScriptLists.push([$div, scriptList])
 
