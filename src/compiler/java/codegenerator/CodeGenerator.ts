@@ -229,7 +229,7 @@ export class CodeGenerator extends InnerClassCodeGenerator {
 
     compileEnumValueConstruction(javaEnum: JavaEnum, enumDeclNode: ASTEnumDefinitionNode, staticFieldSnippets: CodeSnippet[]) {
 
-        staticFieldSnippets.push(new StringCodeSnippet(`${Helpers.classes}["${javaEnum.identifier}"].values = [];\n`));
+        staticFieldSnippets.push(new StringCodeSnippet(`${Helpers.classes}["${javaEnum.pathAndIdentifierAsDotSeparatedString}"].values = [];\n`));
 
         let parameterlessConstructor = javaEnum.methods.find(m => m.isConstructor && m.parameters.length == 0);
 
@@ -256,10 +256,10 @@ export class CodeGenerator extends InnerClassCodeGenerator {
                 (<CodeSnippetContainer>callConstructorSnippet).ensureFinalValueIsOnStack();
                 (<CodeSnippetContainer>callConstructorSnippet).addNextStepMark();
             } else {
-                callConstructorSnippet = new StringCodeSnippet(`new ${Helpers.classes}["${javaEnum.identifier}"]("${valueNode.identifier}", ${enumValueIndex})`);
+                callConstructorSnippet = new StringCodeSnippet(`new ${Helpers.classes}["${javaEnum.pathAndIdentifierAsDotSeparatedString}"]("${valueNode.identifier}", ${enumValueIndex})`);
             }
             let field = javaEnum.fields.find(f => f.identifier == valueNode.identifier);
-            let buildEnumValueSnippet = new OneParameterTemplate(`${Helpers.classes}["${javaEnum.identifier}"].values.push(${Helpers.classes}["${javaEnum.identifier}"]["${field.getInternalName()}"] = §1);\n`).applyToSnippet(javaEnum, valueNode.range, callConstructorSnippet);
+            let buildEnumValueSnippet = new OneParameterTemplate(`${Helpers.classes}["${javaEnum.pathAndIdentifierAsDotSeparatedString}"].values.push(${Helpers.classes}["${javaEnum.pathAndIdentifierAsDotSeparatedString}"]["${field.getInternalName()}"] = §1);\n`).applyToSnippet(javaEnum, valueNode.range, callConstructorSnippet);
             staticFieldSnippets.push(buildEnumValueSnippet);
 
             enumValueIndex++;

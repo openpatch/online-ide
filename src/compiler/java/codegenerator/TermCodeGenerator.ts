@@ -875,7 +875,7 @@ export abstract class TermCodeGenerator extends BinopCastCodeGenerator {
         let snippet: CodeSnippet;
 
         if (field._isStatic) {
-            let classIdentifier = field.classEnum.identifier;
+            let classIdentifier = field.classEnum.pathAndIdentifierAsDotSeparatedString;
             snippet = new StringCodeSnippet(`${Helpers.classes}["${classIdentifier}"].${fieldName}`, range, type);
         } else {
             let outerClassPraefix: string = "";

@@ -9,6 +9,7 @@ import { Error } from "../common/Error.ts";
 import { KlassObjectRegistry } from "../common/interpreter/StepFunction.ts";
 import { EmptyRange } from "../common/range/Range.ts";
 import { Executable } from "../common/Executable.ts";
+import type { TypeScope } from "./parser/AST.ts";
 
 
 export class JavaExecutable extends Executable {
@@ -36,12 +37,18 @@ export class JavaExecutable extends Executable {
 
         this.staticInitializationSequence = [];
 
-        for (const module of this.moduleManager.getModules().filter(m => !m.hasErrors())) {
-            if (!module.ast) continue;
-            for (const cdef of module.ast.innerTypes) {
+        // nested types (e.g. an enum inside a class) have static initializers, too
+        const gather = (typeScope: TypeScope) => {
+            for (const cdef of typeScope.innerTypes) {
                 if (cdef.resolvedType)
                     classesToInitialize.push(cdef.resolvedType);
+                gather(cdef);
             }
+        }
+
+        for (const module of this.moduleManager.getModules().filter(m => !m.hasErrors())) {
+            if (!module.ast) continue;
+            gather(module.ast);
         }
 
         let done: boolean = false;

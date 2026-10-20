@@ -55,6 +55,8 @@ export class JavaTypeStore {
 
                 if (i < pathParts.length - 1) {
                     let package1 = typeMap.get(part);
+                    // an inner type like A.B is found through the innerTypes of its outer type A
+                    if (package1 && !(package1 instanceof JavaPackage)) return;
                     if (!package1) {
                         package1 = new JavaPackage(part, type.identifierRange, type.module, currentPackage);
                         typeMap.set(part, package1);
