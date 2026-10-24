@@ -5,9 +5,12 @@ import { SRC } from "./ScratchLibraryComments";
 import { resetScratchGameClock, scratchGameClock } from './ScratchGameClock';
 
 /**
- * Timing helper, mirroring org.openpatch.scratch.Timer.
- * `millis()` returns milliseconds since the program (Stage) started; the Stage
- * constructor calls ScratchTimerClass.resetProgramStart() so it restarts per run.
+ * Timing helper, mirroring org.openpatch.scratch.Timer (7.0). All durations are
+ * seconds of game time; the game clock drives them, and the Stage constructor
+ * calls ScratchTimerClass.resetProgramStart() so the clock restarts per run.
+ *
+ * The instance methods follow the desktop's Timer exactly: a per-instance start,
+ * NaN sentinels for the phase timers and the same 1e-9 epsilon.
  */
 export class ScratchTimerClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
@@ -15,14 +18,12 @@ export class ScratchTimerClass extends ObjectClass {
 
         { type: "method", signature: "Timer()", native: ScratchTimerClass.prototype._constructor, comment: SRC.timerConstructorComment },
         { type: "method", signature: "void reset()", native: ScratchTimerClass.prototype._reset, comment: SRC.timerResetComment },
-        { type: "method", signature: "static int millis()", native: ScratchTimerClass._millis, comment: SRC.timerMillisComment },
-        { type: "method", signature: "boolean everyMillis(int millis)", native: ScratchTimerClass.prototype._everyMillis, comment: SRC.timerEveryMillisComment },
-        { type: "method", signature: "boolean forMillis(int millis)", native: ScratchTimerClass.prototype._forMillis, comment: SRC.timerForMillisComment },
-        { type: "method", signature: "boolean afterMillis(int millis)", native: ScratchTimerClass.prototype._afterMillis, comment: SRC.timerAfterMillisComment },
-        { type: "method", signature: "boolean intervalMillis(int millis)", native: ScratchTimerClass.prototype._intervalMillis1, comment: SRC.timerIntervalMillisComment },
-        { type: "method", signature: "boolean intervalMillis(int millis, boolean skipFirst)", native: ScratchTimerClass.prototype._intervalMillis2, comment: SRC.timerIntervalMillis2Comment },
-        { type: "method", signature: "boolean intervalMillis(int millis1, int millis2)", native: ScratchTimerClass.prototype._intervalMillis3, comment: SRC.timerIntervalMillis3Comment },
-        { type: "method", signature: "boolean intervalMillis(int millis1, int millis2, boolean skipFirst)", native: ScratchTimerClass.prototype._intervalMillis4, comment: SRC.timerIntervalMillis4Comment },
+        { type: "method", signature: "double getSeconds()", native: ScratchTimerClass.prototype._getSeconds, comment: SRC.timerGetSecondsComment },
+        { type: "method", signature: "boolean every(double seconds)", native: ScratchTimerClass.prototype._every, comment: SRC.timerEveryComment },
+        { type: "method", signature: "boolean during(double seconds)", native: ScratchTimerClass.prototype._during, comment: SRC.timerDuringComment },
+        { type: "method", signature: "boolean after(double seconds)", native: ScratchTimerClass.prototype._after, comment: SRC.timerAfterComment },
+        { type: "method", signature: "boolean interval(double seconds)", native: ScratchTimerClass.prototype._interval1, comment: SRC.timerIntervalComment },
+        { type: "method", signature: "boolean interval(double on, double off)", native: ScratchTimerClass.prototype._interval2, comment: SRC.timerInterval2Comment },
     ];
 
     static type: NonPrimitiveType;
@@ -34,69 +35,71 @@ export class ScratchTimerClass extends ObjectClass {
         resetScratchGameClock();
     }
 
+    /** Internal: milliseconds of game time; not declared to Java any more. */
     static _millis(): number {
         return Math.trunc(scratchGameClock().millis);
     }
 
-    private startMillisEvery = -1;
-    private startMillisFor = -1;
-    private startMillisAfter = -1;
-    private startMillisInterval = -1;
-    private currentInterval = 0;
+    private static _now(): number {
+        return ScratchTimerClass._millis() / 1000;
+    }
+
+    private start = 0;
+    private everyStart = NaN;
+    private duringStart = NaN;
+    private afterStart = NaN;
+    private intervalStart = NaN;
+    private intervalOff = false;
 
     _constructor() { this._reset(); return this; }
 
     _reset() {
-        this.startMillisEvery = -1;
-        this.startMillisFor = -1;
-        this.startMillisAfter = -1;
-        this.startMillisInterval = -1;
-        this.currentInterval = 0;
+        this.start = ScratchTimerClass._now();
+        this.everyStart = NaN;
+        this.duringStart = NaN;
+        this.afterStart = NaN;
+        this.intervalStart = NaN;
+        this.intervalOff = false;
     }
 
-    _everyMillis(millis: number): boolean {
-        const now = ScratchTimerClass._millis();
-        if (this.startMillisEvery < 0) this.startMillisEvery = now;
-        if (now >= this.startMillisEvery + millis) {
-            this.startMillisEvery = now;
+    _getSeconds(): number {
+        return ScratchTimerClass._now() - this.start;
+    }
+
+    _every(seconds: number): boolean {
+        const t = ScratchTimerClass._now();
+        if (Number.isNaN(this.everyStart)) this.everyStart = t;
+        if (t >= this.everyStart + seconds - 1e-9) {
+            this.everyStart = t;
             return true;
         }
         return false;
     }
 
-    _forMillis(millis: number): boolean {
-        const now = ScratchTimerClass._millis();
-        if (this.startMillisFor < 0) this.startMillisFor = now;
-        return now < this.startMillisFor + millis;
+    _during(seconds: number): boolean {
+        const t = ScratchTimerClass._now();
+        if (Number.isNaN(this.duringStart)) this.duringStart = t;
+        return t < this.duringStart + seconds - 1e-9;
     }
 
-    _afterMillis(millis: number): boolean {
-        const now = ScratchTimerClass._millis();
-        if (this.startMillisAfter < 0) this.startMillisAfter = now;
-        return now >= this.startMillisAfter + millis;
+    _after(seconds: number): boolean {
+        const t = ScratchTimerClass._now();
+        if (Number.isNaN(this.afterStart)) this.afterStart = t;
+        return t >= this.afterStart + seconds - 1e-9;
     }
 
-    _intervalMillis1(millis: number): boolean { return this._intervalMillis4(millis, millis, false); }
-    _intervalMillis2(millis: number, skipFirst: boolean): boolean { return this._intervalMillis4(millis, millis, skipFirst); }
-    _intervalMillis3(millis1: number, millis2: number): boolean { return this._intervalMillis4(millis1, millis2, false); }
-    _intervalMillis4(millis1: number, millis2: number, skipFirst: boolean): boolean {
-        const now = ScratchTimerClass._millis();
-        if (this.startMillisInterval < 0) {
-            this.startMillisInterval = now;
-            if (skipFirst) this.startMillisInterval -= millis1;
-        }
-        if (this.currentInterval === 0 && now < this.startMillisInterval + millis1) {
-            return true;
-        } else if (this.currentInterval === 0) {
-            this.currentInterval = 1;
-            this.startMillisInterval = now;
-            return false;
-        } else if (this.currentInterval === 1 && now < this.startMillisInterval + millis2) {
-            return false;
-        } else {
-            this.currentInterval = 0;
-            this.startMillisInterval = now;
-            return true;
+    _interval1(seconds: number): boolean { return this._interval2(seconds, seconds); }
+
+    _interval2(on: number, off: number): boolean {
+        const t = ScratchTimerClass._now();
+        if (Number.isNaN(this.intervalStart)) this.intervalStart = t;
+        while (true) {
+            const phase = this.intervalOff ? off : on;
+            if (t < this.intervalStart + phase - 1e-9 || phase <= 0 && on <= 0 && off <= 0) {
+                return !this.intervalOff;
+            }
+            this.intervalStart += phase;
+            this.intervalOff = !this.intervalOff;
         }
     }
 }

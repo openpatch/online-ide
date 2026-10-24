@@ -5,10 +5,9 @@ import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass, StringClass } from "../../system/javalang/ObjectClassStringClass";
 import { IWorld } from "../IWorld";
 import { ScratchStageClass } from "./ScratchStageClass";
-import { scratchStageTransitioning, setActiveScratchStage, transitionToScratchStage } from "./ScratchStages";
+import { scratchStageTransitioning, setActiveScratchStage, transitionToScratchStage, TransitionKind } from "./ScratchStages";
 import { currentScratchStage, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
-import { TextureSampling, TextureSamplingEnum } from "./TextureSamplingEnum";
-import { getTextureSampling, setTextureSampling } from "./ScratchTextureSampling";
+import { isPixelArt, setPixelArt } from "./ScratchPixelArt";
 import { SRC } from "./ScratchLibraryComments";
 import { scratchBrowserVersion } from './ScratchCompatibility';
 import { scratchGameClock } from './ScratchGameClock';
@@ -43,7 +42,6 @@ export class ScratchWindowClass extends ObjectClass {
 
         { type: "method", signature: "int getWidth()", native: ScratchWindowClass.prototype._getWidth, comment: SRC.windowGetWidthComment },
         { type: "method", signature: "int getHeight()", native: ScratchWindowClass.prototype._getHeight, comment: SRC.windowGetHeightComment },
-        { type: "method", signature: "double getDeltaTime()", native: ScratchWindowClass.prototype._getDeltaTime, comment: SRC.windowGetDeltaTimeComment },
         { type: "method", signature: "void pause()", native: ScratchWindowClass.prototype._pause },
         { type: "method", signature: "void resume()", native: ScratchWindowClass.prototype._resume },
         { type: "method", signature: "boolean isPaused()", native: ScratchWindowClass.prototype._isPaused },
@@ -53,9 +51,10 @@ export class ScratchWindowClass extends ObjectClass {
 
         { type: "method", signature: "Stage getStage()", native: ScratchWindowClass.prototype._getStage, comment: SRC.windowGetStageComment },
         { type: "method", signature: "void setStage(Stage stage)", native: ScratchWindowClass.prototype._setStage, comment: SRC.windowSetStageComment },
-        { type: "method", signature: "void transitionToStage(Stage stage, int duration)", native: ScratchWindowClass.prototype._transitionToStage, comment: SRC.windowTransitionToStageComment },
-        { type: "method", signature: "void transitionToStage(Supplier<? extends Stage> stage, int duration)", java: ScratchWindowClass.prototype._transitionToStageSupplier, comment: SRC.windowTransitionToStageSupplierComment },
-        { type: "method", signature: "static boolean isTransitioning()", native: ScratchWindowClass.isTransitioning, comment: SRC.windowIsTransitioningComment },
+        { type: "method", signature: "void transitionToStage(Stage stage, double seconds)", native: ScratchWindowClass.prototype._transitionToStage, comment: SRC.windowTransitionToStageComment },
+        { type: "method", signature: "void transitionToStage(Supplier<? extends Stage> stage, double seconds)", java: ScratchWindowClass.prototype._transitionToStageSupplier, comment: SRC.windowTransitionToStageSupplierComment },
+        { type: "method", signature: "void transitionToStage(Supplier<? extends Stage> stage, Transition transition, double seconds)", java: ScratchWindowClass.prototype._transitionToStageSupplierTransition, comment: SRC.windowTransitionToStageSupplierComment },
+        { type: "method", signature: "boolean isTransitioning()", native: ScratchWindowClass.prototype._isTransitioning, comment: SRC.windowIsTransitioningComment },
 
         { type: "method", signature: "void setDebug(boolean debug)", native: ScratchWindowClass.prototype._setDebug, comment: SRC.windowSetDebugComment },
         { type: "method", signature: "boolean isDebug()", native: ScratchWindowClass.prototype._isDebug, comment: SRC.windowIsDebugComment },
@@ -69,10 +68,13 @@ export class ScratchWindowClass extends ObjectClass {
 
         // desktop-only
         { type: "method", signature: "static void useFullScreen()", native: ScratchWindowClass.useFullScreen, comment: SRC.windowUseFullScreenComment },
-        { type: "method", signature: "static void useTextureSampling(TextureSampling sampling)", native: ScratchWindowClass.useTextureSampling, comment: SRC.windowUseTextureSamplingComment },
-        { type: "method", signature: "static TextureSampling getTextureSampling()", native: ScratchWindowClass.getTextureSampling, comment: SRC.windowGetTextureSamplingComment },
+        { type: "method", signature: "static void usePixelArt()", native: ScratchWindowClass.usePixelArt, comment: SRC.windowUsePixelArtComment },
+        { type: "method", signature: "static boolean isPixelArt()", native: ScratchWindowClass.isPixelArtStatic, comment: SRC.windowIsPixelArtComment },
+        { type: "method", signature: "static void useSmoothPixelArt()", native: ScratchWindowClass.useSmoothPixelArt, comment: SRC.windowUseSmoothPixelArtComment },
+        { type: "method", signature: "static boolean isSmoothPixelArt()", native: ScratchWindowClass.isSmoothPixelArtStatic, comment: SRC.windowIsSmoothPixelArtComment },
+        { type: "method", signature: "static void useFrameSmoothing(double seconds)", native: ScratchWindowClass.useFrameSmoothing, comment: SRC.windowUseFrameSmoothingComment },
+        { type: "method", signature: "static double getFrameSmoothing()", native: ScratchWindowClass.getFrameSmoothing, comment: SRC.windowGetFrameSmoothingComment },
         { type: "method", signature: "static void useSplashLogo(string path)", native: ScratchWindowClass.useSplashLogo, comment: SRC.windowUseSplashLogoComment },
-        { type: "method", signature: "static string getSplashLogo()", native: ScratchWindowClass.getSplashLogo, comment: SRC.windowGetSplashLogoComment },
     ];
 
     static type: NonPrimitiveType;
@@ -156,11 +158,33 @@ export class ScratchWindowClass extends ObjectClass {
     _setStage(stage: ScratchStageClass) { setActiveScratchStage(stage); }
 
     /** Fade to black, swap stages, fade back. */
-    _transitionToStage(stage: ScratchStageClass, duration: number) {
-        transitionToScratchStage(stage, duration);
+    _transitionToStage(stage: ScratchStageClass, seconds: number) {
+        transitionToScratchStage(stage, seconds * 1000);
     }
 
-    _transitionToStageSupplier(t: Thread, callback: CallbackParameter, supplier: SupplierInterface, duration: number) {
+    _isTransitioning(): boolean { return ScratchWindowClass.isTransitioning(); }
+
+    _transitionToStageSupplier(t: Thread, callback: CallbackParameter, supplier: SupplierInterface, seconds: number) {
+        this._transitionToStageSupplierTransition(t, callback, supplier, undefined, seconds);
+    }
+
+    /** TransitionEnum names map straight onto the built-in kinds. */
+    private static kindOf(transition: any): TransitionKind {
+        const name = transition?.name;
+        return typeof name === "string"
+            && ["fade", "crossfade", "slide-left", "slide-right", "slide-up", "slide-down"].includes(name)
+            ? name as TransitionKind
+            : "fade";   // fromShader and the default render the built-in fade
+    }
+
+    /**
+     * The browser renders one built-in transition; a Transition chosen by the
+     * program (including fromShader) is accepted and reported, but which
+     * built-in is drawn does not change yet.
+     */
+    _transitionToStageSupplierTransition(t: Thread, callback: CallbackParameter,
+        supplier: SupplierInterface, transition: any, seconds: number) {
+        const kind = ScratchWindowClass.kindOf(transition);
         if (!supplier) throw new NullPointerExceptionClass('Stage supplier must not be null');
         const module = t.currentProgramState.program.module;
         transitionToScratchStage((ready, failed) => {
@@ -190,7 +214,7 @@ export class ScratchWindowClass extends ObjectClass {
             thread.pushProgram(program);
             thread.state = ThreadState.running;
             return () => { thread.state = ThreadState.terminated; };
-        }, duration);
+        }, seconds * 1000, kind);
         callback?.();
     }
 
@@ -222,13 +246,21 @@ export class ScratchWindowClass extends ObjectClass {
         desktopOnly("Window.useFullScreen()",
             "Nutze den Vollbild-Knopf der Ausgabe. / Use the output panel's fullscreen button.");
     }
-    /** POINT keeps scaled-up pixel art sharp; see ScratchTextureSampling. */
-    static useTextureSampling(sampling: TextureSamplingEnum) {
-        setTextureSampling((sampling?.ordinal ?? TextureSampling.LINEAR) as TextureSampling);
-    }
-    static getTextureSampling(): TextureSamplingEnum {
-        return TextureSamplingEnum.values[getTextureSampling()];
-    }
+    /** Nearest-neighbour filtering keeps scaled-up pixel art sharp. */
+    static usePixelArt() { setPixelArt(true); }
+    static isPixelArtStatic(): boolean { return isPixelArt(); }
+    static useSmoothPixelArt() { setPixelArt(false); }
+    static isSmoothPixelArtStatic(): boolean { return !isPixelArt(); }
+
+    /**
+     * 7.0's frame smoothing: how long the renderer blends frames, in seconds.
+     * The browser's canvas redraws per requestAnimationFrame and does not
+     * re-blend previous frames, so the value is stored and reported as asked
+     * but does not change what is drawn.
+     */
+    private static frameSmoothing = 0;
+    static useFrameSmoothing(seconds: number) { ScratchWindowClass.frameSmoothing = Math.max(0, seconds); }
+    static getFrameSmoothing(): number { return ScratchWindowClass.frameSmoothing; }
     static useSplashLogo(path: string) {
         ScratchWindowClass.splashLogo = path;
         desktopOnly("Window.useSplashLogo()");

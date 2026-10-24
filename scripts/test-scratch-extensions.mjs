@@ -38,8 +38,9 @@ try {
             const points = [[30,-20],[45,-20],[80,-20],[0,-70],[-100,60],[50,-50],[-60,60],[-20,60],[-98,-2],[-82,-2],[8,-8]];
             const actual = await page.evaluate(points => window.scratchTest.pixels(points), points);
             const white = [255,255,255], red = [255,0,0], blue = [0,0,255];
+            // the shown Tiled layer survives eraseAll: showLayer draws every frame (7.0)
             const expected = [[0,255,0],white,blue,red,frame<24?red:white,frame<24?blue:white,
-                frame===6?red:white,frame===14?red:white,frame===6?red:white,frame===14?red:white,frame<24?[160,0,160]:white];
+                frame===6?red:white,frame===14?red:white,frame===6?red:white,frame===14?red:white,[160,0,160]];
             assert.deepEqual(actual, expected, `${flavor}, frame ${frame}: drawing, UI redraw, persistent pen/stamps and bitmap text`);
         }
         const tiled = await page.evaluate(async () => {

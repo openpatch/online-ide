@@ -34,7 +34,7 @@ function checkName(value: string) {
 /** Same sequential Java API as the desktop helper, with asynchronous IndexedDB underneath. */
 export class ScratchSaveDataClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: 'declaration', package: 'org.openpatch.scratch.extensions.fs', signature: 'class SaveData<T> extends Object' },
+        { type: 'declaration', package: 'org.openpatch.scratch.save', signature: 'class SaveData<T> extends Object' },
         { type: 'method', signature: 'SaveData(string gameId, string slot, Class<T> type)', native: ScratchSaveDataClass.prototype._constructorSave },
         { type: 'method', signature: 'T loadOrDefault(Supplier<? extends T> defaults)', java: ScratchSaveDataClass.prototype._loadOrDefault },
         { type: 'method', signature: 'void save(T data)', java: ScratchSaveDataClass.prototype._save },

@@ -170,27 +170,27 @@ export class SRC {
         "de": "Gibt die Position der Kamera zurück",
         "en": "Returns the position of the camera",
     });
-    static cameraToLocalPositionComment = () => lm({
+    static cameraToWorldPositionComment = () => lm({
         "de": "Rechnet eine Bildschirmposition in Bühnenkoordinaten um",
         "en": "Turns a place on the screen into a place on the stage",
     });
-    static cameraToLocalXComment = () => lm({
+    static cameraToWorldXComment = () => lm({
         "de": "Rechnet eine x-Bildschirmkoordinate in Bühnenkoordinaten um",
         "en": "Turns an x-coordinate on the screen into one on the stage",
     });
-    static cameraToLocalYComment = () => lm({
+    static cameraToWorldYComment = () => lm({
         "de": "Rechnet eine y-Bildschirmkoordinate in Bühnenkoordinaten um",
         "en": "Turns a y-coordinate on the screen into one on the stage",
     });
-    static cameraToGlobalPositionComment = () => lm({
+    static cameraToScreenPositionComment = () => lm({
         "de": "Rechnet eine Bühnenposition in Bildschirmkoordinaten um",
         "en": "Turns a place on the stage into a place on the screen",
     });
-    static cameraToGlobalXComment = () => lm({
+    static cameraToScreenXComment = () => lm({
         "de": "Rechnet eine x-Bühnenkoordinate in Bildschirmkoordinaten um",
         "en": "Turns an x-coordinate on the stage into one on the screen",
     });
-    static cameraToGlobalYComment = () => lm({
+    static cameraToScreenYComment = () => lm({
         "de": "Rechnet eine y-Bühnenkoordinate in Bildschirmkoordinaten um",
         "en": "Turns a y-coordinate on the stage into one on the screen",
     });
@@ -283,28 +283,76 @@ export class SRC {
 
     // ---- Color ----
     static colorClassComment = () => lm({
-        "de": "Farbe; Rot-, Grün-, Blauanteil bzw. Farbton, Sättigung und Helligkeit jeweils 0 bis 255",
-        "en": "A colour; its red, green and blue parts, or its hue, saturation and brightness, each 0 to 255",
+        "de": "Unveränderliche Farbe; Farbton, Sättigung und Helligkeit jeweils 0 bis 100, Rot-, Grün- und Blauanteil jeweils 0 bis 255",
+        "en": "An immutable colour; hue, saturation and brightness each 0 to 100, red, green and blue each 0 to 255",
     });
     static colorConstructorComment = () => lm({
-        "de": "Erzeugt die Farbe Weiß",
-        "en": "Creates the colour white",
-    });
-    static colorConstructor2Comment = () => lm({
         "de": "Erzeugt eine Farbe aus einem Hex-Code, z.B. #ff0000",
         "en": "Creates a colour from a hex code, for example #ff0000",
     });
-    static colorConstructor3Comment = () => lm({
-        "de": "Erzeugt eine Farbe mit dem angegebenen Farbton (0 bis 255)",
-        "en": "Creates a colour with the given hue (0 to 255)",
-    });
-    static colorConstructor4Comment = () => lm({
+    static colorConstructor2Comment = () => lm({
         "de": "Erzeugt eine Farbe aus Rot-, Grün- und Blauanteil (jeweils 0 bis 255)",
         "en": "Creates a colour from its red, green and blue parts (each 0 to 255)",
     });
-    static colorConstructor5Comment = () => lm({
-        "de": "Erzeugt eine Kopie der übergebenen Farbe",
-        "en": "Creates a copy of the given colour",
+    static colorConstructor3Comment = () => lm({
+        "de": "Erzeugt eine Farbe aus Rot-, Grün-, Blauanteil und Deckkraft (jeweils 0 bis 255)",
+        "en": "Creates a colour from its red, green and blue parts and its alpha (each 0 to 255)",
+    });
+    static colorFromHSBComment = () => lm({
+        "de": "Erzeugt eine Farbe aus Farbton, Sättigung und Helligkeit (jeweils 0 bis 100)",
+        "en": "Creates a colour from hue, saturation and brightness (each 0 to 100)",
+    });
+    static colorFromARGBComment = () => lm({
+        "de": "Erzeugt eine Farbe aus einer gepackten ARGB-Zahl",
+        "en": "Creates a colour from a packed ARGB number",
+    });
+    static colorGetAlphaComment = () => lm({
+        "de": "Gibt die Deckkraft zurück (0 unsichtbar bis 255 deckend)",
+        "en": "Returns the alpha (0 invisible to 255 opaque)",
+    });
+    static colorGetHueComment = () => lm({
+        "de": "Gibt den Farbton zurück (0 bis 100; 0 für Grautöne)",
+        "en": "Returns the hue (0 to 100; 0 for greys)",
+    });
+    static colorGetSaturationComment = () => lm({
+        "de": "Gibt die Sättigung zurück (0 grau bis 100)",
+        "en": "Returns the saturation (0 grey to 100)",
+    });
+    static colorGetBrightnessComment = () => lm({
+        "de": "Gibt die Helligkeit zurück (0 schwarz bis 100)",
+        "en": "Returns the brightness (0 black to 100)",
+    });
+    static colorWithRedComment = () => lm({
+        "de": "Gibt eine neue Farbe mit dem Rotanteil zurück",
+        "en": "Returns a new colour with the given red part",
+    });
+    static colorWithGreenComment = () => lm({
+        "de": "Gibt eine neue Farbe mit dem Grünanteil zurück",
+        "en": "Returns a new colour with the given green part",
+    });
+    static colorWithBlueComment = () => lm({
+        "de": "Gibt eine neue Farbe mit dem Blauanteil zurück",
+        "en": "Returns a new colour with the given blue part",
+    });
+    static colorWithAlphaComment = () => lm({
+        "de": "Gibt eine neue Farbe mit der Deckkraft zurück",
+        "en": "Returns a new colour with the given alpha",
+    });
+    static colorWithHueComment = () => lm({
+        "de": "Gibt eine neue Farbe mit dem Farbton zurück (0 bis 100)",
+        "en": "Returns a new colour with the given hue (0 to 100)",
+    });
+    static colorWithSaturationComment = () => lm({
+        "de": "Gibt eine neue Farbe mit der Sättigung zurück (0 bis 100)",
+        "en": "Returns a new colour with the given saturation (0 to 100)",
+    });
+    static colorWithBrightnessComment = () => lm({
+        "de": "Gibt eine neue Farbe mit der Helligkeit zurück (0 bis 100)",
+        "en": "Returns a new colour with the given brightness (0 to 100)",
+    });
+    static colorToARGBComment = () => lm({
+        "de": "Gibt die Farbe als gepackte ARGB-Zahl zurück",
+        "en": "Returns the colour as a packed ARGB number",
     });
     static colorGetComment = () => lm({
         "de": "Gibt die Farbe als ganze Zahl zurück",
@@ -2217,6 +2265,330 @@ export class SRC {
         "en": "Returns true for millis1 milliseconds and then false for millis2 milliseconds; skipFirst leaves out the first round",
     });
 
+    static timerGetSecondsComment = () => lm({
+        "de": "Gibt die seit dem Start beziehungsweise dem letzten Zurücksetzen vergangenen Sekunden zurück",
+        "en": "Returns the seconds since the timer started or was last reset",
+    });
+    static timerEveryComment = () => lm({
+        "de": "Gibt alle seconds Sekunden einmal true zurück",
+        "en": "Returns true once every seconds seconds",
+    });
+    static timerDuringComment = () => lm({
+        "de": "Gibt für die ersten seconds Sekunden nach dem Zurücksetzen true zurück",
+        "en": "Returns true for the first seconds seconds after being reset",
+    });
+    static timerAfterComment = () => lm({
+        "de": "Gibt true zurück, sobald seit dem Zurücksetzen seconds Sekunden vergangen sind",
+        "en": "Returns true once seconds seconds have passed since it was reset",
+    });
+    static timerIntervalComment = () => lm({
+        "de": "Wechselt alle seconds Sekunden zwischen true und false",
+        "en": "Changes between true and false every seconds seconds",
+    });
+    static timerInterval2Comment = () => lm({
+        "de": "Gibt on Sekunden lang true und danach off Sekunden lang false zurück",
+        "en": "Returns true for on seconds and then false for off seconds",
+    });
+
+    // ---- Transition ----
+    static transitionClassComment = () => lm({
+        "de": "Übergang zwischen zwei Bühnen",
+        "en": "A transition between two stages",
+    });
+    static transitionFromShaderComment = () => lm({
+        "de": "Macht einen Übergang aus einem Fragment-Shader",
+        "en": "Makes a transition from a fragment shader",
+    });
+    static transitionGetNameComment = () => lm({
+        "de": "Gibt den Namen des Übergangs zurück",
+        "en": "Returns the transition's name",
+    });
+    static transitionToStringComment = () => lm({
+        "de": "Gibt den Namen des Übergangs zurück",
+        "en": "Returns the transition's name",
+    });
+
+    static penGetTransparencyComment = () => lm({
+        "de": "Gibt die Transparenz des Stifts zurück (0 deckend bis 100 unsichtbar)",
+        "en": "Returns the pen's transparency (0 opaque to 100 invisible)",
+    });
+    static penGetLayerComment = () => lm({
+        "de": "Gibt die Ebene zurück, auf die der Stift zeichnet",
+        "en": "Returns the layer the pen draws on",
+    });
+    static penSetLayerComment = () => lm({
+        "de": "Setzt die Ebene, auf die der Stift zeichnet",
+        "en": "Sets the layer the pen draws on",
+    });
+    static penIsDownComment = () => lm({
+        "de": "Gibt zurück, ob der Stift abgesetzt ist und beim Bewegen zeichnet",
+        "en": "Returns whether the pen is down and draws when it moves",
+    });
+    static penGetPositionComment = () => lm({
+        "de": "Gibt die Position des Stifts zurück",
+        "en": "Returns the pen's position",
+    });
+
+    static shapeGetPointsComment = () => lm({
+        "de": "Gibt die Punkte der Umrandung zurück (x0, y0, x1, y1, …)",
+        "en": "Returns the outline's points (x0, y0, x1, y1, …)",
+    });
+
+    // ---- Sprite, 7.0 additions ----
+    static spriteAddAnimationComment = () => lm({
+        "de": "Fügt eine Animation aus durchnummerierten Bildern hinzu (Zählung ab 1)",
+        "en": "Adds an animation from numbered images (counting from 1)",
+    });
+    static spriteAddAnimation2Comment = () => lm({
+        "de": "Fügt eine Animation aus den Bildern first bis last hinzu",
+        "en": "Adds an animation from the images first to last",
+    });
+    static spriteAddAnimation3Comment = () => lm({
+        "de": "Fügt eine Animation aus einem Sprite Sheet hinzu (Rahmengröße, dann die Nummern, zeilenweise ab 0)",
+        "en": "Adds an animation from a sprite sheet (frame size, then the frame numbers, row by row from 0)",
+    });
+    static spritePlayAnimationComment = () => lm({
+        "de": "Spielt die Animation ab",
+        "en": "Plays the animation",
+    });
+    static spritePlayAnimation2Comment = () => lm({
+        "de": "Spielt die Animation einmal ab",
+        "en": "Plays the animation once",
+    });
+    static spriteResetAnimationComment = () => lm({
+        "de": "Setzt die Animation zurück",
+        "en": "Resets the animation",
+    });
+    static spriteSetAnimationFrameComment = () => lm({
+        "de": "Springt zum angegebenen Rahmen der Animation",
+        "en": "Jumps to the given frame of the animation",
+    });
+    static spriteSetAnimationIntervalComment = () => lm({
+        "de": "Setzt das Intervall zwischen zwei Rahmen in Sekunden",
+        "en": "Sets the interval between two frames in seconds",
+    });
+    static spriteGetAnimationIntervalComment = () => lm({
+        "de": "Gibt das Intervall zwischen zwei Rahmen in Sekunden zurück",
+        "en": "Returns the interval between two frames in seconds",
+    });
+    static spriteGetAnimationFrameComment = () => lm({
+        "de": "Gibt den aktuellen Rahmen der Animation zurück",
+        "en": "Returns the animation's current frame",
+    });
+    static spriteIsAnimationPlayedComment = () => lm({
+        "de": "Gibt zurück, ob die Animation zu Ende gespielt ist",
+        "en": "Returns whether the animation has been played to its end",
+    });
+    static spriteSetWidthComment = () => lm({
+        "de": "Streckt das Sprite auf die angegebene Breite in Pixeln",
+        "en": "Stretches the sprite to the given width in pixels",
+    });
+    static spriteSetHeightComment = () => lm({
+        "de": "Streckt das Sprite auf die angegebene Höhe in Pixeln",
+        "en": "Stretches the sprite to the given height in pixels",
+    });
+    static spriteChangeWidthComment = () => lm({
+        "de": "Ändert die Breite des Sprites",
+        "en": "Changes the sprite's width",
+    });
+    static spriteChangeHeightComment = () => lm({
+        "de": "Ändert die Höhe des Sprites",
+        "en": "Changes the sprite's height",
+    });
+    static spriteSetNineSliceComment = () => lm({
+        "de": "Legt die Ränder für das Neun-Segment-Skalieren fest",
+        "en": "Sets the margins for nine-slice scaling",
+    });
+    static spriteDisableNineSliceComment = () => lm({
+        "de": "Schaltet das Neun-Segment-Skalieren aus",
+        "en": "Turns nine-slice scaling off",
+    });
+    static spriteSetColorEffectComment = () => lm({
+        "de": "Setzt den Farbeffekt (0 bis 200: einmal einmal um den Farbkreis)",
+        "en": "Sets the colour effect (0 to 200: once around the colour circle)",
+    });
+    static spriteChangeColorEffectComment = () => lm({
+        "de": "Ändert den Farbeffekt",
+        "en": "Changes the colour effect",
+    });
+    static spriteGetColorEffectComment = () => lm({
+        "de": "Gibt den Farbeffekt zurück",
+        "en": "Returns the colour effect",
+    });
+    static spriteSetLayerComment = () => lm({
+        "de": "Legt die Ebene fest, auf der das Sprite gezeichnet wird",
+        "en": "Sets the layer the sprite is drawn on",
+    });
+    static spriteGetLayerComment = () => lm({
+        "de": "Gibt die Ebene zurück, auf der das Sprite gezeichnet wird",
+        "en": "Returns the layer the sprite is drawn on",
+    });
+    static spriteGetRotationStyleComment = () => lm({
+        "de": "Gibt den Rotationsstil zurück",
+        "en": "Returns the rotation style",
+    });
+    static spritePointTowardsComment = () => lm({
+        "de": "Dreht das Sprite Richtung der angegebenen Position",
+        "en": "Turns the sprite towards the given position",
+    });
+    static spritePointTowards2Comment = () => lm({
+        "de": "Dreht das Sprite Richtung des anderen Sprites",
+        "en": "Turns the sprite towards the other sprite",
+    });
+    static spriteCreateCloneComment = () => lm({
+        "de": "Erzeugt einen Klon dieses Sprites (hinter dem Original)",
+        "en": "Creates a clone of this sprite (behind the original)",
+    });
+
+    // ---- Stage, 7.0 changes ----
+    static stageSetColorEffectComment = () => lm({
+        "de": "Setzt den Farbeffekt der Bühne (0 bis 200: einmal um den Farbkreis)",
+        "en": "Sets the stage's colour effect (0 to 200: once around the colour circle)",
+    });
+    static stageChangeColorEffectComment = () => lm({
+        "de": "Ändert den Farbeffekt der Bühne",
+        "en": "Changes the stage's colour effect",
+    });
+    static stageGetColorEffectComment = () => lm({
+        "de": "Gibt den Farbeffekt der Bühne zurück",
+        "en": "Returns the stage's colour effect",
+    });
+    static stageGetTransparencyComment = () => lm({
+        "de": "Gibt die Transparenz der Bühne zurück (0 sichtbar bis 100 unsichtbar)",
+        "en": "Returns the stage's transparency (0 visible to 100 invisible)",
+    });
+    static stageSortByYComment = () => lm({
+        "de": "Zeichnet die Sprites in der Reihenfolge ihrer unteren Kante (wer tiefer steht, ist vorne)",
+        "en": "Draws the sprites in the order of their lower edge (lower is nearer)",
+    });
+    static stageSortByComment = () => lm({
+        "de": "Zeichnet die Sprites in der Reihenfolge, die der Comparator angibt (hinten nach vorne, wird fortlaufend neu sortiert)",
+        "en": "Draws the sprites in the order the comparator gives, back to front (re-sorted continuously)",
+    });
+    static stageStopSortingComment = () => lm({
+        "de": "Schaltet die automatische Sortierung aus",
+        "en": "Turns the automatic sorting off",
+    });
+
+    // ---- Text, 7.0 changes ----
+    static textGetTextComment = () => lm({
+        "de": "Gibt den angezeigten Text zurück",
+        "en": "Returns the text shown",
+    });
+    static textShowComment = () => lm({
+        "de": "Zeigt den Text an",
+        "en": "Shows the text",
+    });
+    static textHideComment = () => lm({
+        "de": "Versteckt den Text",
+        "en": "Hides the text",
+    });
+    static textIsVisibleComment = () => lm({
+        "de": "Gibt zurück, ob der Text sichtbar ist",
+        "en": "Returns whether the text is visible",
+    });
+    static textSetLayerComment = () => lm({
+        "de": "Legt die Ebene fest, auf der der Text gezeichnet wird",
+        "en": "Sets the layer the text is drawn on",
+    });
+    static textGetLayerComment = () => lm({
+        "de": "Gibt die Ebene zurück, auf der der Text gezeichnet wird",
+        "en": "Returns the layer the text is drawn on",
+    });
+
+    // ---- Window, 7.0 changes ----
+    static windowUsePixelArtComment = () => lm({
+        "de": "Stellt Pixelgrafiken scharf (Nächster-Nachbar-Filter), vor dem Konstruktor aufrufen",
+        "en": "Keeps pixel art sharp (nearest-neighbour filtering); call before the constructor",
+    });
+    static windowIsPixelArtComment = () => lm({
+        "de": "Gibt zurück, ob Pixelgrafiken scharf gestellt sind",
+        "en": "Returns whether pixel art filtering is on",
+    });
+    static windowUseSmoothPixelArtComment = () => lm({
+        "de": "Stellt weiche Pixelgrafiken ein (linearer Filter)",
+        "en": "Smooth pixel art filtering (linear)",
+    });
+    static windowIsSmoothPixelArtComment = () => lm({
+        "de": "Gibt zurück, ob Pixelgrafiken weich gestellt sind",
+        "en": "Returns whether pixel art filtering is smooth",
+    });
+    static windowUseFrameSmoothingComment = () => lm({
+        "de": "Wie lange der Renderer Frames blendet, in Sekunden",
+        "en": "How long the renderer blends frames, in seconds",
+    });
+    static windowGetFrameSmoothingComment = () => lm({
+        "de": "Gibt die Frame-Blendzeit in Sekunden zurück",
+        "en": "Returns the frame smoothing in seconds",
+    });
+
+    static tiledShowLayerComment = () => lm({
+        "de": "Zeichnet die Ebene der Karte auf die angegebene Ebene der Bühne",
+        "en": "Draws the map layer onto the given stage layer",
+    });
+    static tiledHideLayerComment = () => lm({
+        "de": "Nimmt die Ebene der Karte wieder von der Bühne",
+        "en": "Takes the map layer off the stage again",
+    });
+
+    // ---- extensions, 7.0 changes ----
+    static pixelsOfComment = () => lm({
+        "de": "Liest die Bildpunkte der Bühne oder eines Bildes",
+        "en": "Reads the pixels of a stage or an image",
+    });
+    static pixelsGetWidthComment = () => lm({
+        "de": "Gibt die Breite in Pixeln zurück",
+        "en": "Returns the width in pixels",
+    });
+    static pixelsGetHeightComment = () => lm({
+        "de": "Gibt die Höhe in Pixeln zurück",
+        "en": "Returns the height in pixels",
+    });
+    static pixelsGetColorComment = () => lm({
+        "de": "Gibt die Farbe des Bildpunkts zurück",
+        "en": "Returns the colour of the pixel",
+    });
+    static pixelsGetArgbComment = () => lm({
+        "de": "Gibt den Bildpunkt als gepackte ARGB-Zahl zurück",
+        "en": "Returns the pixel as a packed ARGB number",
+    });
+    static gifRecorderSnapshotComment = () => lm({
+        "de": "Nimmt einen einzelnen Rahmen auf",
+        "en": "Records a single frame",
+    });
+    static fileSaveComment = () => lm({
+        "de": "Speichert das Objekt in der Datei",
+        "en": "Saves the object to the file",
+    });
+    static fileSaveXMLComment = () => lm({
+        "de": "Speichert das Objekt als XML in der Datei",
+        "en": "Saves the object to the file as XML",
+    });
+    static fileLoadComment = () => lm({
+        "de": "Lädt das Objekt aus der Datei",
+        "en": "Loads the object from the file",
+    });
+    static fileLoadOrCreateComment = () => lm({
+        "de": "Lädt das Objekt aus der Datei oder erzeugt es neu",
+        "en": "Loads the object from the file or creates it new",
+    });
+    static fileLoadXMLComment = () => lm({
+        "de": "Lädt das Objekt als XML aus der Datei",
+        "en": "Loads the object from the file as XML",
+    });
+    static fileLoadXMLOrCreateComment = () => lm({
+        "de": "Lädt das Objekt als XML aus der Datei oder erzeugt es neu",
+        "en": "Loads the object from the file as XML or creates it new",
+    });
+    static mapObjectSetClassNameComment = () => lm({
+        "de": "Setzt den Namen der Klasse, zu der dieses Objekt gehört",
+        "en": "Sets the name of the class this object belongs to",
+    });
+    static propertySetTextComment = () => lm({
+        "de": "Setzt den Text der Eigenschaft",
+        "en": "Sets the property's text",
+    });
+
     // ---- UISprite ----
     static uISpriteClassComment = () => lm({
         "de": "Figur für Benutzeroberflächen (Knöpfe, Balken); wird oben gezeichnet und kollidiert nicht",
@@ -2291,6 +2663,10 @@ export class SRC {
     static vector2AngleComment = () => lm({
         "de": "Gibt den Winkel des Vektors in Grad zurück",
         "en": "Returns the angle of the vector in degrees",
+    });
+    static vector2DirectionComment = () => lm({
+        "de": "Gibt die Richtung des Vektors in Scratch-Grad zurück (0 ist oben, 90 rechts)",
+        "en": "Returns the vector's direction in Scratch degrees (0 is up, 90 is right)",
     });
     static vector2UnitVectorComment = () => lm({
         "de": "Gibt einen Vektor gleicher Richtung mit der Länge 1 zurück",
@@ -2479,5 +2855,79 @@ export class SRC {
     static textureSamplingGetModeComment = () => lm({
         "de": "Gibt die Nummer des Verfahrens zurück",
         "en": "Returns the number of the method",
+    });
+
+    // ---- Gamepad ----
+    static gamepadClassComment = () => lm({
+        "de": "Fragt die angeschlossenen Gamepad-Controller ab. Ohne Spielernummer geht es um alle Controller: isConnected und isButtonPressed gelten, sobald ein Controller sie erfüllt, getStick und getTrigger lesen den ersten verbundenen Controller. Die Stick-Werte sind wie auf der Bühne (y nach oben positiv), nahe der Mitte steht (0, 0)",
+        "en": "Asks the connected gamepad controllers. Without a player number every method looks at all of them: isConnected and isButtonPressed hold as soon as one controller has it, getStick and getTrigger read the first connected one. Sticks point up like on the stage, and near the middle they report (0, 0)",
+    });
+    static gamepadIsConnectedComment = () => lm({
+        "de": "Gibt genau dann true zurück, wenn ein Controller angeschlossen ist",
+        "en": "Returns true exactly when a controller is connected",
+    });
+    static gamepadIsConnectedPlayerComment = () => lm({
+        "de": "Gibt zurück, ob am Platz des Spielers (1 bis 4) ein Controller angeschlossen ist",
+        "en": "Returns whether the player's slot (1 to 4) has a controller",
+    });
+    static gamepadIsButtonPressedComment = () => lm({
+        "de": "Gibt genau dann true zurück, wenn ein Controller die Taste gedrückt hält",
+        "en": "Returns true exactly when one of the controllers holds the button down",
+    });
+    static gamepadIsButtonPressedPlayerComment = () => lm({
+        "de": "Gibt zurück, ob der Controller des Spielers (1 bis 4) die Taste gedrückt hält",
+        "en": "Returns whether the player's controller (1 to 4) holds the button down",
+    });
+    static gamepadGetStickComment = () => lm({
+        "de": "Gibt zurück, wohin der Stick des ersten verbundenen Controllers zeigt: x von -1 (links) bis 1 (rechts), y von -1 (unten) bis 1 (oben); (0, 0) ohne Controller",
+        "en": "Returns where the first connected controller's stick points: x from -1 (left) to 1 (right), y from -1 (down) to 1 (up); (0, 0) without a controller",
+    });
+    static gamepadGetStickPlayerComment = () => lm({
+        "de": "Gibt zurück, wohin der Stick des Controllers des Spielers (1 bis 4) zeigt; (0, 0), wenn er nicht verbunden ist",
+        "en": "Returns where the player's controller's (1 to 4) stick points; (0, 0) if it is not connected",
+    });
+    static gamepadGetTriggerComment = () => lm({
+        "de": "Gibt zurück, wie weit der Trigger des ersten verbundenen Controllers gedrückt ist: 0 (gar nicht) bis 1 (ganz); 0 ohne Controller",
+        "en": "Returns how far down the first connected controller's trigger is: 0 (not at all) to 1 (fully); 0 without a controller",
+    });
+    static gamepadGetTriggerPlayerComment = () => lm({
+        "de": "Gibt zurück, wie weit der Trigger des Controllers des Spielers (1 bis 4) gedrückt ist; 0, wenn er nicht verbunden ist",
+        "en": "Returns how far down the player's controller's (1 to 4) trigger is; 0 if it is not connected",
+    });
+
+    // ---- GamepadButton ----
+    static gamepadButtonClassComment = () => lm({
+        "de": "Die Tasten eines Gamepads in Xbox-Anordnung. Auf dem PlayStation-Controller ist A Kreuz, B Kreis, X Quadrat und Y Dreieck; die Schultertasten sind L1 und R1",
+        "en": "The buttons of a gamepad, in Xbox positions. On a PlayStation controller A is Cross, B is Circle, X is Square and Y is Triangle; the bumpers are L1 and R1",
+    });
+
+    // ---- GamepadStick ----
+    static gamepadStickClassComment = () => lm({
+        "de": "Einer der beiden Sticks des Gamepads (LEFT oder RIGHT)",
+        "en": "One of a gamepad's two sticks (LEFT or RIGHT)",
+    });
+
+    // ---- GamepadTrigger ----
+    static gamepadTriggerClassComment = () => lm({
+        "de": "Einer der beiden analogen Trigger des Gamepads (die Schultertasten, die stufenlos nachgeben)",
+        "en": "One of a gamepad's two analog triggers (the shoulder buttons that go down gradually)",
+    });
+
+    // ---- GamepadListener ----
+    static gamepadListenerClassComment = () => lm({
+        "de": "Wird von einer Figur oder der Bühne implementiert, um vom Gamepad erzählt zu bekommen, was passiert: Eine Taste geht nach unten oder nach oben, ein Controller erscheint an einem Platz. Die Aufrufe kommen am selben Punkt des Takts wie die Tasten, vor run() — während das Spiel pausiert, laufen keine Takte und die Aufrufe bleiben aus, anders als bei den Tasten",
+        "en": "Implemented by a sprite or the stage to be told what the gamepads do: a button goes down or up, a controller appears in a slot. The calls come at the same point of the tick as the key events, before run() — while the game is paused no ticks run and the calls stay out, unlike the keys",
+    });
+    static gamepadWhenGamepadButtonPressedComment = () => lm({
+        "de": "Wird aufgerufen, wenn eine der Tasten an einem der Controller nach unten geht",
+        "en": "Called when one of the buttons goes down on one of the controllers",
+    });
+    static gamepadWhenGamepadButtonReleasedComment = () => lm({
+        "de": "Wird aufgerufen, wenn eine der Tasten an einem der Controller wieder hochgeht",
+        "en": "Called when one of the buttons comes up again on one of the controllers",
+    });
+    static gamepadWhenGamepadConnectedComment = () => lm({
+        "de": "Wird aufgerufen, wenn am Platz eines Spielers (1 bis 4) ein Controller ankommt",
+        "en": "Called when a controller appears in a player's slot (1 to 4)",
     });
 }

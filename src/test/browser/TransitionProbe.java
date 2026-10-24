@@ -18,19 +18,19 @@ class SourceStage extends Stage {
     Stage original = this;
     window.transitionToStage(() -> {
       TransitionProbe.factories++;
-      if (!Window.isTransitioning() || window.getStage() != original) {
+      if (!window.isTransitioning() || window.getStage() != original) {
         throw new RuntimeException("Factory ran outside the reserved transition");
       }
-      window.transitionToStage(() -> { throw new RuntimeException("Reentrant request ran"); }, 30);
+      window.transitionToStage(() -> { throw new RuntimeException("Reentrant request ran"); }, 0.03);
       println("BUILDING");
       Stage destination = new DestinationStage(window);
       println("CREATED");
       return destination;
-    }, 30);
-    if (TransitionProbe.factories != 0 || !Window.isTransitioning()) {
+    }, 0.03);
+    if (TransitionProbe.factories != 0 || !window.isTransitioning()) {
       throw new RuntimeException("Factory ran before the fade");
     }
-    window.transitionToStage(() -> { throw new RuntimeException("Busy request ran"); }, 30);
+    window.transitionToStage(() -> { throw new RuntimeException("Busy request ran"); }, 0.03);
     println("REQUESTED");
   }
 }
@@ -41,13 +41,13 @@ class DestinationStage extends Stage {
   DestinationStage(TransitionProbe window) {
     this.window = window;
     // An interpreted constructor can wait for assets while the screen stays black.
-    this.wait(500);
+    this.waitSeconds(0.5);
   }
 
   public void run() {
-    if (Window.isTransitioning()) {
+    if (window.isTransitioning()) {
       sawFadeIn = true;
-      window.transitionToStage(() -> { throw new RuntimeException("Fade-in request ran"); }, 30);
+      window.transitionToStage(() -> { throw new RuntimeException("Fade-in request ran"); }, 0.03);
       return;
     }
     if (!sawFadeIn || TransitionProbe.factories != 1 || TransitionProbe.oldFrames != 1) {

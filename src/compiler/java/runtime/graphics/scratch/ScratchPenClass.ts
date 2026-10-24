@@ -3,8 +3,9 @@ import { CallbackParameter } from "../../../../common/interpreter/CallbackParame
 import { Thread } from "../../../../common/interpreter/Thread";
 import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
-import { ObjectClass, StringClass } from "../../system/javalang/ObjectClassStringClass";
+import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
 import { IWorld } from "../IWorld";
+import { Layer, LayerEnum } from "./LayerEnum";
 import { ScratchColorClass } from "./ScratchColorClass";
 import { scratchLayerOf } from "./ScratchLayers";
 import { activeScratchStage } from "./ScratchStages";
@@ -13,42 +14,45 @@ import { SRC } from "./ScratchLibraryComments";
 import { WeakIterableSet } from '../WeakIterableSet';
 
 /**
- * Pen for drawing lines, mirroring org.openpatch.scratch.Pen (core subset).
- * A pen may be standalone or attached to a Sprite; when attached, the sprite
- * pushes its position via setPosition() so the pen draws as the sprite moves.
+ * Pen for drawing lines, mirroring org.openpatch.scratch.Pen (7.0). A pen may
+ * be standalone or attached to a Sprite (the sprite pushes its position via
+ * setPosition()); everything the sprite-related constructors did in 6.x is
+ * internal now. Colour hue and transparency are 0 to 100, as in Scratch.
+ *
+ * Layers: BACKGROUND (default) draws on the shared pen canvas below the
+ * sprites, FOREGROUND above them, UI on the screen-space canvas. MAIN shares
+ * the background canvas here — the browser has no way to interleave a pen
+ * with the sprites of the main layer.
  */
 export class ScratchPenClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch", signature: "class Pen extends Object", comment: SRC.penClassComment },
 
         { type: "method", signature: "Pen()", java: ScratchPenClass.prototype._cj$_constructor_$Pen$, comment: SRC.penConstructorComment },
-        { type: "method", signature: "Pen(Sprite sprite)", java: ScratchPenClass.prototype._cj$_constructor_$Pen$Sprite },
-        { type: "method", signature: "Pen(Pen pen)", java: ScratchPenClass.prototype._cj$_constructor_$Pen$Pen },
 
+        { type: "method", signature: "Color getColor()", native: ScratchPenClass.prototype._getColor, comment: SRC.penGetColorComment },
+        { type: "method", signature: "void setColor(Color color)", native: ScratchPenClass.prototype._setColorObj, comment: SRC.penSetColorComment },
+        { type: "method", signature: "void setColor(double hue)", native: ScratchPenClass.prototype._setColorHue, comment: SRC.penSetColor2Comment },
+        { type: "method", signature: "void setColor(double red, double green, double blue)", native: ScratchPenClass.prototype._setColorRGB, comment: SRC.penSetColor3Comment },
+        { type: "method", signature: "void changeColor(double by)", native: ScratchPenClass.prototype._changeColor, comment: SRC.penChangeColorComment },
+        { type: "method", signature: "double getSize()", native: ScratchPenClass.prototype._getSize, comment: SRC.penGetSizeComment },
+        { type: "method", signature: "void setSize(double size)", native: ScratchPenClass.prototype._setSize, comment: SRC.penSetSizeComment },
+        { type: "method", signature: "void changeSize(double by)", native: ScratchPenClass.prototype._changeSize, comment: SRC.penChangeSizeComment },
+        { type: "method", signature: "double getTransparency()", native: ScratchPenClass.prototype._getTransparency, comment: SRC.penGetTransparencyComment },
+        { type: "method", signature: "void setTransparency(double transparency)", native: ScratchPenClass.prototype._setTransparency, comment: SRC.penSetTransparencyComment },
+        { type: "method", signature: "void changeTransparency(double by)", native: ScratchPenClass.prototype._changeTransparency, comment: SRC.penChangeTransparencyComment },
+        { type: "method", signature: "Layer getLayer()", native: ScratchPenClass.prototype._getLayer, comment: SRC.penGetLayerComment },
+        { type: "method", signature: "void setLayer(Layer layer)", native: ScratchPenClass.prototype._setLayer, comment: SRC.penSetLayerComment },
+        { type: "method", signature: "boolean isDown()", native: ScratchPenClass.prototype._isDown, comment: SRC.penIsDownComment },
         { type: "method", signature: "void down()", native: ScratchPenClass.prototype._down, comment: SRC.penDownComment },
         { type: "method", signature: "void up()", native: ScratchPenClass.prototype._up, comment: SRC.penUpComment },
-        { type: "method", signature: "void setColor(Color c)", native: ScratchPenClass.prototype._setColorObj, comment: SRC.penSetColorComment },
-        { type: "method", signature: "void setColor(double h)", native: ScratchPenClass.prototype._setColorHue, comment: SRC.penSetColor2Comment },
-        { type: "method", signature: "void setColor(double r, double g, double b)", native: ScratchPenClass.prototype._setColorRGB, comment: SRC.penSetColor3Comment },
-        { type: "method", signature: "void changeColor(double c)", native: ScratchPenClass.prototype._changeColor, comment: SRC.penChangeColorComment },
-        { type: "method", signature: "void setSize(double size)", native: ScratchPenClass.prototype._setSize, comment: SRC.penSetSizeComment },
-        { type: "method", signature: "double getSize()", native: ScratchPenClass.prototype._getSize, comment: SRC.penGetSizeComment },
-        { type: "method", signature: "void changeSize(double size)", native: ScratchPenClass.prototype._changeSize, comment: SRC.penChangeSizeComment },
-        { type: "method", signature: "Color getColor()", native: ScratchPenClass.prototype._getColor, comment: SRC.penGetColorComment },
-        { type: "method", signature: "void setTransparency(double transparency)", native: ScratchPenClass.prototype._setTransparency, comment: SRC.penSetTransparencyComment },
-        { type: "method", signature: "void changeTransparency(double step)", native: ScratchPenClass.prototype._changeTransparency, comment: SRC.penChangeTransparencyComment },
-        { type: "method", signature: "void goToBackground()", native: ScratchPenClass.prototype._goToBackground, comment: SRC.penGoToBackgroundComment },
-        { type: "method", signature: "void goToForeground()", native: ScratchPenClass.prototype._goToForeground, comment: SRC.penGoToForegroundComment },
-        { type: "method", signature: "boolean isInBackground()", native: ScratchPenClass.prototype._isInBackground, comment: SRC.penIsInBackgroundComment },
+        { type: "method", signature: "void setPosition(double x, double y)", native: ScratchPenClass.prototype._setPosition, comment: SRC.penSetPositionComment },
+        { type: "method", signature: "void setPosition(Vector2 position)", native: ScratchPenClass.prototype._setPositionV, comment: SRC.penSetPosition2Comment },
         { type: "method", signature: "void goToRandomPosition()", java: ScratchPenClass.prototype._mj$goToRandomPosition$void$, comment: SRC.penGoToRandomPositionComment },
         { type: "method", signature: "void goToMousePointer()", native: ScratchPenClass.prototype._goToMousePointer, comment: SRC.penGoToMousePointerComment },
+        { type: "method", signature: "Vector2 getPosition()", native: ScratchPenClass.prototype._getPosition, comment: SRC.penGetPositionComment },
         { type: "method", signature: "void stamp()", native: ScratchPenClass.prototype._stamp, comment: SRC.penStampComment },
-        { type: "method", signature: "String toString()", java: ScratchPenClass.prototype._mj$toString$String$, comment: SRC.penToStringComment },
-        { type: "method", signature: "void setPosition(double x, double y)", native: ScratchPenClass.prototype._setPosition, comment: SRC.penSetPositionComment },
-        { type: "method", signature: "void setPosition(Vector2 v)", native: ScratchPenClass.prototype._setPositionV, comment: SRC.penSetPosition2Comment },
         { type: "method", signature: "void eraseAll()", native: ScratchPenClass.prototype._eraseAll, comment: SRC.penEraseAllComment },
-        { type: "method", signature: "void addedToStage(Stage stage)", native: ScratchPenClass.prototype._addedToStage, comment: SRC.penAddedToStageComment },
-        { type: "method", signature: "void removedFromStage(Stage stage)", native: ScratchPenClass.prototype._removedFromStage, comment: SRC.penRemovedFromStageComment },
     ];
 
     static type: NonPrimitiveType;
@@ -56,7 +60,7 @@ export class ScratchPenClass extends ObjectClass {
     world!: IWorld;
     private layer?: PIXI.Graphics;
 
-    /** Every live pen, so Stage.eraseAll() can clear all of them at once. */
+    /** Every live pen, so the stage can clear canvases. */
     private static allPens = new WeakMap<IWorld, WeakIterableSet<ScratchPenClass>>();
 
     px: number = 0;   // pen position in Scratch coords (centre origin, y up)
@@ -65,13 +69,12 @@ export class ScratchPenClass extends ObjectClass {
     /** Whether a path has been begun and not yet closed, as upstream tracks. */
     private pathOpen: boolean = false;
 
-    private colorHue: ScratchColorClass = ScratchColorClass.fromHue(0);   // upstream: new Color(0)
-    private colorInt: number = ScratchColorClass.fromHue(0)._get() & 0xffffff;
+    private color: ScratchColorClass = new ScratchColorClass(0, 0, 255);
+    private colorInt: number = this.color._get() & 0xffffff;
     private size: number = 1;
-    /** Upstream stores an opacity of 0..255, where 255 is fully opaque. */
-    private opacity: number = 255;
-    /** false = draws below the sprites, which is upstream's default. */
-    private foreground: boolean = false;
+    /** Transparency from 0 (opaque) to 100 (invisible), as in Scratch. */
+    private transparency: number = 0;
+    private penLayer: Layer = Layer.BACKGROUND;
     /** Set when the pen belongs to a sprite, so stamp() knows what to print. */
     sprite?: { _stamp(): void, _stampForeground(): void, isUI?(): boolean, stage?: object };
     /**
@@ -86,23 +89,6 @@ export class ScratchPenClass extends ObjectClass {
         if (callback) callback();
     }
 
-    _cj$_constructor_$Pen$Sprite(t: Thread, callback: CallbackParameter, sprite: any) {
-        this.sprite = sprite;
-        this.px = sprite._getX();
-        this.py = sprite._getY();
-        this._cj$_constructor_$Pen$(t, callback);
-    }
-
-    _cj$_constructor_$Pen$Pen(t: Thread, callback: CallbackParameter, pen: ScratchPenClass) {
-        this.attachToWorld(pen.world);
-        this.sprite = pen.sprite;
-        this.px = pen.px;
-        this.py = pen.py;
-        this._copyFrom(pen);
-        t.s.push(this);
-        callback?.();
-    }
-
     /** Called by ScratchSpriteClass/ScratchStageClass to attach a pen without going through the interpreter. */
     attachToWorld(world: IWorld) {
         this.world = world;
@@ -112,20 +98,46 @@ export class ScratchPenClass extends ObjectClass {
         pens.add(this);
     }
 
-    /** Stage.eraseAll(): clear the pen layers belonging to that stage. */
-    static eraseAllLayers(world: IWorld, stage?: object) {
-        for (const pen of ScratchPenClass.allPens.get(world) ?? []) {
-            if (stage !== undefined && pen.stage !== undefined && pen.stage !== stage) continue;
-            pen._eraseAll();
-        }
+    /** In-place copy of another pen's state (clones); see copyForClone. */
+    _copyStateFrom(other: ScratchPenClass) {
+        this.color = other.color;
+        this.colorInt = other.colorInt;
+        this.size = other.size;
+        this.transparency = other.transparency;
+        this.penLayer = other.penLayer;
+        if (other.penDown) this._down(); else this._up();
+    }
+
+    /**
+     * A copy of this pen for a clone, as 7.0's internal Pen(Pen, Sprite) does:
+     * layer, colour, size and transparency, and down if it was.
+     */
+    copyForClone(sprite: ScratchPenClass["sprite"]): ScratchPenClass {
+        const copy = new ScratchPenClass();
+        copy.attachToWorld(this.world);
+        copy.sprite = sprite;
+        copy.px = this.px;
+        copy.py = this.py;
+        copy.color = this.color;
+        copy.colorInt = this.colorInt;
+        copy.size = this.size;
+        copy.transparency = this.transparency;
+        copy.penLayer = this.penLayer;
+        if (this.penDown) copy._down(); else copy._up();
+        return copy;
+    }
+
+    private containerName(): "pen" | "foregroundStamps" | "uiStamps" {
+        if (this.penLayer === Layer.FOREGROUND) return "foregroundStamps";
+        if (this.penLayer === Layer.UI) return "uiStamps";
+        return "pen";   // BACKGROUND and MAIN
     }
 
     private getLayer(): PIXI.Graphics | undefined {
         if (!this.world) return undefined;
         if (!this.layer || this.layer.destroyed) {
             this.layer = new PIXI.Graphics();
-            // draw beneath the sprites, above the backdrop
-            const penLayer = scratchLayerOf(this, this.sprite?.isUI?.() ? "uiStamps" : this.foreground ? "foregroundStamps" : "pen");
+            const penLayer = scratchLayerOf(this, this.containerName());
             if (penLayer) penLayer.addChild(this.layer);
             else this.world.app.stage.addChildAt(this.layer, 0);
         }
@@ -136,6 +148,10 @@ export class ScratchPenClass extends ObjectClass {
         return { x: this.world.width / 2 + x, y: this.world.height / 2 - y };
     }
 
+    private alpha(): number {
+        return Math.max(0, Math.min(1, 1 - this.transparency / 100));
+    }
+
     /**
      * Upstream's down() starts a path *with a point where the pen is*, so a pen
      * that is put down and lifted again without moving leaves a dot behind. A
@@ -144,15 +160,6 @@ export class ScratchPenClass extends ObjectClass {
      * Putting an already-down pen down again adds nothing, as upstream only
      * begins a path when the last one was closed.
      */
-    /** Upstream's Pen(Pen p): colour, size and transparency, and down if it was. */
-    _copyFrom(other: ScratchPenClass) {
-        this.colorHue = new ScratchColorClass()._cCopy(other.colorHue);
-        this.colorInt = other.colorInt;
-        this.size = other.size;
-        this.opacity = other.opacity;
-        if (other.penDown) this._down(); else this._up();
-    }
-
     _down() {
         this.penDown = true;
         if (this.pathOpen) return;
@@ -174,32 +181,46 @@ export class ScratchPenClass extends ObjectClass {
         const layer = this.getLayer();
         if (!layer) return;
         const p = this.toScreen(x, y);
-        const alpha = Math.max(0, Math.min(1, this.opacity / 255));
-        layer.circle(p.x, p.y, this.size / 4).fill({ color: this.colorInt, alpha });
+        layer.circle(p.x, p.y, this.size / 4).fill({ color: this.colorInt, alpha: this.alpha() });
     }
 
-    _setColorObj(c: ScratchColorClass) { if (c) { this.colorHue = c; this.colorInt = c._get() & 0xffffff; } }
-    _setColorHue(h: number) { this.colorHue = new ScratchColorClass(); this.colorHue._cHue(h); this.colorInt = this.colorHue._get() & 0xffffff; }
-    _setColorRGB(r: number, g: number, b: number) { this.colorHue = new ScratchColorClass(); this.colorHue._cRGB(r, g, b); this.colorInt = this.colorHue._get() & 0xffffff; }
-    _changeColor(c: number) { this.colorHue._changeColor(c); this.colorInt = this.colorHue._get() & 0xffffff; }
+    _getColor(): ScratchColorClass { return this.color; }
+    _setColorObj(color: ScratchColorClass) {
+        if (color) { this.color = color; this.colorInt = color._get() & 0xffffff; }
+    }
+    _setColorHue(hue: number) {
+        this.color = ScratchColorClass.fromHSB(hue, 100, 100)._withAlpha(this.color._getAlpha());
+        this.colorInt = this.color._get() & 0xffffff;
+    }
+    _setColorRGB(red: number, green: number, blue: number) {
+        this.color = new ScratchColorClass(red, green, blue);
+        this.colorInt = this.color._get() & 0xffffff;
+    }
+    _changeColor(by: number) {
+        this.color = this.color._withHue(this.color._getHue() + by);
+        this.colorInt = this.color._get() & 0xffffff;
+    }
 
-    _setSize(size: number) { this.size = size; }
     _getSize(): number { return this.size; }
-    _changeSize(size: number) { this.size += size; }
-    _getColor(): ScratchColorClass { return this.colorHue; }
-    // NOTE: this is an opacity of 0..255 (255 = opaque), not a percentage —
-    // upstream hands the value straight to Processing's stroke alpha.
-    _setTransparency(transparency: number) { this.opacity = transparency; }
-    _changeTransparency(step: number) { this._setTransparency((this.opacity + step) % 255); }
+    _setSize(size: number) { this.size = Math.max(1, size); }
+    _changeSize(by: number) { this._setSize(this.size + by); }
 
-    _goToBackground() { this.foreground = false; this.moveLayer(); }
-    _goToForeground() { this.foreground = true; this.moveLayer(); }
-    _isInBackground(): boolean { return !this.foreground; }
+    _getTransparency(): number { return this.transparency; }
+    _setTransparency(transparency: number) { this.transparency = Math.max(0, Math.min(100, transparency)); }
+    _changeTransparency(by: number) { this._setTransparency(this.transparency + by); }
+
+    _getLayer(): LayerEnum { return LayerEnum.values[this.penLayer]; }
+    _setLayer(layer: LayerEnum) {
+        this.penLayer = Layer[layer.name as keyof typeof Layer];
+        this.moveLayer();
+    }
+
+    _isDown(): boolean { return this.penDown; }
 
     /** Re-parent the existing drawing when the pen switches layer. */
     private moveLayer() {
         if (!this.layer || this.layer.destroyed || !this.world) return;
-        const target = scratchLayerOf(this, this.foreground ? "foregroundStamps" : "pen");
+        const target = scratchLayerOf(this, this.containerName());
         if (target) target.addChild(this.layer);
     }
 
@@ -218,11 +239,13 @@ export class ScratchPenClass extends ObjectClass {
         if (callback) callback();
     }
 
-    _stamp() { if (this.foreground) this.sprite?._stampForeground(); else this.sprite?._stamp(); }
+    _getPosition(): ScratchVector2Class { return new ScratchVector2Class(this.px, this.py); }
 
-    _mj$toString$String$(t: Thread, callback: CallbackParameter) {
-        t.s.push(new StringClass(`Pen(x: ${this.px}, y: ${this.py}, down: ${this.penDown})`));
-        if (callback) callback();
+    _stamp() {
+        // a stamp lands on the pen's own layer; the sprite owns the two stamp
+        // canvases (below and above the sprites) until it takes a layer argument
+        if (this.penLayer === Layer.FOREGROUND || this.penLayer === Layer.UI) this.sprite?._stampForeground();
+        else this.sprite?._stamp();
     }
 
     _setPosition(x: number, y: number) {
@@ -231,9 +254,8 @@ export class ScratchPenClass extends ObjectClass {
             if (layer) {
                 const a = this.toScreen(this.px, this.py);
                 const b = this.toScreen(x, y);
-                const alpha = Math.max(0, Math.min(1, this.opacity / 255));
                 layer.moveTo(a.x, a.y).lineTo(b.x, b.y)
-                    .stroke({ width: this.size, color: this.colorInt, alpha, cap: "round", join: "round" });
+                    .stroke({ width: this.size, color: this.colorInt, alpha: this.alpha(), cap: "round", join: "round" });
             }
         }
         this.px = x;
@@ -241,12 +263,31 @@ export class ScratchPenClass extends ObjectClass {
     }
     _setPositionV(v: ScratchVector2Class) { if (v) this._setPosition(v.x, v.y); }
 
-    _eraseAll() { this.getLayer()?.clear(); }
+    /**
+     * 7.0's eraseAll erases the canvas of the pen's whole layer, stamps and
+     * other pens on it included, so the shared container is cleared here and
+     * every pen drawing into it re-creates its graphics on its next move.
+     */
+    _eraseAll() {
+        const container = scratchLayerOf(this, this.containerName());
+        if (container) {
+            for (const child of container.children.slice()) child.destroy();
+        } else {
+            this.getLayer()?.clear();
+        }
+    }
 
-    /** Upstream's stage-lifecycle hooks; the world is already set up here. */
-    _addedToStage(_stage: ObjectClass) { }
+    /** Every pen that still lives in this world (internal). */
+    static livePens(world: IWorld): Iterable<ScratchPenClass> {
+        return ScratchPenClass.allPens.get(world) ?? [];
+    }
+
+    /** Clear only this pen's own drawing (internal). */
+    _eraseOwnGraphics() { this.getLayer()?.clear(); }
+
+    /** Stage lifecycle (internal; not part of the 7.0 API). */
     _removedFromStage(_stage: ObjectClass) {
-        this._eraseAll();
+        this._eraseOwnGraphics();
         if (this.world) ScratchPenClass.allPens.get(this.world)?.delete(this);
     }
 }

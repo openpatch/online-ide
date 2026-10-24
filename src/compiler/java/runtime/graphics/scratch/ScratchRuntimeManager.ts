@@ -7,6 +7,8 @@ import { IWorld } from "../IWorld";
 import { InternalMouseListener, MouseEventKind } from "../MouseManager2D";
 import { KeyCodeEnum } from "./KeyCodeEnum";
 import { MouseCodeEnum } from "./MouseCodeEnum";
+import { GamepadButtonEnum } from "./ScratchGamepadClasses";
+import { GamepadEvent, diffAndDispatchGamepads, pollGamepads } from "./ScratchGamepadState";
 import { activeScratchStage, isScratchStageActive } from "./ScratchStages";
 import { WeakIterableSet } from '../WeakIterableSet';
 
@@ -25,7 +27,16 @@ export interface IScratchEventReceiver {
     _mj$whenMouseWheelMoved$void$int?: (t: Thread, cb: any, steps: number) => void;
     _mj$whenAddedToStage$void$?: (t: Thread, cb: any) => void;
     _mj$whenRemovedFromStage$void$?: (t: Thread, cb: any) => void;
+    // GamepadListener hooks; only objects implementing the interface have them.
+    _mj$whenGamepadButtonPressed$void$GamepadButton?: (t: Thread, cb: any, button: GamepadButtonEnum) => void;
+    _mj$whenGamepadButtonReleased$void$GamepadButton?: (t: Thread, cb: any, button: GamepadButtonEnum) => void;
+    _mj$whenGamepadConnected$void$int?: (t: Thread, cb: any, player: number) => void;
     _containsPoint?: (x: number, y: number) => boolean;
+    /**
+     * Where this receiver stands in the draw order (7.0's whenClicked only
+     * reaches the frontmost sprite under the pointer). Larger is in front.
+     */
+    _frontmostOrder?: () => number;
     /**
      * The stage this receiver belongs to, if any. Input only reaches the stage on
      * screen, and a broadcast only the sprites of the stage it was sent from —
@@ -35,7 +46,7 @@ export interface IScratchEventReceiver {
     _scratchStage?: () => object | undefined;
 }
 
-type ListenerKind = "iReceive" | "keyPressed" | "keyReleased" | "clicked" | "mouseClicked" | "backdropSwitches" | "mouseMoved" | "mouseWheelMoved";
+type ListenerKind = "iReceive" | "keyPressed" | "keyReleased" | "clicked" | "mouseClicked" | "backdropSwitches" | "mouseMoved" | "mouseWheelMoved" | "gamepad";
 
 /**
  * Per-world dispatcher for Scratch events (broadcasts, keyboard, mouse clicks),
@@ -47,6 +58,7 @@ export class ScratchRuntimeManager implements InternalMouseListener {
         iReceive: new WeakIterableSet(), keyPressed: new WeakIterableSet(), keyReleased: new WeakIterableSet(),
         clicked: new WeakIterableSet(), mouseClicked: new WeakIterableSet(), backdropSwitches: new WeakIterableSet(),
         mouseMoved: new WeakIterableSet(), mouseWheelMoved: new WeakIterableSet(),
+        gamepad: new WeakIterableSet(),
     };
 
     private keyPressedListener: KeyPressedListener = (key) => this.onKeyPressed(key);
@@ -209,10 +221,57 @@ export class ScratchRuntimeManager implements InternalMouseListener {
         t.state = ThreadState.running;
     }
 
+    // ---- gamepad ----
+    /**
+     * Reads the controllers, then tells the listener objects what changed since
+     * the last batch. Called once per batch of ticks, right before they run —
+     * the counterpart of the desktop's window-thread poll and the beforeTick
+     * dispatch on the batch's first tick (Game.runTicks). A paused batch runs
+     * no ticks, so no gamepad events reach the listeners — as on the desktop,
+     * where only the keys are handed out while paused (Game.runInputOnly).
+     * And because the act thread of a batch has to finish before the next one
+     * starts, the IDE's speed slider paces this along with the program.
+     */
+    pollAndDispatchGamepads() {
+        pollGamepads();
+        diffAndDispatchGamepads(event => this.dispatchGamepadEvent(event));
+    }
+
+    /**
+     * Hands one gamepad event to the objects that implement the matching
+     * GamepadListener hook. Every stage and sprite sits in the gamepad list
+     * (see _registerListeners); the hook's presence decides who is told.
+     */
+    private dispatchGamepadEvent(event: GamepadEvent) {
+        const list = [...this.lists.gamepad].filter(o => this.receivesInput(o));
+        if (event.kind === "connected") {
+            const receivers = list.filter(o => o._mj$whenGamepadConnected$void$int);
+            if (receivers.length === 0) return;
+            const t = this.interpreter.scheduler.createThread("scratch whenGamepadConnected");
+            for (const obj of receivers) obj._mj$whenGamepadConnected$void$int!(t, undefined, event.player);
+            t.state = ThreadState.running;
+            return;
+        }
+        const pressed = event.kind === "buttonPressed";
+        const receivers = list.filter(o => pressed
+            ? o._mj$whenGamepadButtonPressed$void$GamepadButton
+            : o._mj$whenGamepadButtonReleased$void$GamepadButton);
+        if (receivers.length === 0) return;
+        const button = GamepadButtonEnum.values[event.button];
+        const t = this.interpreter.scheduler.createThread(pressed
+            ? "scratch whenGamepadButtonPressed" : "scratch whenGamepadButtonReleased");
+        for (const obj of receivers) {
+            if (pressed) obj._mj$whenGamepadButtonPressed$void$GamepadButton!(t, undefined, button);
+            else obj._mj$whenGamepadButtonReleased$void$GamepadButton!(t, undefined, button);
+        }
+        t.state = ThreadState.running;
+    }
+
     // ---- mouse ----
     onMouseEvent(kind: MouseEventKind, x: number, y: number): void {
         if (kind === "mousemove") { this.fireMouseMoved(x, y); return; }
-        if (kind !== "mouseup") return;
+        // 7.0, as in Scratch: the click counts the moment the button goes DOWN
+        if (kind !== "mousedown") return;
         const clicked = [...this.lists.clicked].filter(o => this.receivesInput(o));
         const mouseClicked = [...this.lists.mouseClicked].filter(o => this.receivesInput(o));
         if (clicked.length === 0 && mouseClicked.length === 0) return;
@@ -220,9 +279,13 @@ export class ScratchRuntimeManager implements InternalMouseListener {
         const t = this.interpreter.scheduler.createThread("scratch click");
         const code = MouseCodeEnum.values.find(m => m.button === this.lastMouseButton) || MouseCodeEnum.values[0];
         for (const obj of mouseClicked) obj._mj$whenMouseClicked$void$MouseCode!(t, undefined, code);
-        for (const obj of clicked) {
-            if (!obj._containsPoint || obj._containsPoint(x, y)) obj._mj$whenClicked$void$!(t, undefined);
-        }
+        // only the frontmost sprite under the pointer, as in Scratch (6.x
+        // called every sprite under it, on mouse-up)
+        const hit = clicked
+            .filter(obj => obj._containsPoint && obj._containsPoint(x, y))
+            .sort((a, b) => (a._frontmostOrder?.() ?? 0) - (b._frontmostOrder?.() ?? 0));
+        const frontmost = hit[hit.length - 1];
+        if (frontmost) frontmost._mj$whenClicked$void$!(t, undefined);
         t.state = ThreadState.running;
     }
 

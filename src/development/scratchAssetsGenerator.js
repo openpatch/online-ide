@@ -6,18 +6,18 @@
  *  - image atlases (Starling TextureAtlas XML) -> PIXI spritesheet JSON + copied PNG
  *    into assets/graphics/scratch/
  *  - OGG sounds -> flattened into assets/sounds/scratch/
- *  - UbuntuMono-Regular.ttf -> assets/fonts/
+ *  - UbuntuMono-Regular.ttf and Jersey10-Regular.ttf -> assets/fonts/
  *
  * Everything goes to assets/ rather than public/, so Vite hashes and rewrites the
  * URLs and the embedded build also works when it is included from a subdirectory.
  *
  * Run: node src/development/scratchAssetsGenerator.js [pathToScratchForJavaResources]
- * Default source: ../scratch-for-java/src/main/resources
+ * Default source: ../scratch-for-java/core/src/main/resources
  */
 import * as fs from "fs";
 import * as path from "path";
 
-const SRC = process.argv[2] || "../scratch-for-java/src/main/resources";
+const SRC = process.argv[2] || "../scratch-for-java/core/src/main/resources";
 const OUT_IMG = "./assets/graphics/scratch";
 const OUT_FONT = "./assets/fonts";
 const OUT_SOUNDS = "./assets/sounds/scratch";
@@ -121,12 +121,15 @@ function generateSounds() {
 
 function generateFont() {
     ensureDir(OUT_FONT);
-    const ttf = path.join(SRC, "UbuntuMono-Regular.ttf");
-    if (fs.existsSync(ttf)) {
-        fs.copyFileSync(ttf, path.join(OUT_FONT, "UbuntuMono-Regular.ttf"));
-        console.log("  UbuntuMono-Regular.ttf copied");
-    } else {
-        console.log("  (font not present)");
+    const fonts = ["UbuntuMono-Regular.ttf", "Jersey10-Regular.ttf"];
+    for (const font of fonts) {
+        const ttf = path.join(SRC, font);
+        if (fs.existsSync(ttf)) {
+            fs.copyFileSync(ttf, path.join(OUT_FONT, font));
+            console.log(`  ${font} copied`);
+        } else {
+            console.log(`  (${font} not present)`);
+        }
     }
 }
 
@@ -134,6 +137,6 @@ console.log("Scratch assets: images");
 generateImages();
 console.log("Scratch assets: sounds");
 generateSounds();
-console.log("Scratch assets: font");
+console.log("Scratch assets: fonts");
 generateFont();
 console.log("[1;32mDone![0m");

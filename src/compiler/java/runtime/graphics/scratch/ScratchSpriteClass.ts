@@ -11,22 +11,25 @@ import { ObjectClass, StringClass } from "../../system/javalang/ObjectClassStrin
 import { ShapeClass } from "../ShapeClass";
 import { KeyCodeEnum } from "./KeyCodeEnum";
 import { Layer, LayerEnum } from "./LayerEnum";
-import { ScratchLayerName, ScratchLayers, scratchLayerOf, spriteLayerOf } from "./ScratchLayers";
+import { ScratchLayerName, ScratchLayers, scratchLayerOf, spriteLayerOf, spriteLayerOfLayer } from "./ScratchLayers";
 import { activeScratchStage, isScratchStageActive, scratchStagesRunning } from "./ScratchStages";
 import { MouseCodeEnum } from "./MouseCodeEnum";
 import { RotationStyle, RotationStyleEnum } from "./RotationStyleEnum";
 import { ScratchColorClass } from "./ScratchColorClass";
-import { ScratchCostumes } from "./ScratchCostumes";
+import { ScratchCostumes, assetNameFromPath } from "./ScratchCostumes";
 import { colorKey, isTouchingColor } from "./ScratchColorSensing";
 import { ScratchShadersClass } from "./ScratchShaders";
 import { DEBUG_COLOR, round2 } from "./ScratchDebug";
-import { ScratchHitboxClass } from "./ScratchHitboxClass";
 import { scratchSpriteList } from "./ScratchLists";
 import { ScratchPenClass } from "./ScratchPenClass";
 import { IScratchEventReceiver, ScratchRuntimeManager } from "./ScratchRuntimeManager";
 import { ScratchSoundBank } from "./ScratchSounds";
+import { ScratchBoundsClass } from "./ScratchBoundsClass";
+import { createColorEffectFilter } from "./ScratchEffects";
+import { roundToScratchPixelGrid, scratchDefaultFontFamily } from "./ScratchFont";
 import { ScratchShapeClass } from "./ScratchShapeClasses";
 import { ScratchTextClass } from "./ScratchTextClass";
+import { TextAlign } from "./TextAlignEnum";
 import { ScratchTimerClass } from "./ScratchTimerClass";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
@@ -45,10 +48,10 @@ type ScratchStageLike = {
     _broadcast(message: StringClass): void;
     _mj$broadcast$void$String(t: Thread, callback: CallbackParameter, message: StringClass): void;
     _ask(question: string): void;
+    _askForSprite(sprite: ScratchSpriteClass, question: string): void;
     _getAnswer(): string;
     _isAsking(): boolean;
     _pickRandom(from: number, to: number): number;
-    _getDeltaTime(): number;
     _debug(values: any[]): void;
     sprites: ScratchSpriteClass[];
 };
@@ -65,9 +68,13 @@ export class ScratchSpriteClass extends ShapeClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch", signature: "class Sprite extends Actor", comment: SRC.spriteClassComment },
 
+        { type: "field", signature: "static double DIRECTION_UP" },
+        { type: "field", signature: "static double DIRECTION_RIGHT" },
+        { type: "field", signature: "static double DIRECTION_DOWN" },
+        { type: "field", signature: "static double DIRECTION_LEFT" },
+
         { type: "method", signature: "Sprite()", java: ScratchSpriteClass.prototype._cj$_constructor_$Sprite$, comment: SRC.spriteConstructorComment },
         { type: "method", signature: "Sprite(string name, string imagePath)", java: ScratchSpriteClass.prototype._cj$_constructor_$Sprite$string$string, comment: SRC.spriteConstructor2Comment },
-        { type: "method", signature: "Sprite(Sprite s)", java: ScratchSpriteClass.prototype._cj$_constructor_$Sprite$Sprite, comment: SRC.spriteConstructor3Comment },
 
         // per-frame hook (Scratch: runs every frame)
         { type: "method", signature: "void run()", java: ScratchSpriteClass.prototype._mj$run$void$, comment: SRC.spriteRunComment },
@@ -85,12 +92,12 @@ export class ScratchSpriteClass extends ShapeClass {
 
         // speech
         { type: "method", signature: "void say(string text)", native: ScratchSpriteClass.prototype._say, comment: SRC.spriteSayComment },
-        { type: "method", signature: "void say(string text, int millis)", native: ScratchSpriteClass.prototype._sayFor, comment: SRC.spriteSay2Comment },
+        { type: "method", signature: "void say(string text, double seconds)", native: ScratchSpriteClass.prototype._sayFor, comment: SRC.spriteSay2Comment },
         { type: "method", signature: "void think(string text)", native: ScratchSpriteClass.prototype._think, comment: SRC.spriteThinkComment },
-        { type: "method", signature: "void think(string text, int millis)", native: ScratchSpriteClass.prototype._thinkFor, comment: SRC.spriteThink2Comment },
+        { type: "method", signature: "void think(string text, double seconds)", native: ScratchSpriteClass.prototype._thinkFor, comment: SRC.spriteThink2Comment },
 
         // costumes
-        { type: "method", signature: "void addCostume(string name)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string, comment: SRC.spriteAddCostumeComment },
+        { type: "method", signature: "void addCostume(string imagePath)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string, comment: SRC.spriteAddCostumeComment },
         { type: "method", signature: "void addCostume(string name, string imagePath)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string$string, comment: SRC.spriteAddCostume2Comment },
         { type: "method", signature: "void addCostume(string name, string spriteSheetPath, int x, int y, int width, int height)", java: ScratchSpriteClass.prototype._mj$addCostume$void$string$string$int$int$int$int, comment: SRC.spriteAddCostume3Comment },
         { type: "method", signature: "void addCostumes(string prefix, string spriteSheet, int tileWidth, int tileHeight)", java: ScratchSpriteClass.prototype._mj$addCostumes$void$string$string$int$int, comment: SRC.spriteAddCostumesComment },
@@ -101,8 +108,21 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "string getCurrentCostumeName()", native: ScratchSpriteClass.prototype._getCurrentCostumeName, comment: SRC.spriteGetCurrentCostumeNameComment },
         { type: "method", signature: "int getCurrentCostumeIndex()", native: ScratchSpriteClass.prototype._getCurrentCostumeIndex, comment: SRC.spriteGetCurrentCostumeIndexComment },
 
+        // animations (7.0: on every sprite, durations in seconds)
+        { type: "method", signature: "void addAnimation(string name, string pattern, int frames)", java: ScratchSpriteClass.prototype._mj$addAnimation$void$string$string$int, comment: SRC.spriteAddAnimationComment },
+        { type: "method", signature: "void addAnimation(string name, string pattern, int from, int to)", java: ScratchSpriteClass.prototype._mj$addAnimation$void$string$string$int$int, comment: SRC.spriteAddAnimation2Comment },
+        { type: "method", signature: "void addAnimation(string name, string spriteSheetPath, int frameWidth, int frameHeight, int... frames)", java: ScratchSpriteClass.prototype._mj$addAnimation$void$string$string$int$int$int$Arr, comment: SRC.spriteAddAnimation3Comment },
+        { type: "method", signature: "void playAnimation(string name)", native: ScratchSpriteClass.prototype._playAnimation, comment: SRC.spritePlayAnimationComment },
+        { type: "method", signature: "void playAnimation(string name, boolean once)", native: ScratchSpriteClass.prototype._playAnimationOnce, comment: SRC.spritePlayAnimation2Comment },
+        { type: "method", signature: "void resetAnimation()", native: ScratchSpriteClass.prototype._resetAnimation, comment: SRC.spriteResetAnimationComment },
+        { type: "method", signature: "void setAnimationFrame(int frame)", native: ScratchSpriteClass.prototype._setAnimationFrame, comment: SRC.spriteSetAnimationFrameComment },
+        { type: "method", signature: "void setAnimationInterval(double seconds)", native: ScratchSpriteClass.prototype._setAnimationInterval, comment: SRC.spriteSetAnimationIntervalComment },
+        { type: "method", signature: "double getAnimationInterval()", native: ScratchSpriteClass.prototype._getAnimationInterval, comment: SRC.spriteGetAnimationIntervalComment },
+        { type: "method", signature: "int getAnimationFrame()", native: ScratchSpriteClass.prototype._getAnimationFrame, comment: SRC.spriteGetAnimationFrameComment },
+        { type: "method", signature: "boolean isAnimationPlayed()", native: ScratchSpriteClass.prototype._isAnimationPlayed, comment: SRC.spriteIsAnimationPlayedComment },
+
         // sound
-        { type: "method", signature: "void addSound(string name)", native: ScratchSpriteClass.prototype._addSound, comment: SRC.spriteAddSoundComment },
+        { type: "method", signature: "void addSound(string soundPath)", native: ScratchSpriteClass.prototype._addSound, comment: SRC.spriteAddSoundComment },
         { type: "method", signature: "void addSound(string name, string soundPath)", native: ScratchSpriteClass.prototype._addSound2, comment: SRC.spriteAddSound2Comment },
         { type: "method", signature: "void playSound(string name)", native: ScratchSpriteClass.prototype._playSound, comment: SRC.spritePlaySoundComment },
         { type: "method", signature: "SoundPlayback playSoundCopy(string name, double volume)", native: ScratchSpriteClass.prototype._playSoundCopy },
@@ -115,7 +135,6 @@ export class ScratchSpriteClass extends ShapeClass {
 
         // movement
         { type: "method", signature: "void move(double steps)", native: ScratchSpriteClass.prototype._move2, comment: SRC.spriteMoveComment },
-        { type: "method", signature: "void move(Vector2 v)", native: ScratchSpriteClass.prototype._moveV, comment: SRC.spriteMove2Comment },
         { type: "method", signature: "void setPosition(double x, double y)", native: ScratchSpriteClass.prototype._setPosition, comment: SRC.spriteSetPositionComment },
         { type: "method", signature: "void setPosition(Vector2 v)", native: ScratchSpriteClass.prototype._setPositionV, comment: SRC.spriteSetPosition2Comment },
         { type: "method", signature: "void changePosition(double x, double y)", native: ScratchSpriteClass.prototype._changePosition, comment: SRC.spriteChangePositionComment },
@@ -137,14 +156,13 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "void turnRight(double degrees)", native: ScratchSpriteClass.prototype._turnRight, comment: SRC.spriteTurnRightComment },
         { type: "method", signature: "void turnLeft(double degrees)", native: ScratchSpriteClass.prototype._turnLeft, comment: SRC.spriteTurnLeftComment },
         { type: "method", signature: "void setDirection(double degrees)", native: ScratchSpriteClass.prototype._setDirection, comment: SRC.spriteSetDirectionComment },
-        { type: "method", signature: "void setDirection(Vector2 v)", native: ScratchSpriteClass.prototype._setDirectionV, comment: SRC.spriteSetDirection2Comment },
         { type: "method", signature: "void goToSprite(Sprite sprite)", native: ScratchSpriteClass.prototype._goToSprite, comment: SRC.spriteGoToSpriteComment },
-        { type: "method", signature: "void pointInDirection(double degrees)", native: ScratchSpriteClass.prototype._setDirection, comment: SRC.spritePointInDirectionComment },
-        { type: "method", signature: "void pointInDirection(Vector2 v)", native: ScratchSpriteClass.prototype._pointInDirectionV, comment: SRC.spritePointInDirection2Comment },
+        { type: "method", signature: "void pointTowards(Vector2 position)", native: ScratchSpriteClass.prototype._pointTowardsVector, comment: SRC.spritePointTowardsComment },
         { type: "method", signature: "void pointTowardsMousePointer()", native: ScratchSpriteClass.prototype._pointTowardsMousePointer, comment: SRC.spritePointTowardsMousePointerComment },
-        { type: "method", signature: "void pointTowardsSprite(Sprite other)", native: ScratchSpriteClass.prototype._pointTowardsSprite, comment: SRC.spritePointTowardsSpriteComment },
+        { type: "method", signature: "void pointTowards(Sprite other)", native: ScratchSpriteClass.prototype._pointTowardsSprite, comment: SRC.spritePointTowards2Comment },
         { type: "method", signature: "double getDirection()", native: ScratchSpriteClass.prototype._getDirection, comment: SRC.spriteGetDirectionComment },
         { type: "method", signature: "void setRotationStyle(RotationStyle style)", native: ScratchSpriteClass.prototype._setRotationStyle, comment: SRC.spriteSetRotationStyleComment },
+        { type: "method", signature: "RotationStyle getRotationStyle()", native: ScratchSpriteClass.prototype._getRotationStyle, comment: SRC.spriteGetRotationStyleComment },
         { type: "method", signature: "void setRotationCenter(double x, double y)", native: ScratchSpriteClass.prototype._setRotationCenter, comment: SRC.spriteSetRotationCenterComment },
 
         // appearance
@@ -157,16 +175,24 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "void setTransparency(double percentage)", native: ScratchSpriteClass.prototype._setTransparency, comment: SRC.spriteSetTransparencyComment },
         { type: "method", signature: "void changeTransparency(double step)", native: ScratchSpriteClass.prototype._changeTransparency, comment: SRC.spriteChangeTransparencyComment },
         { type: "method", signature: "double getTransparency()", native: ScratchSpriteClass.prototype._getTransparency, comment: SRC.spriteGetTransparencyComment },
-        // int, not double: upstream reports the costume's pixels, which are whole
-        { type: "method", signature: "int getWidth()", native: ScratchSpriteClass.prototype._getSpriteWidth, comment: SRC.spriteGetWidthComment },
-        { type: "method", signature: "int getHeight()", native: ScratchSpriteClass.prototype._getSpriteHeight, comment: SRC.spriteGetHeightComment },
+        { type: "method", signature: "double getWidth()", native: ScratchSpriteClass.prototype._getSpriteWidth, comment: SRC.spriteGetWidthComment },
+        { type: "method", signature: "double getHeight()", native: ScratchSpriteClass.prototype._getSpriteHeight, comment: SRC.spriteGetHeightComment },
+        { type: "method", signature: "void setWidth(double width)", native: ScratchSpriteClass.prototype._setWidth, comment: SRC.spriteSetWidthComment },
+        { type: "method", signature: "void setHeight(double height)", native: ScratchSpriteClass.prototype._setHeight, comment: SRC.spriteSetHeightComment },
+        { type: "method", signature: "void changeWidth(double by)", native: ScratchSpriteClass.prototype._changeWidth, comment: SRC.spriteChangeWidthComment },
+        { type: "method", signature: "void changeHeight(double by)", native: ScratchSpriteClass.prototype._changeHeight, comment: SRC.spriteChangeHeightComment },
+        { type: "method", signature: "void setNineSlice(int top, int right, int bottom, int left)", native: ScratchSpriteClass.prototype._setNineSlice, comment: SRC.spriteSetNineSliceComment },
+        { type: "method", signature: "void disableNineSlice()", native: ScratchSpriteClass.prototype._disableNineSlice, comment: SRC.spriteDisableNineSliceComment },
+        { type: "method", signature: "void setColorEffect(double effect)", native: ScratchSpriteClass.prototype._setColorEffect, comment: SRC.spriteSetColorEffectComment },
+        { type: "method", signature: "void changeColorEffect(double by)", native: ScratchSpriteClass.prototype._changeColorEffect, comment: SRC.spriteChangeColorEffectComment },
+        { type: "method", signature: "double getColorEffect()", native: ScratchSpriteClass.prototype._getColorEffect, comment: SRC.spriteGetColorEffectComment },
         { type: "method", signature: "void setTint(Color c)", native: ScratchSpriteClass.prototype._setTintObj, comment: SRC.spriteSetTintComment },
-        { type: "method", signature: "void setTint(double h)", native: ScratchSpriteClass.prototype._setTintHue, comment: SRC.spriteSetTint2Comment },
         { type: "method", signature: "void setTint(double r, double g, double b)", native: ScratchSpriteClass.prototype._setTintRGB, comment: SRC.spriteSetTint3Comment },
-        { type: "method", signature: "void changeTint(double step)", native: ScratchSpriteClass.prototype._changeTint, comment: SRC.spriteChangeTintComment },
         { type: "method", signature: "Color getTint()", native: ScratchSpriteClass.prototype._getTint, comment: SRC.spriteGetTintComment },
 
         // layering
+        { type: "method", signature: "void setLayer(Layer layer)", native: ScratchSpriteClass.prototype._setLayer, comment: SRC.spriteSetLayerComment },
+        { type: "method", signature: "Layer getLayer()", native: ScratchSpriteClass.prototype._getLayer, comment: SRC.spriteGetLayerComment },
         { type: "method", signature: "void goToFrontLayer()", native: ScratchSpriteClass.prototype._goToFrontLayer, comment: SRC.spriteGoToFrontLayerComment },
         { type: "method", signature: "void goToBackLayer()", native: ScratchSpriteClass.prototype._goToBackLayer, comment: SRC.spriteGoToBackLayerComment },
         { type: "method", signature: "void goLayersForwards(int number)", native: ScratchSpriteClass.prototype._goLayersForwards, comment: SRC.spriteGoLayersForwardsComment },
@@ -197,18 +223,13 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "string getAnswer()", native: ScratchSpriteClass.prototype._getAnswer, comment: SRC.spriteGetAnswerComment },
         { type: "method", signature: "boolean isAsking()", native: ScratchSpriteClass.prototype._isAsking, comment: SRC.spriteIsAskingComment },
         { type: "method", signature: "int pickRandom(int from, int to)", native: ScratchSpriteClass.prototype._pickRandom, comment: SRC.spritePickRandomComment },
-        { type: "method", signature: "double getDeltaTime()", native: ScratchSpriteClass.prototype._getDeltaTime, comment: SRC.spriteGetDeltaTimeComment },
         { type: "method", signature: "Text getText()", native: ScratchSpriteClass.prototype._getText, comment: SRC.spriteGetTextComment },
         { type: "method", signature: "void debug(Object... values)", native: ScratchSpriteClass.prototype._debug, comment: SRC.spriteDebugComment },
 
         { type: "method", signature: "Timer getTimer()", native: ScratchSpriteClass.prototype._getTimer, comment: SRC.spriteGetTimerComment },
-        { type: "method", signature: "Timer getTimer(string name)", native: ScratchSpriteClass.prototype._getNamedTimer, comment: SRC.spriteGetTimer2Comment },
 
-        { type: "method", signature: "void setHitbox(double... points)", native: ScratchSpriteClass.prototype._setHitbox, comment: SRC.spriteSetHitboxComment },
         { type: "method", signature: "void setHitbox(Shape shape)", native: ScratchSpriteClass.prototype._setHitboxShape, comment: SRC.spriteSetHitbox2Comment },
-        { type: "method", signature: "protected void setUI(boolean isUI)", native: ScratchSpriteClass.prototype._setUI, comment: SRC.spriteSetUIComment },
-        { type: "method", signature: "protected boolean isUI()", native: ScratchSpriteClass.prototype._isUI, comment: SRC.spriteIsUIComment },
-        { type: "method", signature: "Hitbox getHitbox()", native: ScratchSpriteClass.prototype._getHitbox, comment: SRC.spriteGetHitboxComment },
+        { type: "method", signature: "Shape getHitbox()", native: ScratchSpriteClass.prototype._getHitboxShape, comment: SRC.spriteGetHitboxComment },
         { type: "method", signature: "void enableHitbox()", native: ScratchSpriteClass.prototype._enableHitbox, comment: SRC.spriteEnableHitboxComment },
         { type: "method", signature: "void disableHitbox()", native: ScratchSpriteClass.prototype._disableHitbox, comment: SRC.spriteDisableHitboxComment },
         { type: "method", signature: "void stamp()", native: ScratchSpriteClass.prototype._stamp, comment: SRC.spriteStampComment },
@@ -223,11 +244,17 @@ export class ScratchSpriteClass extends ShapeClass {
         { type: "method", signature: "void showVariable(string name, Supplier<Object> value)", java: ScratchSpriteClass.prototype._mj$showVariable$void$string$Supplier },
         { type: "method", signature: "void hideVariable(string name)", native: ScratchSpriteClass.prototype._hideVariable },
 
-        { type: "method", signature: "Sprite clone()", java: ScratchSpriteClass.prototype._mj$copy$Shape$, comment: SRC.spriteCloneComment },
+        { type: "method", signature: "<T extends Sprite> T createClone()", java: ScratchSpriteClass.prototype._mj$createClone$Sprite$, comment: SRC.spriteCreateCloneComment },
         { type: "method", signature: "Shaders getShaders()", native: ScratchSpriteClass.prototype._getShaders, comment: SRC.spriteGetShadersComment },
+        { type: "method", signature: "String toString()", java: ScratchSpriteClass.prototype._mj$toString$Sprite$ },
     ];
 
     static type: NonPrimitiveType;
+
+    static readonly DIRECTION_UP = 0;
+    static readonly DIRECTION_RIGHT = 90;
+    static readonly DIRECTION_DOWN = 180;
+    static readonly DIRECTION_LEFT = -90;
 
     // logical Scratch state
     sx: number = 0;               // centre-origin x, right = +
@@ -258,6 +285,22 @@ export class ScratchSpriteClass extends ShapeClass {
     private cloned = false;
     private removing = false;
     variableMonitors = new ScratchMonitors();
+    /**
+     * 7.0's createClone(): the copy sits directly behind the original, as in
+     * Scratch (6.x put it in front of everything).
+     */
+    _mj$createClone$Sprite$(t: Thread, callback: CallbackParameter): void {
+        this._mj$copy$Shape$(t, () => {
+            const clone = t.s[t.s.length - 1] as ScratchSpriteClass | undefined;
+            if (clone?.container?.parent && this.container?.parent
+                && clone.container.parent === this.container.parent && clone !== this) {
+                const parent = this.container.parent;
+                parent.setChildIndex(clone.container, Math.max(0, parent.getChildIndex(this.container)));
+            }
+            if (callback) callback();
+        });
+    }
+
     _mj$showVariable$void$string$Supplier(t: Thread, callback: CallbackParameter, name: string, supplier: SupplierInterface) {
         const owner = (this.constructor as any).type?.identifier ?? this.constructor.name;
         this.variableMonitors.show(t, name, supplier, `${owner}: ${name}`);
@@ -270,7 +313,7 @@ export class ScratchSpriteClass extends ShapeClass {
             // Shape's constructor pushed `this` and set up this.world
             this.container = new PIXI.Container();
             // UI sprites go into the layer the camera does not move
-            (spriteLayerOf(this, this.isUI()) ?? this.world.app.stage).addChild(this.container);
+            (spriteLayerOfLayer(this, this.spriteLayer) ?? this.world.app.stage).addChild(this.container);
             this.centerXInitial = 0;
             this.centerYInitial = 0;
             this.penObj = new ScratchPenClass();
@@ -307,7 +350,7 @@ export class ScratchSpriteClass extends ShapeClass {
                 this.direction = other.direction;
                 this.size = other.size;
                 this.rotationStyle = other.rotationStyle;
-                this._setUI(other.ui);
+                this.spriteLayer = other.spriteLayer;
                 this.hitboxEnabled = other.hitboxEnabled;
                 this.customHitboxPoints = other.customHitboxPoints?.slice();
                 this.rotationCenter = other.rotationCenter;
@@ -322,7 +365,7 @@ export class ScratchSpriteClass extends ShapeClass {
                     const pen = this._getPen();
                     pen.px = this.sx;
                     pen.py = this.sy;
-                    pen._copyFrom(other.penObj);
+                    pen._copyStateFrom(other.penObj);
                 }
                 this.applyState();
             }
@@ -417,73 +460,88 @@ export class ScratchSpriteClass extends ShapeClass {
             mouseClicked: this._mj$whenMouseClicked$void$MouseCode !== proto._mj$whenMouseClicked$void$MouseCode,
             backdropSwitches: this._mj$whenBackdropSwitches$void$String !== proto._mj$whenBackdropSwitches$void$String,
             mouseMoved: this._mj$whenMouseMoved$void$double$double !== proto._mj$whenMouseMoved$void$double$double,
+            // Every object is registered for the gamepad events; the dispatch
+            // only reaches those that implement a GamepadListener hook.
+            gamepad: true,
         });
     }
 
     // ---- speech / thought bubbles ----
     private speechBubble?: PIXI.Container;
+    private speechTail?: PIXI.Graphics;
+    private speechBubbleWidth: number = 0;
+    private speechThink: boolean = false;
     private speechTimeout?: any;
 
     /**
-     * Speech and thought bubbles, matching org.openpatch.scratch.Text#drawBubble:
-     * UbuntuMono 14, white fill, light grey border, grey text, 16px corners, and
-     * 8px padding. A speech bubble gets a triangular tail at its bottom left, a
-     * thought bubble three shrinking circles. The numbers below are upstream's.
+     * Speech and thought bubbles, matching org.openpatch.scratch.Text as a
+     * sprite's SPEAK/THINK text: the default font at 14 - UbuntuMono, or
+     * Jersey 10 in pixel-art mode, with sizes rounded to whole pixels of it -
+     * white fill, light grey border, black text (upstream's Text defaults),
+     * 16px corners, and 8px padding. A speech bubble gets a triangular tail at
+     * its bottom left, a thought bubble three shrinking circles. The lines are
+     * laid out by the shared v7 layout (ScratchTextClass.layoutText): broken
+     * like upstream's LineBreaker at BUBBLE_MAX_WIDTH minus the padding, one
+     * baseline a line step apart, from the font file's own metrics. The
+     * numbers below are upstream's.
      */
     private showSpeech(text: string, think: boolean) {
         this.clearSpeech();
         if (!text || text.length === 0) return;
 
+        const fontSize = roundToScratchPixelGrid(ScratchSpriteClass.BUBBLE_FONT_SIZE);
+        const family = scratchDefaultFontFamily();
+        // No leading, no wrap style: the layout below breaks the lines and
+        // places every baseline itself.
         const style = new PIXI.TextStyle({
-            fontFamily: "UbuntuMono, monospace",
-            fontSize: ScratchSpriteClass.BUBBLE_FONT_SIZE,
-            fill: 0x787878,                                  // Color(120, 120, 120)
-            // `leading` is the gap BETWEEN lines, which is what Processing's
-            // textLeading(textSize + 4) means; lineHeight would instead centre
-            // every line in an 18px box and push the first one down
-            leading: 4,
-            wordWrap: true,
-            wordWrapWidth: ScratchSpriteClass.SPEAK_BUBBLE_MAX_LIMIT,
+            fontFamily: family,
+            fontSize,
+            fill: 0x000000,                                  // Color(0, 0, 0), upstream's Text default
         });
-        const label = new PIXI.Text({ text, style });
-
-        const lines = Math.max(1, text.split("\n").length, Math.round(label.height / (ScratchSpriteClass.BUBBLE_FONT_SIZE + 4)));
-        const bw = Math.max(label.width, ScratchSpriteClass.SPEAK_BUBBLE_MIN_LIMIT) + 16;
-        const bh = (ScratchSpriteClass.BUBBLE_FONT_SIZE + 4) * lines + 16;
+        // upstream's Text.layout() for a sprite's bubble: BUBBLE_MAX_WIDTH,
+        // and the words inside it wrap at that minus the padding
+        const layout = ScratchTextClass.layoutText(text, family, style, fontSize,
+            ScratchSpriteClass.SPEAK_BUBBLE_MAX_LIMIT - 16);
+        // a bubble is at least BUBBLE_MIN_LIMIT wide - the minimum REPLACES the
+        // words' width plus the padding (upstream's Text.toDraw) - and stands
+        // on its bottom edge at the position
+        const bw = Math.max(ScratchSpriteClass.SPEAK_BUBBLE_MIN_LIMIT, layout.width + 16);
+        const bh = layout.height + 16;
 
         const g = new PIXI.Graphics();
-        g.roundRect(0, 0, bw, bh, 16).fill(0xffffff).stroke({ width: 1, color: 0xdadada });
-        if (think) {
-            // circle(x, y, d) upstream takes a diameter, so these are radii
-            g.circle(20, bh, 5).fill(0xffffff).stroke({ width: 1, color: 0xdadada });
-            g.circle(7, bh + 7, 3).fill(0xffffff).stroke({ width: 1, color: 0xdadada });
-            g.circle(0, bh + 10, 2).fill(0xffffff).stroke({ width: 1, color: 0xdadada });
-        } else {
-            // Outlined like the bubble it hangs off. Filled only, it was a
-            // white triangle on a white stage and the bubble looked tail-less.
-            g.moveTo(10, bh + 20).lineTo(10, bh).lineTo(30, bh).closePath()
-                .fill(0xffffff).stroke({ width: 1, color: 0xdadada });
-            // hides the seam where the tail meets the border, as upstream does
-            g.moveTo(12, bh).lineTo(26, bh).stroke({ width: 3, color: 0xffffff });
-        }
+        g.roundRect(0, 0, bw, bh, 16).fill(0xffffff).stroke({ width: 1, color: 0xc9c9c9 });
+        // the tail or the circles are drawn per side in positionSpeech: the
+        // bubble grows right of the sprite, or left when there is no room,
+        // and the tail hangs off whichever corner points back at it
 
-        // 8,8 upstream; PIXI puts the glyph box a few pixels lower than
-        // Processing does, so the y is nudged to make the two renders line up
-        label.position.set(8, 4);
+        // The words sit inside the padding, centred within the box - which is
+        // wider than the words when the minimum width applies (upstream's
+        // Renderer.drawLayout): the first line's baseline an ascent below
+        // the bubble's top (upstream's TextLayout.Line.baseline), the further
+        // ones a line step below it.
+        const words = new PIXI.Container();
+        ScratchTextClass.addLines(words, layout, style, TextAlign.CENTER, 8, 8 + layout.ascent, bw - 16);
         const bubble = new PIXI.Container();
         bubble.addChild(g);
-        bubble.addChild(label);
+        bubble.addChild(words);
+        const tail = new PIXI.Graphics();
+        bubble.addChild(tail);
         // the bubble belongs with its sprite, so the camera moves it too
-        (spriteLayerOf(this, this.isUI()) ?? this.world.app.stage).addChild(bubble);
+        (spriteLayerOfLayer(this, this.spriteLayer) ?? this.world.app.stage).addChild(bubble);
         this.speechBubble = bubble;
+        this.speechBubbleWidth = bw;
         this.speechBubbleHeight = bh;
+        this.speechThink = think;
+        this.speechTail = tail;
         this.positionSpeech();
     }
 
     /**
-     * Anchor the bubble the way upstream's drawBubble does: its bottom-left
-     * corner sits on the top-right corner of the sprite's hitbox, so that the
-     * tail points back at the sprite however big its costume canvas is.
+     * Anchor the bubble the way upstream's Text.toDraw does: its bottom corner
+     * sits on the top corner of the sprite's hitbox, so that the tail points
+     * back at the sprite however big its costume canvas is. The bubble grows
+     * right of the sprite, or left when the camera's window has no room on
+     * the right (see positionSpeech).
      *
      * The sprite's own state is used rather than the transformed hit polygon,
      * because that is derived from the PIXI world transform, which is only valid
@@ -522,28 +580,82 @@ export class ScratchSpriteClass extends ShapeClass {
         const degrees = this.rotationStyle === RotationStyle.ALL_AROUND ? this.direction - 90 : 0;
         const radians = degrees * Math.PI / 180;
         const cos = Math.cos(radians), sin = Math.sin(radians);
-        let anchorRight = -Infinity, anchorTop = Infinity;
+        let anchorRight = -Infinity, anchorLeft = Infinity, anchorTop = Infinity;
         for (const [cx, cy] of [[left, top], [right, top], [right, bottom], [left, bottom]]) {
             const x = cx * cos - cy * sin;
             const y = cx * sin + cy * cos;
             if (x > anchorRight) anchorRight = x;
+            if (x < anchorLeft) anchorLeft = x;
             if (y < anchorTop) anchorTop = y;
         }
 
-        this.speechBubble.position.set(
-            W / 2 + this.sx + anchorRight,
-            H / 2 - this.sy + anchorTop - this.speechBubbleHeight);
+        // Upstream's Text.toDraw: the bubble grows to the right of the sprite,
+        // or to its left when there is no room, and the tail starts from the
+        // sprite's edge on that side. The room is the camera's window in stage
+        // coordinates - a UI sprite's bubble is not moved by the camera, so its
+        // window is the whole stage. Neither side having room keeps the bubble
+        // on the stage, and the top stays below the window's top edge.
+        const bw = this.speechBubbleWidth, bh = this.speechBubbleHeight;
+        const ui = this.isUI();
+        const camera = (this.stage as any)?.camera;
+        const camX = ui || !camera ? 0 : camera.x;
+        const camY = ui || !camera ? 0 : camera.y;
+        const halfW = (ui || !camera ? W : W / (camera.zoom / 100)) / 2;
+        const halfH = (ui || !camera ? H : H / (camera.zoom / 100)) / 2;
+        const hasOutline = !!texture && content.width > 0 && content.height > 0;
+        let bubbleLeft = this.sx + anchorRight;          // stage coordinates, y up
+        let flip = false;
+        if (bubbleLeft + bw > camX + halfW && hasOutline) {
+            bubbleLeft = this.sx + anchorLeft - bw;
+            flip = true;
+        }
+        bubbleLeft = Math.max(camX - halfW, Math.min(bubbleLeft, camX + halfW - bw));
+        // the box's top edge: the bottom sits on the outline's top
+        let bubbleTop = this.sy - anchorTop + bh;
+        bubbleTop = Math.min(bubbleTop, camY + halfH);
+
+        this.drawSpeechTail(flip);
+        this.speechBubble.position.set(W / 2 + bubbleLeft, H / 2 - bubbleTop);
+    }
+
+    /**
+     * The tail of a speaking bubble, or the circles of a thinking one, at the
+     * corner that points back at the sprite: the bubble's left edge when it
+     * grows right, its right edge when it grows left (upstream's tailX with
+     * its dir, see Renderer's SPEECH and THOUGHT cases).
+     */
+    private drawSpeechTail(mirrored: boolean) {
+        const tail = this.speechTail;
+        if (!tail) return;
+        const bw = this.speechBubbleWidth, bh = this.speechBubbleHeight;
+        const at = mirrored ? bw : 0;     // the sprite's edge, as an x in the bubble
+        const dir = mirrored ? -1 : 1;
+        tail.clear();
+        if (this.speechThink) {
+            // circle(x, y, d) upstream takes a diameter, so these are radii
+            tail.circle(at + dir * 20, bh, 5).fill(0xffffff).stroke({ width: 1, color: 0xc9c9c9 });
+            tail.circle(at + dir * 7, bh + 7, 3).fill(0xffffff).stroke({ width: 1, color: 0xc9c9c9 });
+            tail.circle(at, bh + 10, 2).fill(0xffffff).stroke({ width: 1, color: 0xc9c9c9 });
+        } else {
+            // Outlined like the bubble it hangs off. Filled only, it was a
+            // white triangle on a white stage and the bubble looked tail-less.
+            tail.moveTo(at + dir * 10, bh + 20).lineTo(at + dir * 10, bh).lineTo(at + dir * 30, bh).closePath()
+                .fill(0xffffff).stroke({ width: 1, color: 0xc9c9c9 });
+            // hides the seam where the tail meets the border, as upstream does
+            tail.moveTo(at + dir * 12, bh).lineTo(at + dir * 26, bh).stroke({ width: 3, color: 0xffffff });
+        }
     }
 
     private clearSpeech() {
         if (this.speechTimeout) { this.speechTimeout(); this.speechTimeout = undefined; }
         if (this.speechBubble) { this.speechBubble.destroy({ children: true }); this.speechBubble = undefined; }
+        this.speechTail = undefined;
     }
 
     _say(text: string) { this.showSpeech(text, false); }
     _think(text: string) { this.showSpeech(text, true); }
-    _sayFor(text: string, millis: number) { this.showSpeech(text, false); this.speechTimeout = scratchGameClock().schedule(() => this.clearSpeech(), millis); }
-    _thinkFor(text: string, millis: number) { this.showSpeech(text, true); this.speechTimeout = scratchGameClock().schedule(() => this.clearSpeech(), millis); }
+    _sayFor(text: string, seconds: number) { this.showSpeech(text, false); this.speechTimeout = scratchGameClock().schedule(() => this.clearSpeech(), seconds * 1000); }
+    _thinkFor(text: string, seconds: number) { this.showSpeech(text, true); this.speechTimeout = scratchGameClock().schedule(() => this.clearSpeech(), seconds * 1000); }
 
     // ---- coordinate conversion + transform ----
     // scaleMagnitudeX/Y give the (positive) scale of the costume container.
@@ -602,7 +714,7 @@ export class ScratchSpriteClass extends ShapeClass {
         this.stage = stage;
         if (this.penObj) { this.penObj.stage = stage; this.penObj.attachToWorld(this.world as any); }
         this.syncWorldRegistration(!stage.scratchLayers || isScratchStageActive(stage as any));
-        const layer = spriteLayerOf(this, this.isUI());
+        const layer = spriteLayerOfLayer(this, this.spriteLayer);
         if (layer && this.container && !this.container.destroyed) layer.addChild(this.container);
         if (this.speechBubble && !this.speechBubble.destroyed) layer?.addChild(this.speechBubble);
         this.spriteText?.attachToStage(stage as object);
@@ -637,11 +749,18 @@ export class ScratchSpriteClass extends ShapeClass {
         if (stage) stage._mj$broadcast$void$String(t, callback, message);
         else callback?.();
     }
-    _ask(question: string) { this.ownerStage()?._ask(question); }
+    _ask(question: string) {
+        // Upstream's Sprite.ask() says the question in a bubble before the
+        // stage's box opens; the bubble goes with the question when it is
+        // answered (submitAnswer() says "" to the sprite).
+        const stage = this.ownerStage();
+        if (!stage) return;
+        this._say(question);
+        stage._askForSprite(this, question);
+    }
     _getAnswer(): string { return this.ownerStage()?._getAnswer() ?? ""; }
     _isAsking(): boolean { return this.ownerStage()?._isAsking() ?? false; }
     _pickRandom(from: number, to: number): number { return this.ownerStage()?._pickRandom(from, to) ?? from; }
-    _getDeltaTime(): number { return this.ownerStage()?._getDeltaTime() ?? 0; }
     _debug(values: any[]) { this.ownerStage()?._debug(values); }
 
     /**
@@ -668,14 +787,34 @@ export class ScratchSpriteClass extends ShapeClass {
         return this.shaders;
     }
 
+    private shaderFilter?: PIXI.Filter;
+    private colorEffectFilter?: PIXI.Filter;
+    private colorEffect: number = 0;
+
     private applyShader(filter: PIXI.Filter | undefined) {
-        if (!this.container || this.container.destroyed) return;
-        this.container.filters = filter ? [filter] : [];
+        this.shaderFilter = filter;
+        this.refreshFilters();
     }
 
+    private refreshFilters() {
+        if (!this.container || this.container.destroyed) return;
+        const filters: PIXI.Filter[] = [];
+        if (this.colorEffect !== 0) {
+            // Scratch's colour effect, the desktop's own shader maths
+            this.colorEffectFilter = createColorEffectFilter(this.colorEffect);
+            filters.push(this.colorEffectFilter);
+        }
+        if (this.shaderFilter) filters.push(this.shaderFilter);
+        this.container.filters = filters;
+    }
+
+    _setColorEffect(effect: number) { this.colorEffect = effect; this.refreshFilters(); }
+    _changeColorEffect(by: number) { this._setColorEffect(this.colorEffect + by); }
+    _getColorEffect(): number { return this.colorEffect; }
+
     // ---- costumes ----
-    _mj$addCostume$void$string(t: Thread, callback: CallbackParameter, name: string) {
-        this.loadCostume(t, name, name, callback);
+    _mj$addCostume$void$string(t: Thread, callback: CallbackParameter, imagePath: string) {
+        this.loadCostume(t, assetNameFromPath(imagePath), imagePath, callback);
     }
 
     _mj$addCostume$void$string$string(t: Thread, callback: CallbackParameter, name: string, imagePath: string) {
@@ -1009,6 +1148,10 @@ export class ScratchSpriteClass extends ShapeClass {
     }
     _getDirection(): number { return this.direction; }
     /** Point along a vector. Scratch direction 90 = +x, 0 = +y, so bearing = 90 - atan2(y,x). */
+    _getRotationStyle(): RotationStyleEnum { return RotationStyleEnum.values[this.rotationStyle]; }
+
+    _pointTowardsVector(v: ScratchVector2Class) { this._pointInDirectionV(v); }
+
     _pointInDirectionV(v: ScratchVector2Class) {
         if (!v) return;
         this._setDirection(90 - Math.atan2(v.y, v.x) * 180 / Math.PI);
@@ -1067,11 +1210,164 @@ export class ScratchSpriteClass extends ShapeClass {
             return { width: pen, height: pen };
         }
         const scale = this.size / 100;
+        // 7.0: widths and heights are doubles (35 % of 128 pixels is 44.8)
         return {
-            width: Math.round(costume.texture.width * scale),
-            height: Math.round(costume.texture.height * scale),
+            width: costume.texture.width * scale,
+            height: costume.texture.height * scale,
         };
     }
+
+    /** Stretch the sprite to the given width in pixels, by its size percentage. */
+    _setWidth(width: number) {
+        const costume = this.costumes[this.currentCostume];
+        if (costume && costume.texture.width > 0) this._setSize(width / costume.texture.width * 100);
+    }
+    _setHeight(height: number) {
+        const costume = this.costumes[this.currentCostume];
+        if (costume && costume.texture.height > 0) this._setSize(height / costume.texture.height * 100);
+    }
+    _changeWidth(by: number) { this._setWidth(this._getSpriteWidth() + by); }
+    _changeHeight(by: number) { this._setHeight(this._getSpriteHeight() + by); }
+
+    /**
+     * The 7.0 nine-slice margins. The browser's costume rendering has no
+     * nine-slice plane yet, so the values are stored but do not change what is
+     * drawn — a documented browser limitation until the renderer grows one.
+     */
+    private nineSlice?: { left: number, top: number, right: number, bottom: number };
+    // Parameter order follows the desktop library (top, right, bottom, left);
+    // the stored object keeps its own order.
+    _setNineSlice(top: number, right: number, bottom: number, left: number) {
+        this.nineSlice = { left, top, right, bottom };
+    }
+    _disableNineSlice() { this.nineSlice = undefined; }
+
+    // ---- animations (7.0: on every sprite) ----
+    /** animation name -> the costume names making up its frames */
+    private animations: Map<string, string[]> = new Map();
+    private animationInterval = 0.12;      // seconds
+    private animationFrame = 0;
+    private animationPlayed = false;        // a once-animation has reached its end
+    private animationName?: string;
+    private animationLastStep = 0;
+
+    /**
+     * Upstream builds each frame's file name with String.format(pattern, i + 1),
+     * so the pattern uses a printf placeholder — "bunny1_walk%d" gives
+     * bunny1_walk1, bunny1_walk2, ... Numbered from 1 by the frames form, or
+     * from the given first to the given last number.
+     */
+    private formatFrame(pattern: string, frameNumber: number): string {
+        if (pattern.indexOf("%") < 0) return pattern + frameNumber;
+        return pattern.replace(/%(0(\d+))?d/, (_m, _pad, width) =>
+            width ? String(frameNumber).padStart(parseInt(width), "0") : String(frameNumber));
+    }
+
+    _mj$addAnimation$void$string$string$int(t: Thread, callback: CallbackParameter,
+        name: string, pattern: string, frames: number) {
+        const paths: string[] = [];
+        for (let i = 1; i <= frames; i++) paths.push(this.formatFrame(pattern, i));
+        ScratchCostumes.whenLoaded(t, paths, callback, () => this._addAnimationPaths(name, pattern, paths));
+    }
+
+    _mj$addAnimation$void$string$string$int$int(t: Thread, callback: CallbackParameter,
+        name: string, pattern: string, from: number, to: number) {
+        const paths: string[] = [];
+        for (let i = from; i <= to; i++) paths.push(this.formatFrame(pattern, i));
+        ScratchCostumes.whenLoaded(t, paths, callback, () => this._addAnimationPaths(name, pattern, paths));
+    }
+
+    /**
+     * The sheet form: frameWidth x frameHeight cells out of the sprite sheet,
+     * named by their number, counted row by row from 0 (7.0's only sheet shape).
+     */
+    _mj$addAnimation$void$string$string$int$int$int$Arr(t: Thread, callback: CallbackParameter,
+        name: string, sheetPath: string, frameWidth: number, frameHeight: number, frames: number[]) {
+        ScratchCostumes.whenLoaded(t, [sheetPath], callback,
+            () => this._addAnimationSheet(name, sheetPath, frameWidth, frameHeight, frames ?? []));
+    }
+
+    private _addAnimationPaths(name: string, _pattern: string, paths: string[]) {
+        const frameNames: string[] = [];
+        for (let i = 0; i < paths.length; i++) {
+            const costumeName = "_animation_" + name + "_" + i;
+            this._addCostumeFromName(costumeName, paths[i]);
+            frameNames.push(costumeName);
+        }
+        this.animations.set(name, frameNames);
+    }
+
+    private _addAnimationSheet(name: string, sheetPath: string, frameWidth: number, frameHeight: number,
+        frameNumbers: number[]) {
+        const base = ScratchCostumes.getTexture(sheetPath);
+        if (!base) throw new RuntimeExceptionClass("Unbekanntes Bild / unknown image: " + sheetPath);
+        const perRow = Math.max(1, Math.floor(base.frame.width / frameWidth));
+        const frameNames: string[] = [];
+        for (const n of frameNumbers) {
+            const row = Math.floor(n / perRow);
+            const col = n % perRow;
+            const rect = new PIXI.Rectangle(
+                base.frame.x + col * frameWidth,
+                base.frame.y + row * frameHeight,
+                frameWidth, frameHeight,
+            );
+            const texture = new PIXI.Texture({ source: base.source, frame: rect });
+            const costumeName = "_animation_" + name + "_" + n;
+            if (!this.costumes.some(c => c.name === costumeName)) {
+                this.costumes.push({ name: costumeName, texture });
+                if (this.currentCostume < 0) this._applyCostumeIndex(this.costumes.length - 1);
+            }
+            frameNames.push(costumeName);
+        }
+        this.animations.set(name, frameNames);
+    }
+
+    /** addCostume(name, path) without failing when the costume already exists. */
+    private _addCostumeFromName(costumeName: string, imagePath: string) {
+        if (this.costumes.some(c => c.name === costumeName)) return;
+        const texture = ScratchCostumes.getTexture(imagePath);
+        if (!texture) throw new RuntimeExceptionClass("Unbekanntes Bild / unknown image: " + imagePath);
+        this.costumes.push({ name: costumeName, texture });
+        if (this.currentCostume < 0) this._applyCostumeIndex(this.costumes.length - 1);
+    }
+
+    _playAnimation(name: string) { this._playAnimationOnce(name, false); }
+
+    /**
+     * Mirrors 7.0 exactly: switching to another animation resets frame and step
+     * clock; the frame advances once per interval; once stops at the last frame.
+     */
+    _playAnimationOnce(name: string, once: boolean) {
+        const frames = this.animations.get(name);
+        if (!frames || frames.length === 0) {
+            console.warn(`Scratch: animation '${name}' not found. Use addAnimation() first.`);
+            return;
+        }
+        const now = ScratchTimerClass._millis() / 1000;
+        if (name !== this.animationName) {
+            this.animationName = name;
+            this.animationFrame = 0;
+            this.animationPlayed = false;
+            this.animationLastStep = now;
+        } else if (now - this.animationLastStep >= this.animationInterval - 1e-9 && !this.animationPlayed) {
+            this.animationLastStep = now;
+            if (this.animationFrame + 1 < frames.length) this.animationFrame++;
+            else if (once) this.animationPlayed = true;
+            else this.animationFrame = 0;
+        }
+        this._switchCostumeByName(frames[this.animationFrame]);
+    }
+
+    _resetAnimation() { this.animationName = undefined; this.animationFrame = 0; this.animationPlayed = false; }
+    _setAnimationFrame(frame: number) {
+        const frames = this.animationName == null ? undefined : this.animations.get(this.animationName);
+        this.animationFrame = frames == null ? Math.max(0, frame) : ((frame % frames.length) + frames.length) % frames.length;
+        if (frames) this._switchCostumeByName(frames[this.animationFrame]);
+    }
+    _setAnimationInterval(seconds: number) { this.animationInterval = Math.max(0, seconds); }
+    _getAnimationInterval(): number { return this.animationInterval; }
+    _getAnimationFrame(): number { return this.animationFrame; }
+    _isAnimationPlayed(): boolean { return this.animationPlayed; }
 
     // ---- tint ----
     // named tintColor: ShapeClass already has a tint() method
@@ -1120,7 +1416,7 @@ export class ScratchSpriteClass extends ShapeClass {
 
     // ---- sound ----
     private soundBank: ScratchSoundBank = new ScratchSoundBank();
-    _addSound(name: string) { this.soundBank.add(name, name); }
+    _addSound(soundPath: string) { this.soundBank.add(assetNameFromPath(soundPath), soundPath); }
     _addSound2(name: string, path: string) { this.soundBank.add(name, path); }
     _playSoundCopy(name: string, volume: number): ScratchSoundPlaybackClass {
         return ScratchSoundPlaybackClass.start(this.soundBank, name, volume);
@@ -1134,33 +1430,46 @@ export class ScratchSpriteClass extends ShapeClass {
     _getVolume(): number { return this.soundBank.getVolume(); }
 
     // ---- timers ----
-    private timers: Map<string, ScratchTimerClass> = new Map();
-    _getTimer(): ScratchTimerClass { return this._getNamedTimer("default"); }
-    _getNamedTimer(name: string): ScratchTimerClass {
-        let timer = this.timers.get(name);
-        if (!timer) { timer = new ScratchTimerClass(); this.timers.set(name, timer); }
-        return timer;
-    }
+    private timer?: ScratchTimerClass;
+    _getTimer(): ScratchTimerClass { return this.timer ??= new ScratchTimerClass(); }
 
     // ---- sensing ----
-    /** UISprites are interface elements and never take part in collisions (as upstream). */
-    isUI(): boolean { return this.ui; }
+    /** 7.0 layers: which layer the sprite is on (MAIN by default). */
+    private spriteLayer: Layer = Layer.MAIN;
 
-    private ui: boolean = false;
+    /** UI sprites are interface elements: the camera does not move them and
+     *  nothing collides with them. */
+    isUI(): boolean { return this.spriteLayer === Layer.UI; }
 
-    _isUI(): boolean { return this.isUI(); }
+    _getLayer(): LayerEnum { return LayerEnum.values[this.spriteLayer]; }
 
-    /**
-     * Pin the sprite to the interface, where the camera does not move it and
-     * nothing collides with it — or take it back into the world.
-     */
-    _setUI(isUI: boolean) {
-        if (this.ui === isUI) return;
-        this.ui = isUI;
-        const layer = spriteLayerOf(this, this.isUI());
-        if (!layer) return;
-        if (this.container && !this.container.destroyed) layer.addChild(this.container);
-        if (this.speechBubble && !this.speechBubble.destroyed) layer.addChild(this.speechBubble);
+    /** Upstream: the class's simple name and the position, as Java doubles print. */
+    _mj$toString$Sprite$(t: Thread, callback: CallbackParameter): void {
+        const d = (n: number) => Number.isInteger(n) ? n.toFixed(1) : String(n);
+        const name = (this.constructor as any).type?.identifier ?? this.constructor.name;
+        t.s.push(new StringClass(`${name} at (${d(this.sx)}, ${d(this.sy)})`));
+        if (callback) callback();
+    }
+
+    /** Draw-order key for whenClicked's frontmost rule; larger is in front. */
+    _frontmostOrder(): number {
+        if (!this.container?.parent) return -1;
+        const rank = this.spriteLayer === Layer.BACKGROUND ? 0
+            : this.spriteLayer === Layer.MAIN ? 1
+                : this.spriteLayer === Layer.FOREGROUND ? 2 : 3;
+        const idx = this.container.parent.getChildIndex(this.container);
+        const z = this.container.parent.sortableChildren ? (this.container.zIndex ?? 0) : 0;
+        return rank * 1e12 + z * 1e6 + idx;
+    }
+
+    _setLayer(layer: LayerEnum) {
+        const target = Layer[layer.name as keyof typeof Layer];
+        if (this.spriteLayer === target) return;
+        this.spriteLayer = target;
+        const container = spriteLayerOfLayer(this, this.spriteLayer);
+        if (!container) return;
+        if (this.container && !this.container.destroyed) container.addChild(this.container);
+        if (this.speechBubble && !this.speechBubble.destroyed) container.addChild(this.speechBubble);
     }
 
     _isTouchingSprite(other: ScratchSpriteClass): boolean {
@@ -1341,18 +1650,27 @@ export class ScratchSpriteClass extends ShapeClass {
      * The current collision outline. Built fresh from the sprite's transformed
      * hit polygon, so it reflects where the sprite is right now.
      */
-    _getHitbox(): ScratchHitboxClass {
-        // marking it dirty only schedules the work, so force it through here
+    /** The collision outline as a Shape, where the sprite is on the stage now. */
+    _getHitboxShape(): ScratchShapeClass {
+        return ScratchShapeClass.of(this.hitboxShapePoints());
+    }
+
+    private hitboxShapePoints(): { x: number, y: number }[] {
         this.setWorldTransformAndHitPolygonDirty();
         this.transformHitPolygon();
         const polygon = this.hitPolygonTransformed?.length ? this.hitPolygonTransformed : (this.hitPolygonInitial ?? []);
-        // The polygon is kept in world pixels, with the origin in the top-left,
-        // because that is what PIXI draws in. Upstream hands out a hitbox around
-        // the middle of the stage instead - getHitbox().getBounds().x() has to
-        // read the same in both - so shift it back before anyone sees it. y still
-        // points down, which is the convention upstream's Hitbox uses too.
+        // world pixels with a top-left origin become stage coordinates with the
+        // origin in the middle, y pointing down, as the 6.x Hitbox did
         const cx = (this.world?.width ?? 0) / 2, cy = (this.world?.height ?? 0) / 2;
-        return new ScratchHitboxClass(polygon.map(p => ({ x: p.x - cx, y: p.y - cy })));
+        return polygon.map(p => ({ x: p.x - cx, y: p.y - cy }));
+    }
+
+    /** @deprecated internal: the 6.x Hitbox form; goes away with its tests. */
+    _getHitbox(): { _getBounds(): ScratchBoundsClass, points: { x: number, y: number }[] } {
+        return {
+            _getBounds: () => this._getHitboxShape()._getBounds(),
+            points: this.hitboxShapePoints(),
+        };
     }
 
     _enableHitbox() { this.hitboxEnabled = true; }
@@ -1514,6 +1832,11 @@ export class ScratchSpriteClass extends ShapeClass {
     protected cloneStateFrom(original: ScratchSpriteClass) {
         this.stage = undefined;
         this.runtime = undefined;
+        // the clone gets its own animation table, as 6.x's AnimatedSprite did
+        this.animations = new Map(original.animations);
+        this.animationName = undefined;
+        this.animationFrame = 0;
+        this.animationPlayed = false;
         this.listenersRegistered = false;
         this.removing = false;
         this.isDestroyed = false;
@@ -1531,22 +1854,20 @@ export class ScratchSpriteClass extends ShapeClass {
         this.speechTimeout = undefined;
         this.spriteText = undefined;
         this.variableMonitors = new ScratchMonitors();
-        this.timers = new Map();
+        this.timer = undefined;
         this.soundBank = original.soundBank.copy();
         this.penObj = new ScratchPenClass();
         this.penObj.sprite = this;
         this.penObj.attachToWorld(this.world as any);
         this.penObj.px = this.sx; this.penObj.py = this.sy;
         if (original.penObj) {
-            this.penObj._copyFrom(original.penObj);
-            if (original.penObj._isInBackground()) this.penObj._goToBackground();
-            else this.penObj._goToForeground();
+            this.penObj._copyStateFrom(original.penObj);
         }
         this.shaders = original.shaders?.copyFor(filters => this.applyShader(filters[0]));
         // Object's synchronization state belongs to this object alone.
         for (const key of ['runnableOrWaitingThreads', 'threadHoldingLockToThisObject', 'reentranceCounter']) delete this[key];
         this.syncWorldRegistration(!this.stage?.scratchLayers || isScratchStageActive(this.stage as any));
-        (spriteLayerOf(this, this.isUI()) ?? this.world.app.stage).addChild(this.container);
+        (spriteLayerOfLayer(this, this.spriteLayer) ?? this.world.app.stage).addChild(this.container);
         if (this.currentCostume >= 0) this._applyCostumeIndex(this.currentCostume);
         this.container.visible = original.container.visible;
         this.container.alpha = original.container.alpha;

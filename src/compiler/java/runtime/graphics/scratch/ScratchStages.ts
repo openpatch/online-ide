@@ -43,10 +43,16 @@ type Transition = {
     phase: "out" | "creating" | "in";
     start: number;
     duration: number;
-    overlay: PIXI.Graphics;
+    overlay?: PIXI.Graphics;
+    /** 7.0's Transition kinds; the built-ins render exactly as upstream's shaders do. */
+    kind: TransitionKind;
+    /** the old stage's frozen root, kept visible under the new one */
+    fromRoot?: PIXI.Container;
     tick: () => void;
     world: IWorld;
 };
+
+export type TransitionKind = "fade" | "crossfade" | "slide-left" | "slide-right" | "slide-up" | "slide-down";
 
 let transition: Transition | undefined;
 
@@ -158,7 +164,8 @@ export function setActiveScratchStage(stage: IScratchStageLike | undefined): voi
  * certainly not what the parameter name suggests, but a program has to take the
  * same time in both places, so the formula is copied as it stands.
  */
-export function transitionToScratchStage(stage: IScratchStageLike | ScratchStageFactory | undefined, duration: number): void {
+export function transitionToScratchStage(stage: IScratchStageLike | ScratchStageFactory | undefined,
+    duration: number, kind: TransitionKind = "fade"): void {
     // upstream only transitions while the applet is in its RUNNING state, which
     // rules out starting a second transition on top of a running one
     if (!stage || transition || !registryWorld || stage === active) return;
@@ -176,8 +183,15 @@ export function transitionToScratchStage(stage: IScratchStageLike | ScratchStage
         target: typeof stage === "function" ? undefined : stage,
         factory: typeof stage === "function" ? stage : undefined,
         phase: "out", start: performance.now(),
-        duration: Math.max(1, duration), overlay, tick, world,
+        duration: Math.max(1, duration),
+        // fade goes through a black overlay; the other kinds move the roots
+        // themselves and keep the overlay around only for the cleanup path
+        overlay: kind === "fade" ? overlay : undefined,
+        kind,
+        fromRoot: kind === "fade" ? undefined : (active as any)?.scratchLayers?.root as PIXI.Container | undefined,
+        tick, world,
     };
+    if (kind !== "fade") overlay.destroy();
     const events = world.interpreter?.eventManager;
     if (events) {
         const stop = () => endTransition(false);
@@ -190,13 +204,13 @@ export function transitionToScratchStage(stage: IScratchStageLike | ScratchStage
 function stepTransition() {
     const tr = transition;
     if (!tr) return;
-    if (tr.overlay.destroyed) { endTransition(false); return; }
+    if (tr.overlay?.destroyed) { endTransition(false); return; }
 
     // a stage built after the transition started would otherwise sit on top of
     // the black overlay — transitionToStage(new Level2(), …) does exactly that
-    const parent = tr.overlay.parent;
-    if (parent && parent.getChildIndex(tr.overlay) !== parent.children.length - 1) {
-        parent.setChildIndex(tr.overlay, parent.children.length - 1);
+    const parent = tr.overlay?.parent;
+    if (parent && parent.getChildIndex(tr.overlay!) !== parent.children.length - 1) {
+        parent.setChildIndex(tr.overlay!, parent.children.length - 1);
     }
 
     const elapsed = performance.now() - tr.start;
@@ -227,6 +241,24 @@ function stepTransition() {
             setActiveScratchStage(stage);
             tr.phase = "in";
             tr.start = performance.now();
+            if (tr.kind !== "fade") {
+                // the old stage's frozen picture stays visible under the new
+                // one, exactly what upstream's "from" texture holds
+                const fromRoot = tr.fromRoot;
+                const newRoot = (stage as any)?.scratchLayers?.root as PIXI.Container | undefined;
+                if (fromRoot && !fromRoot.destroyed && newRoot) {
+                    fromRoot.visible = true;
+                    const parent = newRoot.parent;
+                    if (parent && parent.getChildIndex(fromRoot) > parent.getChildIndex(newRoot)) {
+                        parent.setChildIndex(fromRoot, parent.getChildIndex(newRoot));
+                    }
+                    if (tr.kind === "crossfade") newRoot.alpha = 0;
+                    if (tr.kind === "slide-left") { fromRoot.x = 0; newRoot.x = worldWidth(tr); }
+                    if (tr.kind === "slide-right") { fromRoot.x = 0; newRoot.x = -worldWidth(tr); }
+                    if (tr.kind === "slide-up") { fromRoot.y = 0; newRoot.y = worldHeight(tr); }
+                    if (tr.kind === "slide-down") { fromRoot.y = 0; newRoot.y = -worldHeight(tr); }
+                }
+            }
         };
         if (factory) {
             try {
@@ -241,12 +273,28 @@ function stepTransition() {
         } else if (tr.target) ready(tr.target);
         return;
     }
-    if (amount < 1) {
-        tr.overlay.alpha = 1 - amount;
+    if (tr.kind !== "fade") {
+        // crossfade mixes the frozen old picture with the new stage; the slides
+        // move both, as upstream's slide shaders sample their two textures
+        const fromRoot = tr.fromRoot;
+        const newRoot = (tr.target as any)?.scratchLayers?.root as PIXI.Container | undefined;
+        if (fromRoot && !fromRoot.destroyed && newRoot) {
+            if (tr.kind === "crossfade") newRoot.alpha = amount;
+            if (tr.kind === "slide-left") { fromRoot.x = -worldWidth(tr) * amount; newRoot.x = worldWidth(tr) * (1 - amount); }
+            if (tr.kind === "slide-right") { fromRoot.x = worldWidth(tr) * amount; newRoot.x = -worldWidth(tr) * (1 - amount); }
+            if (tr.kind === "slide-up") { fromRoot.y = -worldHeight(tr) * amount; newRoot.y = worldHeight(tr) * (1 - amount); }
+            if (tr.kind === "slide-down") { fromRoot.y = worldHeight(tr) * amount; newRoot.y = -worldHeight(tr) * (1 - amount); }
+        }
+        if (amount < 1) return;
+    } else if (amount < 1) {
+        if (tr.overlay && !tr.overlay.destroyed) tr.overlay.alpha = 1 - amount;
         return;
     }
     endTransition(true);
 }
+
+function worldWidth(tr: Transition): number { return tr.world.width; }
+function worldHeight(tr: Transition): number { return tr.world.height; }
 
 /** Take the overlay down. `switchNow` finishes a transition that was cut short. */
 function endTransition(switchNow: boolean) {

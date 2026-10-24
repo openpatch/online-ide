@@ -45,7 +45,9 @@ export class ScratchGameClock {
     advance() {
         this.millis += this.stepSeconds * 1000;
         this.steps++;
-        for (const deadline of [...this.deadlines]) if (this.millis >= deadline.at) {
+        // The 1e-9 epsilon is upstream's: a wait of exactly the ticks that
+        // passed must count as over, despite the accumulated float error.
+        for (const deadline of [...this.deadlines]) if (this.millis + 1e-9 >= deadline.at) {
             this.deadlines.delete(deadline);
             deadline.callback();
         }
@@ -66,6 +68,20 @@ export class ScratchGameClock {
         const stage = activeScratchStage<IActor & { sprites: IActor[] }>();
         if (!stage || !includes(stage) || !scratchStagesRunning()) return;
         let steps = this.frame(elapsed);
+        if (steps > 0) {
+            // The batch will run ticks. Upstream's window thread polls the
+            // controllers once per batch and its game thread tells the
+            // GamepadListeners on the batch's first tick, before any run()
+            // (Game.runTicks); a paused game runs no ticks and hands out only
+            // the keys (Game.runInputOnly). Both hooks are reached through the
+            // stage: it holds the runtime manager and re-applies its sort
+            // order before the sprites run, as the desktop's tick() does. And
+            // because the act thread of one batch has to finish before the
+            // next batch starts, the IDE's speed slider paces all of this
+            // together with the program.
+            (stage as any).runtime?.pollAndDispatchGamepads();
+            (stage as any)._applySorting?.();
+        }
         const nextStep = () => {
             if (!steps--) return;
             this.advance();

@@ -6,31 +6,43 @@ import { CallbackFunction } from "../../../../common/interpreter/StepFunction";
 import { Thread } from "../../../../common/interpreter/Thread";
 
 /**
- * Color in the Scratch environment, mirroring org.openpatch.scratch.Color.
- * Uses the java.awt HSB (really HSV) model with all channels in [0..255].
+ * Immutable colour, mirroring org.openpatch.scratch.Color (7.0). One colour
+ * model, Scratch's: hue, saturation and brightness from 0 to 100 next to red,
+ * green and blue from 0 to 255; alpha from 0 to 255. The with* methods return
+ * new colours.
+ *
+ * Internal helpers (fromRGB, fromHex, fromHue, defaultColor, _get,
+ * _changeColor) are not declared to Java; they exist for the runtime's own
+ * code while the 6.x hue-based call sites are ported away.
  */
 export class ScratchColorClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch", signature: "class Color extends Object", comment: SRC.colorClassComment },
 
-        { type: "method", signature: "Color()", native: ScratchColorClass.prototype._c0, comment: SRC.colorConstructorComment },
-        { type: "method", signature: "Color(string hexCode)", native: ScratchColorClass.prototype._cHex, comment: SRC.colorConstructor2Comment },
-        { type: "method", signature: "Color(double h)", native: ScratchColorClass.prototype._cHue, comment: SRC.colorConstructor3Comment },
-        { type: "method", signature: "Color(double r, double g, double b)", native: ScratchColorClass.prototype._cRGB, comment: SRC.colorConstructor4Comment },
-        { type: "method", signature: "Color(Color c)", native: ScratchColorClass.prototype._cCopy, comment: SRC.colorConstructor5Comment },
+        { type: "method", signature: "Color(string hex)", native: ScratchColorClass.prototype._cHex, comment: SRC.colorConstructorComment },
+        { type: "method", signature: "Color(double red, double green, double blue)", native: ScratchColorClass.prototype._cRGB, comment: SRC.colorConstructor2Comment },
+        { type: "method", signature: "Color(double red, double green, double blue, double alpha)", native: ScratchColorClass.prototype._cRGBA, comment: SRC.colorConstructor3Comment },
 
-        { type: "method", signature: "int get()", native: ScratchColorClass.prototype._get, comment: SRC.colorGetComment },
-        { type: "method", signature: "double getHSB()", native: ScratchColorClass.prototype._getHSB, comment: SRC.colorGetHSBComment },
-        { type: "method", signature: "void setHSB(double h)", native: ScratchColorClass.prototype._setHSB1, comment: SRC.colorSetHSBComment },
-        { type: "method", signature: "void setHSB(double h, double s, double l)", native: ScratchColorClass.prototype._setHSB3, comment: SRC.colorSetHSB2Comment },
-        { type: "method", signature: "void setRGB(double r, double g, double b)", native: ScratchColorClass.prototype._setRGB, comment: SRC.colorSetRGBComment },
-        { type: "method", signature: "void changeColor(double h)", native: ScratchColorClass.prototype._changeColor, comment: SRC.colorChangeColorComment },
+        { type: "method", signature: "static Color fromHSB(double hue, double saturation, double brightness)", native: ScratchColorClass._fromHSB, comment: SRC.colorFromHSBComment },
+        { type: "method", signature: "static Color fromARGB(int argb)", native: ScratchColorClass._fromARGB, comment: SRC.colorFromARGBComment },
+
         { type: "method", signature: "double getRed()", native: ScratchColorClass.prototype._getRed, comment: SRC.colorGetRedComment },
         { type: "method", signature: "double getGreen()", native: ScratchColorClass.prototype._getGreen, comment: SRC.colorGetGreenComment },
         { type: "method", signature: "double getBlue()", native: ScratchColorClass.prototype._getBlue, comment: SRC.colorGetBlueComment },
-        { type: "method", signature: "double getH()", native: ScratchColorClass.prototype._getH, comment: SRC.colorGetHComment },
-        { type: "method", signature: "double getS()", native: ScratchColorClass.prototype._getS, comment: SRC.colorGetSComment },
-        { type: "method", signature: "double getL()", native: ScratchColorClass.prototype._getL, comment: SRC.colorGetLComment },
+        { type: "method", signature: "double getAlpha()", native: ScratchColorClass.prototype._getAlpha, comment: SRC.colorGetAlphaComment },
+        { type: "method", signature: "double getHue()", native: ScratchColorClass.prototype._getHue, comment: SRC.colorGetHueComment },
+        { type: "method", signature: "double getSaturation()", native: ScratchColorClass.prototype._getSaturation, comment: SRC.colorGetSaturationComment },
+        { type: "method", signature: "double getBrightness()", native: ScratchColorClass.prototype._getBrightness, comment: SRC.colorGetBrightnessComment },
+
+        { type: "method", signature: "Color withRed(double red)", native: ScratchColorClass.prototype._withRed, comment: SRC.colorWithRedComment },
+        { type: "method", signature: "Color withGreen(double green)", native: ScratchColorClass.prototype._withGreen, comment: SRC.colorWithGreenComment },
+        { type: "method", signature: "Color withBlue(double blue)", native: ScratchColorClass.prototype._withBlue, comment: SRC.colorWithBlueComment },
+        { type: "method", signature: "Color withAlpha(double alpha)", native: ScratchColorClass.prototype._withAlpha, comment: SRC.colorWithAlphaComment },
+        { type: "method", signature: "Color withHue(double hue)", native: ScratchColorClass.prototype._withHue, comment: SRC.colorWithHueComment },
+        { type: "method", signature: "Color withSaturation(double saturation)", native: ScratchColorClass.prototype._withSaturation, comment: SRC.colorWithSaturationComment },
+        { type: "method", signature: "Color withBrightness(double brightness)", native: ScratchColorClass.prototype._withBrightness, comment: SRC.colorWithBrightnessComment },
+
+        { type: "method", signature: "int toARGB()", native: ScratchColorClass.prototype._toARGB, comment: SRC.colorToARGBComment },
         { type: "method", signature: "String toString()", java: ScratchColorClass.prototype._mj$toString$String$, comment: SRC.colorToStringComment },
         { type: "method", signature: "boolean equals(Object other)", java: ScratchColorClass.prototype._mj$equals$boolean$Object, comment: SRC.colorEqualsComment },
         { type: "method", signature: "int hashCode()", native: ScratchColorClass.prototype._hashCode },
@@ -38,134 +50,150 @@ export class ScratchColorClass extends ObjectClass {
 
     static type: NonPrimitiveType;
 
-    r: number = 255;
-    g: number = 255;
-    b: number = 255;
-    h: number = 255;
-    s: number = 255;
-    l: number = 255;
+    readonly r: number;
+    readonly g: number;
+    readonly b: number;
+    readonly a: number;
 
-    _c0() { return this; }
-
-    _cHex(hexCode: string) {
-        if (hexCode.startsWith("#")) hexCode = hexCode.substring(1);
-        const r = parseInt(hexCode.substring(0, 2), 16);
-        const g = parseInt(hexCode.substring(2, 4), 16);
-        const b = parseInt(hexCode.substring(4, 6), 16);
-        this._setRGB(r, g, b);
-        return this;
+    constructor(r?: number, g?: number, b?: number, a?: number) {
+        super();
+        if (typeof r === "string") {
+            const rgba = ScratchColorClass.parseHex(r);
+            this.r = rgba[0]; this.g = rgba[1]; this.b = rgba[2]; this.a = rgba[3];
+        } else {
+            this.r = ScratchColorClass.clamp(r ?? 255, 255);
+            this.g = ScratchColorClass.clamp(g ?? 255, 255);
+            this.b = ScratchColorClass.clamp(b ?? 255, 255);
+            this.a = ScratchColorClass.clamp(a ?? 255, 255);
+        }
     }
 
-    _cHue(h: number) { this._setHSB1(h); return this; }
-    _cRGB(r: number, g: number, b: number) { this._setRGB(r, g, b); return this; }
-    _cCopy(c: ScratchColorClass) {
-        this.r = c.r; this.g = c.g; this.b = c.b;
-        this.h = c.h; this.s = c.s; this.l = c.l;
-        return this;
+    _cHex(hex: string) {
+        const rgba = ScratchColorClass.parseHex(hex);
+        return new ScratchColorClass(rgba[0], rgba[1], rgba[2], rgba[3]);
+    }
+    _cRGB(r: number, g: number, b: number) { return new ScratchColorClass(r, g, b); }
+    _cRGBA(r: number, g: number, b: number, a: number) { return new ScratchColorClass(r, g, b, a); }
+
+    static _fromHSB(hue: number, saturation: number, brightness: number): ScratchColorClass {
+        return ScratchColorClass.fromHSB(hue, saturation, brightness);
+    }
+    static _fromARGB(argb: number): ScratchColorClass {
+        return new ScratchColorClass((argb >> 16) & 0xff, (argb >> 8) & 0xff, argb & 0xff, (argb >>> 24) & 0xff);
     }
 
-    _get(): number {
-        let v1 = Math.min(255, Math.max(0, this.r));
-        let v2 = Math.min(255, Math.max(0, this.g));
-        let v3 = Math.min(255, Math.max(0, this.b));
-        // 0xff000000 | rgb, forced into a signed 32-bit int as Java does
-        return (0xff000000 | ((v1 & 0xff) << 16) | ((v2 & 0xff) << 8) | (v3 & 0xff)) | 0;
-    }
-
-    _getHSB(): number { return this.h; }
-    _setHSB1(h: number) { this._setHSB3(h, this.s, this.l); }
-    _setHSB3(h: number, s: number, l: number) {
-        while (h > 255) h -= 255;
-        while (s > 255) s -= 255;
-        while (l > 255) l -= 255;
-        this.h = h; this.s = s; this.l = l;
-        const rgb = ScratchColorClass.hsbToRgb(h / 255, s / 255, l / 255);
-        this.r = rgb[0]; this.g = rgb[1]; this.b = rgb[2];
-    }
-    _setRGB(r: number, g: number, b: number) {
-        this.r = r; this.g = g; this.b = b;
-        const hsb = ScratchColorClass.rgbToHsb(r, g, b);
-        this.h = hsb[0] * 255; this.s = hsb[1] * 255; this.l = hsb[2] * 255;
-    }
-    _changeColor(h: number) { this._setHSB1(this.h + h); }
     _getRed(): number { return this.r; }
     _getGreen(): number { return this.g; }
     _getBlue(): number { return this.b; }
-    _getH(): number { return this.h; }
-    _getS(): number { return this.s; }
-    _getL(): number { return this.l; }
+    _getAlpha(): number { return this.a; }
 
-    /** java.awt.Color.HSBtoRGB semantics: h,s,v in [0,1] -> [r,g,b] in [0,255] */
-    static hsbToRgb(h: number, s: number, v: number): [number, number, number] {
-        let r = 0, g = 0, b = 0;
-        if (s === 0) {
-            r = g = b = v * 255 + 0.5;
-        } else {
-            const hh = (h - Math.floor(h)) * 6;
-            const f = hh - Math.floor(hh);
-            const p = v * (1 - s);
-            const q = v * (1 - s * f);
-            const tt = v * (1 - s * (1 - f));
-            switch (Math.floor(hh)) {
-                case 0: r = v * 255 + 0.5; g = tt * 255 + 0.5; b = p * 255 + 0.5; break;
-                case 1: r = q * 255 + 0.5; g = v * 255 + 0.5; b = p * 255 + 0.5; break;
-                case 2: r = p * 255 + 0.5; g = v * 255 + 0.5; b = tt * 255 + 0.5; break;
-                case 3: r = p * 255 + 0.5; g = q * 255 + 0.5; b = v * 255 + 0.5; break;
-                case 4: r = tt * 255 + 0.5; g = p * 255 + 0.5; b = v * 255 + 0.5; break;
-                case 5: r = v * 255 + 0.5; g = p * 255 + 0.5; b = q * 255 + 0.5; break;
-            }
-        }
-        return [Math.floor(r), Math.floor(g), Math.floor(b)];
+    /** Scratch's colour (hue) from 0 to 100; 0 for greys. */
+    _getHue(): number {
+        const max = Math.max(this.r, this.g, this.b);
+        const min = Math.min(this.r, this.g, this.b);
+        const d = max - min;
+        if (d === 0) return 0;
+        let h: number;
+        if (max === this.r) h = ((this.g - this.b) / d) % 6;
+        else if (max === this.g) h = (this.b - this.r) / d + 2;
+        else h = (this.r - this.g) / d + 4;
+        return ScratchColorClass.wrap(h / 6 * 100, 100);
     }
 
-    /** java.awt.Color.RGBtoHSB semantics: r,g,b in [0,255] -> [h,s,v] in [0,1] */
-    static rgbToHsb(r: number, g: number, b: number): [number, number, number] {
-        r = Math.round(r); g = Math.round(g); b = Math.round(b);
-        const cmax = Math.max(r, g, b);
-        const cmin = Math.min(r, g, b);
-        const brightness = cmax / 255;
-        const saturation = cmax !== 0 ? (cmax - cmin) / cmax : 0;
-        let hue = 0;
-        if (saturation !== 0) {
-            const redc = (cmax - r) / (cmax - cmin);
-            const greenc = (cmax - g) / (cmax - cmin);
-            const bluec = (cmax - b) / (cmax - cmin);
-            if (r === cmax) hue = bluec - greenc;
-            else if (g === cmax) hue = 2 + redc - bluec;
-            else hue = 4 + greenc - redc;
-            hue /= 6;
-            if (hue < 0) hue += 1;
+    /** Saturation from 0 (grey) to 100. */
+    _getSaturation(): number {
+        const max = Math.max(this.r, this.g, this.b);
+        const min = Math.min(this.r, this.g, this.b);
+        return max === 0 ? 0 : (max - min) / max * 100;
+    }
+
+    /** Brightness from 0 (black) to 100. */
+    _getBrightness(): number {
+        return Math.max(this.r, this.g, this.b) / 255 * 100;
+    }
+
+    _withRed(red: number): ScratchColorClass { return new ScratchColorClass(red, this.g, this.b, this.a); }
+    _withGreen(green: number): ScratchColorClass { return new ScratchColorClass(this.r, green, this.b, this.a); }
+    _withBlue(blue: number): ScratchColorClass { return new ScratchColorClass(this.r, this.g, blue, this.a); }
+    _withAlpha(alpha: number): ScratchColorClass { return new ScratchColorClass(this.r, this.g, this.b, alpha); }
+    _withHue(hue: number): ScratchColorClass { return ScratchColorClass.fromHSB(hue, this._getSaturation(), this._getBrightness())._withAlpha(this.a); }
+    _withSaturation(saturation: number): ScratchColorClass { return ScratchColorClass.fromHSB(this._getHue(), saturation, this._getBrightness())._withAlpha(this.a); }
+    _withBrightness(brightness: number): ScratchColorClass { return ScratchColorClass.fromHSB(this._getHue(), this._getSaturation(), brightness)._withAlpha(this.a); }
+
+    _toARGB(): number {
+        return Math.round(this.a) << 24 | Math.round(this.r) << 16
+            | Math.round(this.g) << 8 | Math.round(this.b);
+    }
+
+    // ---- internals ----
+
+    private static clamp(value: number, max: number): number {
+        return Number.isNaN(value) ? 0 : Math.max(0, Math.min(max, value));
+    }
+
+    private static wrap(value: number, range: number): number {
+        const w = value % range;
+        return w < 0 ? w + range : w;
+    }
+
+    /** fromHSB with whole channels, as Scratch keeps colours. */
+    static fromHSB(hue: number, saturation: number, brightness: number): ScratchColorClass {
+        const h = ScratchColorClass.wrap(hue, 100) / 100 * 6;
+        const s = ScratchColorClass.clamp(saturation, 100) / 100;
+        const v = ScratchColorClass.clamp(brightness, 100) / 100;
+        const sector = Math.floor(h) % 6;
+        const f = h - Math.floor(h);
+        const p = v * (1 - s), q = v * (1 - s * f), t = v * (1 - s * (1 - f));
+        let r: number, g: number, b: number;
+        switch (sector) {
+            case 0: r = v; g = t; b = p; break;
+            case 1: r = q; g = v; b = p; break;
+            case 2: r = p; g = v; b = t; break;
+            case 3: r = p; g = q; b = v; break;
+            case 4: r = t; g = p; b = v; break;
+            default: r = v; g = p; b = q; break;
         }
-        return [hue, saturation, brightness];
+        return new ScratchColorClass(Math.round(r * 255), Math.round(g * 255), Math.round(b * 255));
+    }
+
+    private static parseHex(hex: string): number[] {
+        let h = hex.trim();
+        if (h.startsWith("#")) h = h.substring(1);
+        if (h.length === 3 || h.length === 4) {
+            h = h.split("").map(c => c + c).join("");
+        }
+        if (h.length !== 6 && h.length !== 8) {
+            throw new Error("Not a colour: \"" + hex + "\". Use a hex code such as \"#ff8000\".");
+        }
+        if (!/^[0-9a-fA-F]+$/.test(h)) {
+            throw new Error("Not a colour: \"" + hex + "\". Use a hex code such as \"#ff8000\".");
+        }
+        const value = parseInt(h, 16);
+        if (h.length === 6) {
+            return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff, 255];
+        }
+        return [(value >>> 24) & 0xff, (value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
     }
 
     /** factories for other Scratch classes (no interpreter thread involved) */
-    /**
-     * The colour an untinted sprite or backdrop starts out with, matching what
-     * `new Color()` gives upstream: white, but with the hue, saturation and
-     * brightness still at their defaults rather than derived from that white.
-     *
-     * <p>This is not the same as `fromRGB(255, 255, 255)`. Deriving HSB from
-     * white gives a saturation of 0, and changeColor() only moves the hue - so a
-     * colour seeded that way stays white however far the hue is turned, and
-     * changeTint() on a sprite that was never tinted does nothing at all.
-     */
-    static defaultColor(): ScratchColorClass {
-        return new ScratchColorClass();
-    }
-
     static fromRGB(r: number, g: number, b: number): ScratchColorClass {
-        const c = new ScratchColorClass();
-        c._setRGB(r, g, b);
-        return c;
+        return new ScratchColorClass(r, g, b);
     }
     static fromHex(hexCode: string): ScratchColorClass {
-        return new ScratchColorClass()._cHex(hexCode);
+        const rgba = ScratchColorClass.parseHex(hexCode);
+        return new ScratchColorClass(rgba[0], rgba[1], rgba[2], rgba[3]);
     }
+    /**
+     * Internal, 6.x hue helper (hue 0..255): a fully saturated colour at that
+     * hue, which is what 6.x's setTint(hue) multiplied a costume by. It goes
+     * away when the last hue-based call site is ported to the colour effect.
+     */
     static fromHue(h: number): ScratchColorClass {
-        const c = new ScratchColorClass();
-        c._setHSB1(h);
-        return c;
+        return ScratchColorClass.fromHSB(ScratchColorClass.wrap(h, 255) / 2.55, 100, 100);
+    }
+    /** The colour an untinted sprite or backdrop starts out with: white. */
+    static defaultColor(): ScratchColorClass {
+        return new ScratchColorClass(255, 255, 255);
     }
 
     /** helper for other Scratch classes: current color as a CSS hex string */
@@ -176,28 +204,39 @@ export class ScratchColorClass extends ObjectClass {
 
     toStringValue(): StringClass { return new StringClass(this.toHexString()); }
 
-    /** Upstream's format is "Color[r=255.0, g=128.0, b=0.0]". */
+    /** Upstream's format is "#rrggbb" (plus the alpha byte when it is not 255). */
     _mj$toString$String$(t: Thread, callback: CallbackFunction): void {
-        const d = (n: number) => Number.isInteger(n) ? n.toFixed(1) : String(n);
-        t.s.push(new StringClass(`Color[r=${d(this.r)}, g=${d(this.g)}, b=${d(this.b)}]`));
+        t.s.push(new StringClass(this.format()));
         if (callback) callback();
     }
 
-    /** Two colours are the same when they are the same colour. */
+    private format(): string {
+        const argb = this._toARGB();
+        const rgb = "#" + (argb & 0xffffff).toString(16).padStart(6, "0");
+        return (argb >>> 24) === 255 ? rgb : rgb + ((argb >>> 24) & 0xff).toString(16).padStart(2, "0");
+    }
+
+    /** Two colours are equal when they pack into the same ARGB number. */
     _mj$equals$boolean$Object(t: Thread, callback: CallbackFunction, other: ObjectClassOrNull): void {
-        t.s.push(other instanceof ScratchColorClass
-            && Object.is(other.r, this.r) && Object.is(other.g, this.g) && Object.is(other.b, this.b));
+        t.s.push(other instanceof ScratchColorClass && other._toARGB() === this._toARGB());
         if (callback) callback();
     }
 
-    _hashCode(): number {
-        const bytes = new DataView(new ArrayBuffer(8));
-        let hash = 1;
-        for (const value of [this.r, this.g, this.b]) {
-            bytes.setFloat64(0, value);
-            const channel = Number.isNaN(value) ? 0x7ff80000 : bytes.getInt32(0) ^ bytes.getInt32(4);
-            hash = (Math.imul(hash, 31) + channel) | 0;
-        }
-        return hash;
+    _hashCode(): number { return this._toARGB(); }
+
+    // ---- 6.x internals still used by unported call sites (not Java-visible) ----
+
+    /** 6.x packed int (java.awt style); used by Pen's colour sensing. */
+    _get(): number {
+        return (0xff000000 | (Math.round(this.r) & 0xff) << 16
+            | (Math.round(this.g) & 0xff) << 8 | (Math.round(this.b) & 0xff)) | 0;
+    }
+
+    /** 6.x changeColor on a colour: turn the hue, in place (internal only). */
+    _changeColor(step: number): void {
+        const hue = this._getHue();
+        const turned = ScratchColorClass.wrap(hue + step / 2.55, 100);
+        const next = ScratchColorClass.fromHSB(turned, this._getSaturation(), this._getBrightness())._withAlpha(this.a);
+        (this as any).r = next.r; (this as any).g = next.g; (this as any).b = next.b; (this as any).a = next.a;
     }
 }

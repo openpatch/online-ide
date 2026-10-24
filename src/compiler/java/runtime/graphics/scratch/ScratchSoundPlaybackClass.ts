@@ -19,7 +19,7 @@ export class AutoCloseableInterface extends InterfaceClass {
 /** One play, backed by its own Howler playback ID rather than another audio file. */
 export class ScratchSoundPlaybackClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.sound", signature: "class SoundPlayback extends Object implements java.lang.AutoCloseable" },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class SoundPlayback extends Object implements java.lang.AutoCloseable" },
         { type: "method", signature: "private SoundPlayback()", native: ScratchSoundPlaybackClass.prototype._constructor },
         { type: "method", signature: "string getName()", native: ScratchSoundPlaybackClass.prototype._getName },
         { type: "method", signature: "boolean isPlaying()", native: ScratchSoundPlaybackClass.prototype._isPlaying },

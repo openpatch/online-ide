@@ -24,6 +24,7 @@ export class ScratchVector2Class extends ObjectClass {
         { type: "method", signature: "double distanceSq(Vector2 v)", native: ScratchVector2Class.prototype._distanceSq, comment: SRC.vector2DistanceSqComment },
         { type: "method", signature: "double distance(Vector2 v)", native: ScratchVector2Class.prototype._distance, comment: SRC.vector2DistanceComment },
         { type: "method", signature: "double angle()", native: ScratchVector2Class.prototype._angle, comment: SRC.vector2AngleComment },
+        { type: "method", signature: "double direction()", native: ScratchVector2Class.prototype._direction, comment: SRC.vector2DirectionComment },
         { type: "method", signature: "Vector2 unitVector()", native: ScratchVector2Class.prototype._unitVector, comment: SRC.vector2UnitVectorComment },
         { type: "method", signature: "Vector2 normalVector()", native: ScratchVector2Class.prototype._normalVector, comment: SRC.vector2NormalVectorComment },
         { type: "method", signature: "Vector2 add(Vector2 v)", native: ScratchVector2Class.prototype._add, comment: SRC.vector2AddComment },
@@ -66,6 +67,11 @@ export class ScratchVector2Class extends ObjectClass {
     _distanceSq(v: ScratchVector2Class): number { const dx = v.x - this.x, dy = v.y - this.y; return dx * dx + dy * dy; }
     _distance(v: ScratchVector2Class): number { return Math.sqrt(this._distanceSq(v)); }
     _angle(): number { return Math.atan2(this.y, this.x) * 180 / Math.PI; }
+    /** Direction in Scratch degrees: 0 = up, 90 = right, measured clockwise. */
+    _direction(): number {
+        const direction = (90 - this._angle()) % 360;
+        return direction < 0 ? direction + 360 : direction;
+    }
     _unitVector(): ScratchVector2Class {
         const mag = this._length();
         return mag > 0 ? new ScratchVector2Class(this.x / mag, this.y / mag) : new ScratchVector2Class(0, 0);

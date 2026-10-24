@@ -5,8 +5,7 @@ import '../compiler/common/interpreter/Interpreter';
 import '../compiler/java/JavaCompiler';
 import { ThreadState } from '../compiler/common/interpreter/ThreadState';
 import { ScratchCostumes } from '../compiler/java/runtime/graphics/scratch/ScratchCostumes';
-import { getTextureSampling, setTextureSampling, trackTexture } from '../compiler/java/runtime/graphics/scratch/ScratchTextureSampling';
-import { TextureSampling } from '../compiler/java/runtime/graphics/scratch/TextureSamplingEnum';
+import { isPixelArt, setPixelArt, trackTexture } from '../compiler/java/runtime/graphics/scratch/ScratchPixelArt';
 
 /** Just enough of a texture: its source with the filters and the style the renderer caches. */
 function fakeTexture(): any {
@@ -28,7 +27,7 @@ function fakeThread(): any {
 
 describe('Scratch texture sampling', () => {
 
-    afterEach(() => setTextureSampling(TextureSampling.LINEAR));
+    afterEach(() => setPixelArt(false));
 
     test('a texture starts out linear', () => {
         const texture = trackTexture(fakeTexture());
@@ -38,7 +37,7 @@ describe('Scratch texture sampling', () => {
 
     test('POINT makes textures loaded before and after nearest', () => {
         const before = trackTexture(fakeTexture());
-        setTextureSampling(TextureSampling.POINT);
+        setPixelArt(true);
         const after = trackTexture(fakeTexture());
 
         for (const texture of [before, after]) {
@@ -47,13 +46,13 @@ describe('Scratch texture sampling', () => {
         }
         // the renderer has to drop its cached sampler
         expect(before.source.style.updates).toBe(1);
-        expect(getTextureSampling()).toBe(TextureSampling.POINT);
+        expect(isPixelArt()).toBe(true);
     });
 
-    test('BILINEAR and TRILINEAR are drawn linear', () => {
+    test('smooth pixel art goes back to linear', () => {
         const texture = trackTexture(fakeTexture());
-        setTextureSampling(TextureSampling.POINT);
-        setTextureSampling(TextureSampling.TRILINEAR);
+        setPixelArt(true);
+        setPixelArt(false);
         expect(texture.source.magFilter).toBe("linear");
     });
 });

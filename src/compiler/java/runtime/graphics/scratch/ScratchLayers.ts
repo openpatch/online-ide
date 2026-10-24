@@ -1,5 +1,6 @@
 import * as PIXI from 'pixi.js';
 import { activeScratchStage } from './ScratchStages';
+import { Layer } from './LayerEnum';
 
 /**
  * The stage's drawing layers.
@@ -21,8 +22,8 @@ import { activeScratchStage } from './ScratchStages';
  * index 0 of the PIXI root, so whatever was added last sank to the bottom and
  * stamps piled up in reverse.
  */
-export type ScratchLayerName = "root" | "shaded" | "stageColour" | "camera" | "backdrop" | "pen" | "backgroundStamps" | "sprites"
-    | "texts" | "foregroundStamps" | "debugWorld" | "uiStamps" | "ui" | "uiTexts" | "debugScreen";
+export type ScratchLayerName = "root" | "shaded" | "stageColour" | "camera" | "backdrop" | "pen" | "backgroundStamps" | "backgroundSprites"
+    | "sprites" | "foregroundSprites" | "texts" | "foregroundStamps" | "debugWorld" | "uiStamps" | "ui" | "uiTexts" | "debugScreen";
 
 export type ScratchLayers = Record<ScratchLayerName, PIXI.Container>;
 
@@ -31,7 +32,7 @@ export type ScratchLayers = Record<ScratchLayerName, PIXI.Container>;
  * outlines sit over the sprites they belong to, and it is inside the camera
  * because upstream draws the per-sprite debug with the camera transform applied.
  */
-const INSIDE_CAMERA: ScratchLayerName[] = ["backdrop", "pen", "backgroundStamps", "sprites", "texts", "foregroundStamps", "debugWorld"];
+const INSIDE_CAMERA: ScratchLayerName[] = ["backdrop", "pen", "backgroundStamps", "backgroundSprites", "sprites", "foregroundSprites", "texts", "foregroundStamps", "debugWorld"];
 
 /**
  * Build a set of layers for one stage.
@@ -49,7 +50,9 @@ export function createScratchLayers(parent: PIXI.Container): ScratchLayers {
         backdrop: new PIXI.Container(),
         pen: new PIXI.Container(),
         backgroundStamps: new PIXI.Container(),
+        backgroundSprites: new PIXI.Container(),
         sprites: new PIXI.Container(),
+        foregroundSprites: new PIXI.Container(),
         texts: new PIXI.Container(),
         foregroundStamps: new PIXI.Container(),
         debugWorld: new PIXI.Container(),
@@ -127,7 +130,27 @@ export function spriteLayerOf(context: any, isUI: boolean): PIXI.Container | und
     return scratchLayerOf(context, isUI ? "ui" : "sprites");
 }
 
+/**
+ * Where a sprite's own display object belongs, by 7.0 layer: BACKGROUND and
+ * FOREGROUND have their own containers inside the camera, MAIN is the sprites
+ * themselves, and UI ignores the camera.
+ */
+export function spriteLayerOfLayer(context: any, layer: Layer): PIXI.Container | undefined {
+    return scratchLayerOf(context,
+        layer === Layer.BACKGROUND ? "backgroundSprites"
+            : layer === Layer.FOREGROUND ? "foregroundSprites"
+                : layer === Layer.UI ? "ui" : "sprites");
+}
+
 /** Where a text belongs: above the sprites, and UI texts above the UI sprites. */
 export function textLayerOf(context: any, isUI: boolean): PIXI.Container | undefined {
     return scratchLayerOf(context, isUI ? "uiTexts" : "texts");
+}
+
+/**
+ * Where a text belongs, by 7.0 layer. The browser keeps texts above the
+ * sprites of their layer; UI ignores the camera.
+ */
+export function textLayerOfLayer(context: any, layer: Layer): PIXI.Container | undefined {
+    return scratchLayerOf(context, layer === Layer.UI ? "uiTexts" : "texts");
 }

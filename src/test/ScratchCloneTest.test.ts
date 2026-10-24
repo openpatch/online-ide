@@ -3,7 +3,6 @@ import '../compiler/common/interpreter/Interpreter';
 import '../compiler/java/JavaCompiler';
 import * as PIXI from 'pixi.js';
 import { ScratchSpriteClass } from '../compiler/java/runtime/graphics/scratch/ScratchSpriteClass';
-import { ScratchAnimatedSpriteClass } from '../compiler/java/runtime/graphics/scratch/ScratchAnimatedSpriteClass';
 import { ScratchRuntimeManager } from '../compiler/java/runtime/graphics/scratch/ScratchRuntimeManager';
 import { StringClass } from '../compiler/java/runtime/system/javalang/ObjectClassStringClass';
 
@@ -98,11 +97,11 @@ test('clone deletion is idempotent, unregisters broadcasts and leaves originals 
 });
 
 test('animated clones preserve student subclasses and independent animation tables', () => {
-    class Bunny extends ScratchAnimatedSpriteClass { points = 12; }
+    class Bunny extends ScratchSpriteClass { points = 12; }
     const env = environment();
     const bunny = prepare(new Bunny(), env);
     bunny['animations'].set('walk', ['frame1', 'frame2']);
-    bunny._mj$clone$AnimatedSprite$(env.thread, undefined);
+    bunny._mj$copy$Shape$(env.thread, undefined);
     const clone = env.thread.s.pop() as Bunny;
     expect(clone).toBeInstanceOf(Bunny);
     expect(clone._isClone()).toBe(true);

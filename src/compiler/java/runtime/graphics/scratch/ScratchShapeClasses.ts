@@ -3,7 +3,6 @@ import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
 import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { ScratchBoundsClass } from "./ScratchBoundsClass";
-import { desktopOnly } from "./ScratchUnsupported";
 import { SRC } from "./ScratchLibraryComments";
 
 export type Point = { x: number, y: number };
@@ -21,7 +20,7 @@ const CURVE_SEGMENTS = 32;
  * construction. That keeps contains/intersects/getBounds and — the reason this
  * exists — Sprite.setHitbox(Shape) working for real.
  *
- * Only draw() is desktop-only; it renders through Processing's PGraphics.
+ * Processing is gone in 7.0, and with it Shape.draw().
  */
 export class ScratchShapeClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
@@ -33,7 +32,7 @@ export class ScratchShapeClass extends ObjectClass {
         { type: "method", signature: "Shape translate(double dx, double dy)", native: ScratchShapeClass.prototype._translate, comment: SRC.shapeTranslateComment },
         { type: "method", signature: "Shape rotate(double theta, double anchorX, double anchorY)", native: ScratchShapeClass.prototype._rotate, comment: SRC.shapeRotateComment },
         { type: "method", signature: "Bounds getBounds()", native: ScratchShapeClass.prototype._getBounds, comment: SRC.shapeGetBoundsComment },
-        { type: "method", signature: "void draw()", native: ScratchShapeClass.prototype._draw, comment: SRC.shapeDrawComment },
+        { type: "method", signature: "double[] getPoints()", native: ScratchShapeClass.prototype._getPoints, comment: SRC.shapeGetPointsComment },
     ];
 
     static type: NonPrimitiveType;
@@ -82,8 +81,11 @@ export class ScratchShapeClass extends ObjectClass {
         return new ScratchBoundsClass(minX, minY, maxX - minX, maxY - minY);
     }
 
-    _draw() {
-        desktopOnly("Shape.draw()", "Zeichne die Form mit einem Pen. / Draw the shape with a Pen instead.");
+    /** The outline's points x0, y0, x1, y1, … (a copy). */
+    _getPoints(): number[] {
+        const out: number[] = [];
+        for (const p of this.points) { out.push(p.x, p.y); }
+        return out;
     }
 
     /** A bare Shape carrying the given outline. */

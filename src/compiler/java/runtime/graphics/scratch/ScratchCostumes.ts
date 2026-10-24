@@ -4,7 +4,7 @@ import type { Thread } from "../../../../common/interpreter/Thread";
 import { ThreadState } from "../../../../common/interpreter/ThreadState";
 import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
-import { trackTexture } from "./ScratchTextureSampling";
+import { trackTexture } from "./ScratchPixelArt";
 import { resolveAssetUrl } from "./ScratchAssetUrls";
 import assetCatalog from './catalogs/assets.json';
 
@@ -289,3 +289,16 @@ export class ScratchCostumes {
 
 /** A rectangle in a costume's own pixels. */
 export type ContentBounds = { x: number, y: number, width: number, height: number };
+
+/**
+ * The name a one-argument addCostume/addSound/addBackdrop gives its asset: the
+ * file name without the folder and — when it has one — without the extension,
+ * exactly as the desktop library derives it (Sprite.addCostume(String) and
+ * friends). A name without a dot keeps its dotless whole, so built-in assets
+ * ("cat") and dotfiles (".hidden") stay unchanged.
+ */
+export function assetNameFromPath(path: string): string {
+    const file = path.substring(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
+    const dot = file.lastIndexOf(".");
+    return dot > 0 ? file.substring(0, dot) : file;
+}

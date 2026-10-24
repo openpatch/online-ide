@@ -11,14 +11,15 @@ import { StringClass } from "../../system/javalang/ObjectClassStringClass";
 import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { ActorClass } from "../ActorClass";
 import { IWorld } from "../IWorld";
+import { ComparatorInterface } from "../../system/collections/ComparatorInterface";
 import { InternalMouseListener, MouseEventKind } from "../MouseManager2D";
 import { KeyCodeEnum } from "./KeyCodeEnum";
 import { MouseCodeEnum } from "./MouseCodeEnum";
 import { ScratchCameraClass } from "./ScratchCameraClass";
 import { ScratchColorClass } from "./ScratchColorClass";
-import { ScratchCostumes } from "./ScratchCostumes";
+import { ScratchCostumes, assetNameFromPath } from "./ScratchCostumes";
 import { DEBUG_COLOR, DEBUG_FONT_FAMILY, DEBUG_FONT_SIZE, round2, roundInt } from "./ScratchDebug";
-import { SCRATCH_FONT_FAMILY, loadScratchFont } from "./ScratchFont";
+import { loadScratchFont, roundToScratchPixelGrid, scratchDefaultFontFamily } from "./ScratchFont";
 import { applyCameraTransform, createScratchLayers, ScratchLayers } from "./ScratchLayers";
 import { scratchSpriteList } from "./ScratchLists";
 import { ScratchPenClass } from "./ScratchPenClass";
@@ -26,7 +27,7 @@ import { IScratchEventReceiver, ScratchRuntimeManager } from "./ScratchRuntimeMa
 import { ScratchSoundBank } from "./ScratchSounds";
 import { isLibraryInstance, ScratchSpriteClass } from "./ScratchSpriteClass";
 import { ScratchTextClass } from "./ScratchTextClass";
-import { ScratchSortingClass } from "./ScratchSortingClass";
+import { createColorEffectFilter } from "./ScratchEffects";
 import { ScratchTimerClass } from "./ScratchTimerClass";
 import {
     beginScratchStages, IScratchStageLike, isScratchStageActive,
@@ -34,7 +35,7 @@ import {
 } from "./ScratchStages";
 import { ScratchShadersClass } from "./ScratchShaders";
 import { beginScratchProgram, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
-import { resetTextureSamplingOnEveryRun } from "./ScratchTextureSampling";
+import { resetPixelArtOnEveryRun } from "./ScratchPixelArt";
 import { setAssetBase } from "./ScratchAssetUrls";
 import { BooleanSupplierInterface } from "./BooleanSupplierInterface";
 import { ScratchVector2Class } from "./ScratchVector2Class";
@@ -50,6 +51,23 @@ const SCRATCH_FRAMES_PER_SECOND = 60;
 
 /** Upstream's Text starts at 14pt, which is what display() is drawn in. */
 const DISPLAY_FONT_SIZE = 14;
+
+/** Scratch's ask card measures, upstream's AskDraw (scratch-gui's question box). */
+const ASK_MARGIN = 8;
+const ASK_PADDING = 16;
+const ASK_GAP = 8;
+const ASK_FIELD = 32;
+const ASK_INSET = 12;
+const ASK_BUTTON = 24;
+const ASK_BUTTON_INSET = 4;
+/** The ink of the ask card's question, answer and caret, scratch-gui's blue-grey. */
+const ASK_TEXT_COLOR = 0x575e75;
+/** The blue of the ask card's check button, scratch-gui's. */
+const ASK_BUTTON_COLOR = 0x4c97ff;
+/** Upstream's Text default stroke, the light grey frame of the display band. */
+const DISPLAY_STROKE_COLOR = 0xc9c9c9;
+/** The ask card's caret is on this long, then off this long, upstream's tick / 30 % 2. */
+const CARET_BLINK_MILLIS = 500;
 
 /**
  * A scene, mirroring org.openpatch.scratch.Stage (core subset).
@@ -84,8 +102,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         { type: "method", signature: "void whenKeyPressed(KeyCode key)", java: ScratchStageClass.prototype._mj$whenKeyPressed$void$KeyCode, comment: SRC.stageWhenKeyPressedComment },
         { type: "method", signature: "void whenKeyReleased(KeyCode key)", java: ScratchStageClass.prototype._mj$whenKeyReleased$void$KeyCode, comment: SRC.stageWhenKeyReleasedComment },
         { type: "method", signature: "void whenMouseClicked(MouseCode button)", java: ScratchStageClass.prototype._mj$whenMouseClicked$void$MouseCode, comment: SRC.stageWhenMouseClickedComment },
-        { type: "method", signature: "void whenMouseMoved(double x, double y)", java: ScratchStageClass.prototype._mj$whenMouseMoved$void$double$double, comment: SRC.stageWhenMouseMovedComment },
-        { type: "method", signature: "void whenMouseWheelMoved(int steps)", java: ScratchStageClass.prototype._mj$whenMouseWheelMoved$void$int, comment: SRC.stageWhenMouseWheelMovedComment },
+        { type: "method", signature: "void whenMouseWheelMoved(double steps)", java: ScratchStageClass.prototype._mj$whenMouseWheelMoved$void$double, comment: SRC.stageWhenMouseWheelMovedComment },
 
         { type: "method", signature: "void whenBackdropSwitches(String name)", java: ScratchStageClass.prototype._mj$whenBackdropSwitches$void$String, comment: SRC.stageWhenBackdropSwitchesComment },
 
@@ -104,7 +121,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         { type: "method", signature: "<T extends Sprite> int count(Class<T> c)", native: ScratchStageClass.prototype._count, comment: SRC.stageCountComment },
 
         // backdrops
-        { type: "method", signature: "void addBackdrop(string name)", java: ScratchStageClass.prototype._mj$addBackdrop$void$string, comment: SRC.stageAddBackdropComment },
+        { type: "method", signature: "void addBackdrop(string imagePath)", java: ScratchStageClass.prototype._mj$addBackdrop$void$string, comment: SRC.stageAddBackdropComment },
         { type: "method", signature: "void addBackdrop(string name, string imagePath)", java: ScratchStageClass.prototype._mj$addBackdrop$void$string$string, comment: SRC.stageAddBackdrop2Comment },
         { type: "method", signature: "void addBackdrop(string name, string imagePath, boolean stretch)", java: ScratchStageClass.prototype._mj$addBackdrop$void$string$string$boolean, comment: SRC.stageAddBackdrop3Comment },
         { type: "method", signature: "void switchBackdrop(string name)", native: ScratchStageClass.prototype._switchBackdrop, comment: SRC.stageSwitchBackdropComment },
@@ -115,7 +132,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         { type: "method", signature: "int getCurrentBackdropIndex()", native: ScratchStageClass.prototype._getCurrentBackdropIndex, comment: SRC.stageGetCurrentBackdropIndexComment },
 
         // sound
-        { type: "method", signature: "void addSound(string name)", native: ScratchStageClass.prototype._addSound, comment: SRC.stageAddSoundComment },
+        { type: "method", signature: "void addSound(string soundPath)", native: ScratchStageClass.prototype._addSound, comment: SRC.stageAddSoundComment },
         { type: "method", signature: "void addSound(string name, string soundPath)", native: ScratchStageClass.prototype._addSound2, comment: SRC.stageAddSound2Comment },
         { type: "method", signature: "void playSound(string name)", native: ScratchStageClass.prototype._playSound, comment: SRC.stagePlaySoundComment },
         { type: "method", signature: "SoundPlayback playSoundCopy(string name, double volume)", native: ScratchStageClass.prototype._playSoundCopy },
@@ -127,34 +144,32 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         { type: "method", signature: "double getVolume()", native: ScratchStageClass.prototype._getVolume, comment: SRC.stageGetVolumeComment },
 
         // background colour
-        { type: "method", signature: "void setColor(double h)", native: ScratchStageClass.prototype._setColorHue, comment: SRC.stageSetColorComment },
+        { type: "method", signature: "void setColor(Color color)", native: ScratchStageClass.prototype._setColorObj, comment: SRC.stageSetColorComment },
         { type: "method", signature: "void setColor(double r, double g, double b)", native: ScratchStageClass.prototype._setColorRGB, comment: SRC.stageSetColor2Comment },
-        { type: "method", signature: "void setColor(Color c)", native: ScratchStageClass.prototype._setColorObj, comment: SRC.stageSetColor3Comment },
         { type: "method", signature: "Color getColor()", native: ScratchStageClass.prototype._getColor, comment: SRC.stageGetColorComment },
-        { type: "method", signature: "void changeColor(double h)", native: ScratchStageClass.prototype._changeColor, comment: SRC.stageChangeColorComment },
+        { type: "method", signature: "void setColorEffect(double effect)", native: ScratchStageClass.prototype._setColorEffect, comment: SRC.stageSetColorEffectComment },
+        { type: "method", signature: "void changeColorEffect(double by)", native: ScratchStageClass.prototype._changeColorEffect, comment: SRC.stageChangeColorEffectComment },
+        { type: "method", signature: "double getColorEffect()", native: ScratchStageClass.prototype._getColorEffect, comment: SRC.stageGetColorEffectComment },
 
         { type: "method", signature: "Camera getCamera()", native: ScratchStageClass.prototype._getCamera, comment: SRC.stageGetCameraComment },
 
         // backdrop tint and transparency
-        { type: "method", signature: "void setTint(double r, double g, double b)", native: ScratchStageClass.prototype._setTintRGB, comment: SRC.stageSetTintComment },
-        { type: "method", signature: "void setTint(double h)", native: ScratchStageClass.prototype._setTintHue, comment: SRC.stageSetTint2Comment },
-        { type: "method", signature: "void changeTint(double step)", native: ScratchStageClass.prototype._changeTint, comment: SRC.stageChangeTintComment },
+        { type: "method", signature: "void setTint(Color c)", native: ScratchStageClass.prototype._setTintObj, comment: SRC.stageSetTintComment },
         { type: "method", signature: "void setTransparency(double transparency)", native: ScratchStageClass.prototype._setTransparency, comment: SRC.stageSetTransparencyComment },
         { type: "method", signature: "void changeTransparency(double step)", native: ScratchStageClass.prototype._changeTransparency, comment: SRC.stageChangeTransparencyComment },
+        { type: "method", signature: "double getTransparency()", native: ScratchStageClass.prototype._getTransparency, comment: SRC.stageGetTransparencyComment },
 
         // debugging and program control
-        { type: "method", signature: "void setDebug(boolean debug)", native: ScratchStageClass.prototype._setDebug, comment: SRC.stageSetDebugComment },
-        { type: "method", signature: "boolean isDebug()", native: ScratchStageClass.prototype._isDebug, comment: SRC.stageIsDebugComment },
         { type: "method", signature: "void debug(Object... values)", native: ScratchStageClass.prototype._debug, comment: SRC.stageDebugComment },
         { type: "method", signature: "void waitUntil(BooleanSupplier condition)", java: ScratchStageClass.prototype._mj$waitUntil$void$BooleanSupplier, comment: SRC.stageWaitUntilComment },
-        { type: "method", signature: "void exit()", native: ScratchStageClass.prototype._exit, comment: SRC.stageExitComment },
         { type: "method", signature: "void setCursor(string path)", native: ScratchStageClass.prototype._setCursor, comment: SRC.stageSetCursorComment },
         { type: "method", signature: "void setCursor(string path, int x, int y)", native: ScratchStageClass.prototype._setCursor3, comment: SRC.stageSetCursor2Comment },
 
         // desktop-only extensions
-        { type: "method", signature: "Pixels getPixels()", native: ScratchStageClass.prototype._getPixels, comment: SRC.stageGetPixelsComment },
         { type: "method", signature: "Shaders getShaders()", native: ScratchStageClass.prototype._getShaders, comment: SRC.stageGetShadersComment },
-        { type: "method", signature: "Sorting getSorting()", native: ScratchStageClass.prototype._getSorting, comment: SRC.stageGetSortingComment },
+        { type: "method", signature: "void sortByY()", native: ScratchStageClass.prototype._sortByY, comment: SRC.stageSortByYComment },
+        { type: "method", signature: "void sortBy(Comparator<? super Sprite> comparator)", java: ScratchStageClass.prototype._mj$sortBy$void$Comparator, comment: SRC.stageSortByComment },
+        { type: "method", signature: "void stopSorting()", native: ScratchStageClass.prototype._stopSorting, comment: SRC.stageStopSortingComment },
         { type: "method", signature: "int getWidth()", native: ScratchStageClass.prototype._getWidth, comment: SRC.stageGetWidthComment },
         { type: "method", signature: "int getHeight()", native: ScratchStageClass.prototype._getHeight, comment: SRC.stageGetHeightComment },
 
@@ -165,15 +180,13 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         { type: "method", signature: "boolean isMouseDown()", native: ScratchStageClass.prototype._isMouseDown, comment: SRC.stageIsMouseDownComment },
 
         { type: "method", signature: "Timer getTimer()", native: ScratchStageClass.prototype._getTimer, comment: SRC.stageGetTimerComment },
-        { type: "method", signature: "Timer getTimer(string name)", native: ScratchStageClass.prototype._getNamedTimer, comment: SRC.stageGetTimer2Comment },
-        { type: "method", signature: "double getDeltaTime()", native: ScratchStageClass.prototype._getDeltaTime, comment: SRC.stageGetDeltaTimeComment },
-        { type: "method", signature: "double getFrameRate()", native: ScratchStageClass.prototype._getFrameRate, comment: SRC.stageGetFrameRateComment },
+
 
         { type: "method", signature: "void eraseAll()", native: ScratchStageClass.prototype._eraseAll, comment: SRC.stageEraseAllComment },
         { type: "method", signature: "void display(string text)", native: ScratchStageClass.prototype._display, comment: SRC.stageDisplayComment },
-        { type: "method", signature: "void display(string text, int millis)", native: ScratchStageClass.prototype._displayFor, comment: SRC.stageDisplay2Comment },
+        { type: "method", signature: "void display(string text, double seconds)", native: ScratchStageClass.prototype._displayFor, comment: SRC.stageDisplay2Comment },
 
-        { type: "method", signature: "void wait(int millis)", java: ScratchStageClass.prototype._mj$wait$void$int, comment: SRC.stageWaitComment },
+        { type: "method", signature: "void waitSeconds(double seconds)", java: ScratchStageClass.prototype._mj$waitSeconds$void$double, comment: SRC.stageWaitComment },
 
         { type: "method", signature: "void ask(string question)", native: ScratchStageClass.prototype._ask, comment: SRC.stageAskComment },
         { type: "method", signature: "string getAnswer()", native: ScratchStageClass.prototype._getAnswer, comment: SRC.stageGetAnswerComment },
@@ -194,8 +207,12 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     scratchLayers?: ScratchLayers;
 
     camera: ScratchCameraClass = new ScratchCameraClass();
-    /** The draw order of the sprites, see ScratchSortingClass. */
-    sorting: ScratchSortingClass = new ScratchSortingClass();
+    /** 7.0's sortByY: sprites drawn in the order of their lower edge. */
+    sortByYEnabled: boolean = false;
+    /** The comparator sortBy() was last called with; undefined unless its order is active. */
+    private sortComparator?: ComparatorInterface;
+    /** The comparator re-sort in flight: one interpreter thread walking a merge sort. */
+    private sortJob?: { thread: Thread; sprites: ScratchSpriteClass[] };
 
     private backdrops: { name: string; texture: PIXI.Texture; stretch: boolean }[] = [];
     private currentBackdrop: number = -1;
@@ -224,7 +241,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             const firstStageOfRun = beginScratchStages(world);
             if (firstStageOfRun) {
                 beginScratchProgram(interpreter);
-                resetTextureSamplingOnEveryRun(interpreter);
+                resetPixelArtOnEveryRun(interpreter);
                 // relative image and sound paths start from the project folder
                 setAssetBase(interpreter.getMain?.()?.getAssetBaseUrl?.());
                 // the program's own pictures, sounds and fonts, found by the
@@ -288,6 +305,8 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         for (const sprite of this.sprites) if (sprite.stage === this) sprite.syncWorldRegistration(true);
         this.applyBgColor();
         this._applyCamera();
+        // a question that was open when the stage went off screen keeps blinking
+        if (this.askQuestion !== undefined) this.scheduleCaretBlink();
     }
 
     _deactivate(): void {
@@ -300,6 +319,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         if (index >= 0) listeners!.splice(index, 1);
         for (const sprite of this.sprites) if (sprite.stage === this) sprite.syncWorldRegistration(false);
         if (this.debugEnabled) this.clearDebugOverlay();
+        this.cancelCaretBlink();
     }
 
     // ---- per-frame ----
@@ -334,27 +354,37 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      * have to be worked out here: done from act(), which runs at the start of
      * the frame, the camera and the debug overlay were a frame behind whatever
      * the program moved in between.
+     *
+     * The sort order is NOT worked out here: a batch of ticks re-applies it
+     * (see ScratchGameClock.runFrame), the way the desktop re-sorts in tick(),
+     * so it follows the game speed and holds still while paused.
      */
     _preRender(): void {
         if (!this.isActive() || !this.world?.app) return;
         ScratchMonitors.refresh(this);
         ScratchTextClass.refreshAttached(this.world);
         this._applyCamera();
-        this._applySorting();
         if (this.debugEnabled) this.renderDebugOverlay();
     }
 
     /**
-     * Sorting.byY(): the lower a sprite's lower edge, the later it is drawn.
-     * PIXI keeps the children of the sprites layer in the order they were added;
-     * with sortableChildren it draws them by zIndex instead, and falls back to
-     * that order again once sorting is switched off. Recomputed every frame,
-     * because every frame something may have moved.
+     * Sorting.byY() and Sorting.by(comparator): the layer order the stage was
+     * last told to use, back to front. PIXI keeps the children of the sprites
+     * layer in the order they were added; with sortableChildren it draws them by
+     * zIndex instead, and falls back to that order again once sorting is
+     * switched off. Re-applied once per batch of ticks (ScratchGameClock.runFrame),
+     * because every batch something may have moved; while paused the order
+     * holds still, as on the desktop.
      */
     _applySorting() {
         const layer = this.scratchLayers?.sprites;
         if (!layer || layer.destroyed) return;
-        if (!this.sorting.byY) {
+        if (this.sortComparator && !this.sortByYEnabled) {
+            layer.sortableChildren = true;
+            this.applyComparatorOrder();
+            return;
+        }
+        if (!this.sortByYEnabled) {
             if (layer.sortableChildren) layer.sortableChildren = false;
             return;
         }
@@ -379,7 +409,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     _mj$whenKeyReleased$void$KeyCode(_t: Thread, callback: CallbackParameter, _key: KeyCodeEnum): void { if (callback) callback(); }
     _mj$whenMouseClicked$void$MouseCode(_t: Thread, callback: CallbackParameter, _code: MouseCodeEnum): void { if (callback) callback(); }
     _mj$whenMouseMoved$void$double$double(_t: Thread, callback: CallbackParameter, _x: number, _y: number): void { if (callback) callback(); }
-    _mj$whenMouseWheelMoved$void$int(_t: Thread, callback: CallbackParameter, _steps: number): void { if (callback) callback(); }
+    _mj$whenMouseWheelMoved$void$double(_t: Thread, callback: CallbackParameter, _steps: number): void { if (callback) callback(); }
 
     private listenersRegistered = false;
 
@@ -414,7 +444,10 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             mouseClicked: this._mj$whenMouseClicked$void$MouseCode !== ScratchStageClass.prototype._mj$whenMouseClicked$void$MouseCode,
             backdropSwitches: this._mj$whenBackdropSwitches$void$String !== ScratchStageClass.prototype._mj$whenBackdropSwitches$void$String,
             mouseMoved: this._mj$whenMouseMoved$void$double$double !== ScratchStageClass.prototype._mj$whenMouseMoved$void$double$double,
-            mouseWheelMoved: this._mj$whenMouseWheelMoved$void$int !== ScratchStageClass.prototype._mj$whenMouseWheelMoved$void$int,
+            mouseWheelMoved: this._mj$whenMouseWheelMoved$void$double !== ScratchStageClass.prototype._mj$whenMouseWheelMoved$void$double,
+            // Every object is registered for the gamepad events; the dispatch
+            // only reaches those that implement a GamepadListener hook.
+            gamepad: true,
         });
     }
 
@@ -547,8 +580,8 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      */
     private backdropSprite?: PIXI.Sprite;
 
-    _mj$addBackdrop$void$string(t: Thread, callback: CallbackParameter, name: string) {
-        this.loadBackdrop(t, name, name, false, callback);
+    _mj$addBackdrop$void$string(t: Thread, callback: CallbackParameter, imagePath: string) {
+        this.loadBackdrop(t, assetNameFromPath(imagePath), imagePath, false, callback);
     }
 
     _mj$addBackdrop$void$string$string(t: Thread, callback: CallbackParameter, name: string, imagePath: string) {
@@ -627,7 +660,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     _getCurrentBackdropIndex(): number { return this.currentBackdrop; }
 
     // ---- sound ----
-    _addSound(name: string) { this.soundBank.add(name, name); }
+    _addSound(soundPath: string) { this.soundBank.add(assetNameFromPath(soundPath), soundPath); }
     _addSound2(name: string, path: string) { this.soundBank.add(name, path); }
     _playSoundCopy(name: string, volume: number): ScratchSoundPlaybackClass {
         return ScratchSoundPlaybackClass.start(this.soundBank, name, volume);
@@ -647,29 +680,36 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         this.world._setBackgroundColor(this.bgColor._get() & 0xffffff);
         if (this.stageFilters.length > 0) this.applyStageShader();
     }
-    _setColorHue(h: number) { this.bgColor = ScratchColorClass.fromHue(h); this.applyBgColor(); }
     _setColorRGB(r: number, g: number, b: number) { this.bgColor = ScratchColorClass.fromRGB(r, g, b); this.applyBgColor(); }
     _setColorObj(c: ScratchColorClass) { if (c) { this.bgColor = c; this.applyBgColor(); } }
     _getColor(): ScratchColorClass { return this.bgColor; }
-    _changeColor(h: number) { this.bgColor._changeColor(h); this.applyBgColor(); }
+
+    /**
+     * 7.0's stage colour effect: the hue of everything on the stage (not the
+     * UI) turns, 200 being once around, exactly as Scratch's stage effect.
+     * Applied as a hue filter on the shaded container, which holds everything
+     * but the UI pass.
+     */
+    private stageColorEffect: number = 0;
+    _setColorEffect(effect: number) {
+        this.stageColorEffect = effect;
+        const shaded = this.scratchLayers?.shaded;
+        if (!shaded || shaded.destroyed) return;
+        shaded.filters = effect === 0 ? [] : [createColorEffectFilter(effect)];
+    }
+    _changeColorEffect(by: number) { this._setColorEffect(this.stageColorEffect + by); }
+    _getColorEffect(): number { return this.stageColorEffect; }
 
     // ---- timers ----
-    _getTimer(): ScratchTimerClass { return this._getNamedTimer("default"); }
-    _getNamedTimer(name: string): ScratchTimerClass {
-        let timer = this.timers.get(name);
-        if (!timer) { timer = new ScratchTimerClass(); this.timers.set(name, timer); }
-        return timer;
-    }
-    _getDeltaTime(): number {
-        return scratchGameClock().stepSeconds;
-    }
+    private timer?: ScratchTimerClass;
+    _getTimer(): ScratchTimerClass { return this.timer ??= new ScratchTimerClass(); }
     _getFrameRate(): number {
         return (this.world as any).app?.ticker?.FPS ?? 30;
     }
 
     // ---- misc ----
     _eraseAll() {
-        ScratchPenClass.eraseAllLayers(this.world, this);
+        for (const pen of ScratchPenClass.livePens(this.world)) pen._eraseOwnGraphics();
         // Painted marks outlive their Pen, as pixels do on the desktop. Erase
         // those too when an unowned pen has already been collected.
         for (const marks of this.scratchLayers?.pen.children ?? []) {
@@ -681,66 +721,81 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     }
 
     _display(text: string) { this.displayText(text, undefined); }
-    _displayFor(text: string, millis: number) { this.displayText(text, millis); }
+    _displayFor(text: string, seconds: number) { this.displayText(text, seconds * 1000); }
 
     private displayContainer?: PIXI.Container;
     private displayTimeout?: any;
+    private displayHeight: number = 0;
 
     /**
      * The band along the bottom of the stage that display() writes into.
      *
-     * <p>Upstream this is a Text in the BOX style, built at (-width/2,
-     * -height/2) and as wide as the stage: it sits on the bottom edge, reaches
-     * from side to side and is rounded on its top two corners only. It used to
-     * be a small box in the top left corner here, which is a different thing to
-     * look at.
+     * <p>Upstream this is a Text in the BOX style, in the UI layer, as wide as
+     * the stage minus its 8px margins: rounded all around, white on a light
+     * grey frame, its bottom edge 8px above the window's bottom edge — and 4px
+     * above the ask card while one is up. It used to sit on the bottom edge
+     * itself and be rounded on its top two corners only.
      */
     private displayText(text: string, millis?: number) {
         if (this.displayTimeout) { this.displayTimeout(); this.displayTimeout = undefined; }
         if (this.displayContainer) { this.displayContainer.destroy({ children: true }); this.displayContainer = undefined; }
         this.displayContainer = this.makeBottomBand(text);
+        this.positionDisplayBand();
         if (millis !== undefined) this.displayTimeout = scratchGameClock().schedule(() => this.displayText("", undefined), millis);
     }
 
     /**
-     * Build the band and put it on the stage, or nothing for empty text.
+     * Where the display band sits: its bottom edge 8px above the window's
+     * bottom edge, and while an ask card is up 4px above that card — upstream's
+     * draw() does `bottom += askBox.height() + 4`. The band and the card are
+     * rebuilt independently, so both paths come through here.
+     */
+    private positionDisplayBand() {
+        if (!this.displayContainer || this.displayContainer.destroyed) return;
+        const aboveAsk = this.askHeight > 0 ? this.askHeight + 4 : 0;
+        this.displayContainer.position.set(
+            ASK_MARGIN, this.world.height - ASK_MARGIN - aboveAsk - this.displayHeight);
+    }
+
+    /**
+     * Build the display band and put it on the stage, or nothing for empty text.
      *
-     * <p>Upstream this is a Text in the BOX style, built at (-width/2,
-     * -height/2) and as wide as the stage: it sits on the bottom edge, reaches
-     * from side to side and is rounded on its top two corners only. display()
-     * and ask() both draw one, which is why this is shared.
+     * <p>Upstream this is a Text in the BOX style, in the UI layer, as wide as
+     * the stage minus its 8px margins, with the Text defaults for its colours:
+     * black on white, framed in 2px of (201,201,201), its corners rounded by 8
+     * — the corners of Scratch's ask box. Where it sits is
+     * positionDisplayBand()'s business, because that depends on whether an ask
+     * card is up.
      */
     private makeBottomBand(text: string): PIXI.Container | undefined {
         if (!text || text.length === 0) return undefined;
 
-        const pad = 8;
-        const width = this.world.width;
+        const pad = 8; // upstream's Text.PADDING, between the frame and the words
+        const width = this.world.width - ASK_MARGIN * 2;
+        // In pixel-art mode the band is drawn in Jersey 10 at a size rounded to
+        // whole pixels of it, like every text there.
+        const fontSize = roundToScratchPixelGrid(DISPLAY_FONT_SIZE);
         const style = new PIXI.TextStyle({
-            fontFamily: SCRATCH_FONT_FAMILY,
-            fontSize: DISPLAY_FONT_SIZE,
-            // upstream's Text defaults: grey on white, in a light grey frame
-            fill: 0x787878,
-            lineHeight: DISPLAY_FONT_SIZE + 4,
+            fontFamily: scratchDefaultFontFamily(),
+            fontSize,
+            // upstream's Text defaults: black on white, in a light grey frame
+            fill: 0x000000,
+            lineHeight: fontSize + 4,
             wordWrap: true,
             wordWrapWidth: width - pad * 2,
         });
         const label = new PIXI.Text({ text, style });
         const height = label.height + pad * 2;
-        const radius = 16;
 
-        // Upstream rounds the top two corners and leaves the bottom two square.
-        // The band sits on the bottom edge of the stage, so drawing it a corner
-        // taller than it needs to be puts the rounded bottom off the canvas,
-        // where it cannot be seen - and the square edge is what is left.
         const g = new PIXI.Graphics();
-        g.roundRect(0, 0, width, height + radius, radius)
+        g.roundRect(0, 0, width, height, 8)
             .fill(0xffffff)
-            .stroke({ width: 2, color: 0xdadada });
+            .stroke({ width: 2, color: DISPLAY_STROKE_COLOR });
 
         label.position.set(pad, pad);
         const box = new PIXI.Container();
         box.addChild(g, label);
-        box.position.set(0, this.world.height - height);
+        this.displayHeight = height;
         // last child of the stage's own root, so it is on top of the stage but
         // still disappears with it
         (this.scratchLayers?.root ?? this.world.app.stage).addChild(box);
@@ -751,34 +806,178 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     // Non-blocking, exactly like upstream: ask() puts the question up and returns
     // immediately; run() polls isAsking()/getAnswer().
     //
-    // The question goes into a band at the bottom of the stage and is typed into
-    // there, which is where Scratch and the desktop library both put it. It used
-    // to be handed to the IDE's console instead: the learner had to look below
-    // the stage for a question the tutorial said was on it, and the console's
-    // input field stopped the act loop while it was open, so nothing the program
-    // drew after the first answer ever appeared.
+    // The question goes into Scratch's ask card at the bottom of the stage and
+    // is typed into there, which is where Scratch and the desktop library both
+    // put it. It used to be handed to the IDE's console instead: the learner
+    // had to look below the stage for a question the tutorial said was on it,
+    // and the console's input field stopped the act loop while it was open, so
+    // nothing the program drew after the first answer ever appeared.
     private askQuestion?: string;
     private answer: string = "";
     private askInput: string = "";
     private askContainer?: PIXI.Container;
+    private askHeight: number = 0;
     private askKeyListener?: KeyDownListener;
+    /** The sprite that asked, whose bubble shows the question; none when the stage asked. */
+    private askingSprite?: ScratchSpriteClass;
+    /** Whether the caret in the answer field is drawn this rebuild. */
+    private caretOn: boolean = true;
+    private caretTimer?: () => void;
 
     _ask(question: string) {
+        this.askingSprite = undefined;
+        this.startAsking(question);
+    }
+
+    /** A sprite asking: upstream's Stage.askForSprite(), reached from Sprite.ask(). */
+    _askForSprite(sprite: ScratchSpriteClass, question: string) {
+        this.askingSprite = sprite;
+        this.startAsking(question);
+    }
+
+    /** What ask() and _askForSprite() share, upstream's startAsking(). */
+    private startAsking(question: string) {
         this.askQuestion = question ?? "";
         this.answer = "";
         this.askInput = "";
         this.listenForAnswer();
         this.showAskBox();
+        if (this.askQuestion !== undefined) this.scheduleCaretBlink();
     }
+
     _getAnswer(): string { return this.answer; }
     _isAsking(): boolean { return this.askQuestion !== undefined; }
 
-    /** Puts the question and whatever has been typed so far on screen. */
+    /** Puts the ask card up, or takes it down when the question is over. */
     private showAskBox() {
         if (this.askContainer && !this.askContainer.destroyed) this.askContainer.destroy({ children: true });
+        this.askHeight = 0;
         this.askContainer = this.askQuestion === undefined
             ? undefined
-            : this.makeBottomBand(this.askQuestion + "\n> " + this.askInput);
+            : this.makeAskCard();
+        // the display band sits 4px above the card while it is up
+        this.positionDisplayBand();
+    }
+
+    /**
+     * Scratch's ask card, upstream's AskDraw as drawAsk() paints it: a white
+     * card standing on the bottom edge 8px in from the window's sides — a dark
+     * roundRect just visible round the white one inside it, which is how
+     * upstream paints border and shadow in one — with the question above the
+     * answer field when the stage itself asked (a sprite's question is in its
+     * bubble), the field showing the end of a long answer, and the round check
+     * button at its right end.
+     */
+    private makeAskCard(): PIXI.Container {
+        const width = this.world.width - ASK_MARGIN * 2;
+        // In pixel-art mode the card's words are drawn in Jersey 10 at a size
+        // rounded to whole pixels of it, like every text there.
+        const fontSize = roundToScratchPixelGrid(DISPLAY_FONT_SIZE);
+        const lineHeight = fontSize + 4;
+        const styleOf = (wrapAt: number | undefined) => new PIXI.TextStyle({
+            fontFamily: scratchDefaultFontFamily(),
+            fontSize,
+            fill: ASK_TEXT_COLOR,
+            lineHeight,
+            ...(wrapAt !== undefined ? { wordWrap: true, wordWrapWidth: wrapAt } : {}),
+        });
+
+        // The question only shows when the stage itself asked; a sprite's
+        // question is in its bubble, as Sprite.ask() on the desktop says it.
+        let question: PIXI.Text | undefined;
+        let questionHeight = 0;
+        if (this.askingSprite === undefined && this.askQuestion && this.askQuestion.length > 0) {
+            question = new PIXI.Text({ text: this.askQuestion, style: styleOf(width - ASK_PADDING * 2) });
+            questionHeight = question.height;
+        }
+        const height = 2 * ASK_PADDING + ASK_FIELD + (questionHeight > 0 ? questionHeight + ASK_GAP : 0);
+        this.askHeight = height;
+
+        // the field, measured in card coordinates: PADDING in from each side,
+        // PADDING up from the bottom of the card
+        const fieldX = ASK_PADDING;
+        const fieldY = height - ASK_PADDING - ASK_FIELD;
+        const fieldWidth = width - ASK_PADDING * 2;
+
+        const g = new PIXI.Graphics();
+        g.roundRect(0, 0, width, height, 8).fill({ color: 0x000000, alpha: 0x26 / 255 });
+        g.roundRect(2, 2, width - 4, height - 4, 6).fill(0xffffff);
+        // the answer field: a pill, the dark roundRect again inside its white one
+        g.roundRect(fieldX, fieldY, fieldWidth, ASK_FIELD, ASK_FIELD / 2)
+            .fill({ color: 0x000000, alpha: 0x26 / 255 });
+        g.roundRect(fieldX + 1, fieldY + 1, fieldWidth - 2, ASK_FIELD - 2, ASK_FIELD / 2 - 1).fill(0xffffff);
+
+        // The answer shows the end of what has been typed, as far as it fits
+        // into the room left of the check button: upstream strips one code
+        // point at a time from the front until it fits.
+        const answerStyle = styleOf(undefined);
+        const room = fieldWidth - ASK_INSET - ASK_BUTTON - ASK_BUTTON_INSET * 2;
+        let shown = this.askInput;
+        while (shown.length > 0 && PIXI.CanvasTextMetrics.measureText(shown, answerStyle).width > room) {
+            shown = [...shown].slice(1).join("");
+        }
+        const answer = new PIXI.Text({ text: shown, style: answerStyle });
+        // the answer sits at the left of the field, vertically centred in it
+        answer.position.set(fieldX + ASK_INSET, fieldY + (ASK_FIELD - answer.height) / 2);
+
+        // the check button: a blue circle at the right end of the field, with
+        // the white tick of scratch-gui's ✓ (the joint below the centre, the
+        // long arm up to the right) and a dot where the two strokes meet
+        const buttonX = fieldX + fieldWidth - ASK_BUTTON_INSET - ASK_BUTTON / 2;
+        const buttonY = fieldY + ASK_FIELD / 2;
+        const button = new PIXI.Graphics();
+        button.circle(buttonX, buttonY, ASK_BUTTON / 2).fill(ASK_BUTTON_COLOR);
+        button.moveTo(buttonX - 5, buttonY).lineTo(buttonX - 1.5, buttonY + 3.5)
+            .stroke({ width: 2.5, color: 0xffffff });
+        button.moveTo(buttonX - 1.5, buttonY + 3.5).lineTo(buttonX + 5, buttonY - 3.5)
+            .stroke({ width: 2.5, color: 0xffffff });
+        button.circle(buttonX - 1.5, buttonY + 3.5, 1.25).fill(0xffffff);
+        // the check button finishes the question, exactly as Enter does
+        button.eventMode = "static";
+        button.cursor = "pointer";
+        button.on("pointerdown", () => this.typeIntoAnswer("Enter"));
+
+        // the blinking caret: a 1px line of the ink colour, right of the answer
+        if (this.caretOn) {
+            const caretY = fieldY + (ASK_FIELD - lineHeight) / 2;
+            g.roundRect(fieldX + ASK_INSET + answer.width + 1, caretY, 1, lineHeight, 0).fill(ASK_TEXT_COLOR);
+        }
+
+        const card = new PIXI.Container();
+        card.addChild(g, button);
+        if (question) {
+            question.position.set(ASK_PADDING, ASK_PADDING);
+            card.addChild(question);
+        }
+        card.addChild(answer);
+        // the card stands on the bottom edge, ASK_MARGIN in from the window's
+        // sides, like the display band that goes above it
+        card.position.set(ASK_MARGIN, this.world.height - ASK_MARGIN - height);
+        (this.scratchLayers?.root ?? this.world.app.stage).addChild(card);
+        return card;
+    }
+
+    /**
+     * Blinks the caret while a question is open: every half second of game time
+     * the card is rebuilt with the caret toggled, upstream's tick / 30 % 2. The
+     * chain stops itself when the question is over or the stage is off screen;
+     * a new question or the stage coming back starts it again.
+     */
+    private scheduleCaretBlink() {
+        if (this.caretTimer) return;
+        this.caretOn = true;
+        const blink = () => {
+            this.caretTimer = undefined;
+            if (this.askQuestion === undefined || !this.isActive()) return;
+            this.caretOn = !this.caretOn;
+            this.showAskBox();
+            this.caretTimer = scratchGameClock().schedule(blink, CARET_BLINK_MILLIS);
+        };
+        this.caretTimer = scratchGameClock().schedule(blink, CARET_BLINK_MILLIS);
+    }
+
+    private cancelCaretBlink() {
+        if (this.caretTimer) { this.caretTimer(); this.caretTimer = undefined; }
     }
 
     private listenForAnswer() {
@@ -824,11 +1023,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         // screen with a question still up must not eat the new stage's keys
         if (this.askQuestion === undefined || !this.isActive()) return;
         if (key === "Enter") {
-            this.answer = this.askInput;
-            this.askQuestion = undefined;
-            this.askInput = "";
-            this.stopListeningForAnswer();
-            this.showAskBox();
+            this.finishAsking();
             return;
         }
         if (key === "Backspace") {
@@ -842,16 +1037,41 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         }
     }
 
-    _mj$wait$void$int(t: Thread, _callback: CallbackParameter, millis: number) {
+    /**
+     * Enter and the check button both land here, as upstream's submitAnswer():
+     * the answer is kept, and a sprite's question bubble goes with the
+     * question, which is over.
+     */
+    private finishAsking() {
+        this.answer = this.askInput;
+        this.askQuestion = undefined;
+        this.askInput = "";
+        this.cancelCaretBlink();
+        if (this.askingSprite) {
+            this.askingSprite._say(""); // the question's bubble goes with the question
+            this.askingSprite = undefined;
+        }
+        this.stopListeningForAnswer();
+        this.showAskBox();
+    }
+
+    _mj$waitSeconds$void$double(t: Thread, _callback: CallbackParameter, seconds: number) {
+        const millis = seconds * 1000;
         if (millis <= 0) return;
         t.scheduler.suspendThread(t);
         t.state = ThreadState.timedWaiting;
-        setTimeout(() => t.scheduler.restoreThread(t), millis);
+        // Game time, like the desktop's waitSeconds: it waits until the game
+        // clock has advanced that far, so the wait follows the game speed,
+        // holds while the game is paused and needs Window.step() ticks to pass.
+        // The clock runs the deadlines once per tick (see advance()).
+        scratchGameClock().schedule(() => t.scheduler.restoreThread(t), millis);
     }
 
     /**
      * Poll `condition` until it is true, pausing between checks so the rest of
-     * the program keeps running — upstream loops with wait(16) for the same reason.
+     * the program keeps running — upstream busy-polls with real-time sleeps,
+     * and so does this: the condition is not game time (upstream calls it with
+     * Thread.sleep(1); 16 ms keep the interpreter from busy-looping).
      */
     _mj$waitUntil$void$BooleanSupplier(t: Thread, callback: CallbackParameter, condition: BooleanSupplierInterface) {
         if (!condition) { if (callback) callback(); return; }
@@ -890,19 +1110,11 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
             this.backdropSprite.alpha = 1 - this.backdropTransparency / 100;
         }
     }
-    _setTintRGB(r: number, g: number, b: number) {
-        this.backdropTint = ScratchColorClass.fromRGB(r, g, b);
+    _setTintObj(c: ScratchColorClass) {
+        this.backdropTint = c ?? ScratchColorClass.defaultColor();
         this.applyBackdropTint();
     }
-    _setTintHue(h: number) {
-        this.backdropTint = ScratchColorClass.fromHue(h);
-        this.applyBackdropTint();
-    }
-    _changeTint(step: number) {
-        if (!this.backdropTint) this.backdropTint = ScratchColorClass.defaultColor();
-        this.backdropTint._changeColor(step);
-        this.applyBackdropTint();
-    }
+    _getTransparency(): number { return this.backdropTransparency; }
     _setTransparency(ghost: number) {
         this.backdropTransparency = Math.max(0, Math.min(100, ghost));
         this.applyBackdropTransparency();
@@ -987,8 +1199,8 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
 
         // crosshair on the mouse, in screen space
         const mouseX = this._getMouseX(), mouseY = this._getMouseY();
-        const screenX = W / 2 + this.camera._toGlobalX(mouseX);
-        const screenY = H / 2 - this.camera._toGlobalY(mouseY);
+        const screenX = W / 2 + this.camera._toScreenX(mouseX);
+        const screenY = H / 2 - this.camera._toScreenY(mouseY);
         this.debugScreenGraphics
             .moveTo(screenX, 0).lineTo(screenX, H)
             .moveTo(0, screenY).lineTo(W, screenY)
@@ -1067,7 +1279,140 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         }
         colour.visible = filtered;
     }
-    _getSorting(): ScratchSortingClass { return this.sorting; }
+    /**
+     * Sorting.by(comparator): the sprites are drawn in the order the comparator
+     * gives, back to front — the one it calls smallest first, as with every
+     * java.util.Comparator.
+     *
+     * <p>Browser deviation from the desktop: upstream stores the comparator and
+     * re-sorts its layers with it synchronously every tick, and runs the sprites
+     * in that order, too. A student comparator is interpreted code here, and
+     * interpreted code only runs on a thread — so the re-sort walks a merge sort
+     * over a snapshot of the sprites on a thread of its own, fed by the
+     * scheduler, and only the *draw* order follows the comparator: the run order
+     * stays the ActorManager's. A batch of ticks re-applies the sort (upstream
+     * re-sorts in tick()), so the pass follows the game speed and holds still
+     * while paused; the stable merge sort gives the same order for the same
+     * positions, so nothing flickers from frame to frame.
+     */
+    _mj$sortBy$void$Comparator(_t: Thread, callback: CallbackParameter, comparator: ComparatorInterface) {
+        this.sortComparator = comparator;
+        // last call wins, as on the desktop, where sortByY() and sortBy()
+        // both write the same field
+        this.sortByYEnabled = false;
+        this.cancelSortJob();
+        if (callback) callback();
+    }
+
+    _sortByY() {
+        this.sortByYEnabled = true;
+        this.sortComparator = undefined;
+        this.cancelSortJob();
+    }
+    _stopSorting() {
+        this.sortByYEnabled = false;
+        this.sortComparator = undefined;
+        this.cancelSortJob();
+    }
+
+    private cancelSortJob() {
+        if (!this.sortJob) return;
+        // the scheduler drops a terminated thread, so a merge step waiting on
+        // it is never answered and the pass simply ends
+        this.sortJob.thread.state = ThreadState.terminated;
+        this.sortJob = undefined;
+    }
+
+    /**
+     * One pass of the comparator's order. A pass that is still running keeps the
+     * depths it has applied so far; one whose thread is no longer alive — the
+     * comparator threw, say — is dropped, and this frame starts a new pass.
+     */
+    private applyComparatorOrder() {
+        if (this.sortJob) {
+            const state = this.sortJob.thread.state;
+            if (state === ThreadState.running || state === ThreadState.waiting) return;
+            this.sortJob = undefined;
+        }
+        const sprites = this.sprites.filter(s => !s.isDestroyed && !s.isUI());
+        if (sprites.length >= 2) {
+            const comparator = this.sortComparator!;
+            const thread = this.world.interpreter.scheduler.createThread("scratch sortBy");
+            this.sortJob = { thread, sprites };
+            ScratchStageClass.mergeSort(thread, () => {
+                // the smallest sprite of the pass sits at index 0 and is drawn
+                // first — a lower zIndex is further back in PIXI
+                this.applyDrawDepths(sprites);
+                this.sortJob = undefined;
+            }, comparator, sprites, 0, sprites.length);
+            // the scheduler only steps a running thread; the merge sort rides
+            // on it from here on
+            thread.state = ThreadState.running;
+        } else {
+            this.applyDrawDepths(sprites);
+        }
+    }
+
+    /** Sprites destroyed while a pass was running keep the depth they had. */
+    private applyDrawDepths(sprites: ScratchSpriteClass[]) {
+        sprites.forEach((sprite, index) => {
+            if (!sprite.isDestroyed) sprite._setDrawDepth(index);
+        });
+    }
+
+    /**
+     * A stable top-down merge sort driven by comparator callbacks, so a
+     * comparator that is interpreted code — a student's lambda — can answer one
+     * comparison per scheduler step, the way ArrayList.sort() walks its
+     * quicksort. Not quicksort, on purpose: a per-batch re-sort mostly sees
+     * sprites that compare equal or barely moved, where quicksort's last-element
+     * pivot degrades to O(n²), and quicksort is not stable while the desktop's
+     * List.sort is.
+     */
+    private static mergeSort(t: Thread, callback: CallbackParameter, comparator: ComparatorInterface,
+        elements: ScratchSpriteClass[], fromIndex: number, toIndex: number) {
+        if (toIndex - fromIndex <= 1) {
+            if (callback) callback();
+            return;
+        }
+        const middleIndex = (fromIndex + toIndex) >> 1;
+        ScratchStageClass.mergeSort(t, () => {
+            ScratchStageClass.mergeSort(t, () => {
+                ScratchStageClass.merge(t, callback, comparator, elements, fromIndex, middleIndex, toIndex);
+            }, comparator, elements, middleIndex, toIndex);
+        }, comparator, elements, fromIndex, middleIndex);
+    }
+
+    private static merge(t: Thread, callback: CallbackParameter, comparator: ComparatorInterface,
+        elements: ScratchSpriteClass[], fromIndex: number, middleIndex: number, toIndex: number) {
+        const merged: ScratchSpriteClass[] = [];
+        let left = fromIndex, right = middleIndex;
+        const next = () => {
+            // Moves that need no comparison — the run that is left over and the
+            // copy-back at the end — run in this loop rather than recursing, so
+            // a long run does not deepen the JS stack.
+            for (;;) {
+                if (left >= middleIndex && right >= toIndex) {
+                    for (let index = 0; index < merged.length; index++) {
+                        elements[fromIndex + index] = merged[index];
+                    }
+                    if (callback) callback();
+                    return;
+                }
+                if (left >= middleIndex) { merged.push(elements[right++]); continue; }
+                if (right >= toIndex) { merged.push(elements[left++]); continue; }
+                comparator._mj$compare$int$T$T(t, () => {
+                    // <= 0 takes the left one first, which is what keeps
+                    // sprites that compare equal in the order they were in
+                    if (t.s.pop() <= 0) merged.push(elements[left++]);
+                    else merged.push(elements[right++]);
+                    next();
+                }, elements[left], elements[right]);
+                return;
+            }
+        };
+        next();
+    }
 
     // ---- dimensions ----
     _getCamera(): ScratchCameraClass { return this.camera; }

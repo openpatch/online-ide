@@ -1118,6 +1118,17 @@ export abstract class StatementCodeGenerator extends TermCodeGenerator {
 
                 }
 
+                // Target typing for a parameterless generic method, as Java
+                // infers T from the assignment for Sprite.createClone():
+                // `Bullet b = sprite.createClone();` needs no cast when Bullet
+                // is a subtype of the type parameter's upper bound.
+                if (initValueSnippet.type instanceof GenericTypeParameter
+                    && (initValueSnippet.type as GenericTypeParameter).upperBounds
+                        ?.some(bound => this.canCastTo(destinationType, bound, "implicit"))) {
+                    initValueSnippet.type = destinationType;
+                    return initValueSnippet;
+                }
+
                 if (!this.canCastTo(initValueSnippet.type, destinationType, "implicit")) {
                     this.pushError(JCM.localVariableDeclarationWrongInitializerType(initValueSnippet.type.toString(), destinationType.toString()), "error", initializationNode);
                     return undefined;

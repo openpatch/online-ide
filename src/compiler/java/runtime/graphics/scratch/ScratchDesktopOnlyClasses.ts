@@ -19,90 +19,77 @@ import { SRC } from "./ScratchLibraryComments";
 /** Raw access to the three render buffers — no equivalent in the browser. */
 export class ScratchPixelsClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.pixels", signature: "class Pixels extends Object", comment: SRC.pixelsClassComment },
-        { type: "method", signature: "int[] main()", native: ScratchPixelsClass.prototype._main, comment: SRC.pixelsMainComment },
-        { type: "method", signature: "int[] background()", native: ScratchPixelsClass.prototype._background, comment: SRC.pixelsBackgroundComment },
-        { type: "method", signature: "int[] foreground()", native: ScratchPixelsClass.prototype._foreground, comment: SRC.pixelsForegroundComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Pixels extends Object", comment: SRC.pixelsClassComment },
+        { type: "method", signature: "static Pixels of(Stage stage)", native: ScratchPixelsClass._ofStage, comment: SRC.pixelsOfComment },
+        { type: "method", signature: "static Pixels of(String path)", native: ScratchPixelsClass._ofPath, comment: SRC.pixelsOfComment },
+        { type: "method", signature: "int getWidth()", native: ScratchPixelsClass.prototype._getWidth, comment: SRC.pixelsGetWidthComment },
+        { type: "method", signature: "int getHeight()", native: ScratchPixelsClass.prototype._getHeight, comment: SRC.pixelsGetHeightComment },
+        { type: "method", signature: "Color getColor(int x, int y)", native: ScratchPixelsClass.prototype._getColor, comment: SRC.pixelsGetColorComment },
+        { type: "method", signature: "int getArgb(int x, int y)", native: ScratchPixelsClass.prototype._getArgb, comment: SRC.pixelsGetArgbComment },
     ];
     static type: NonPrimitiveType;
 
     private static readonly HINT = "Der Bildpuffer ist im Browser nicht zugänglich. / The pixel buffer is not reachable in the browser.";
-    _main(): number[] { return desktopOnlyValue("Pixels.main()", [], ScratchPixelsClass.HINT); }
-    _background(): number[] { return desktopOnlyValue("Pixels.background()", [], ScratchPixelsClass.HINT); }
-    _foreground(): number[] { return desktopOnlyValue("Pixels.foreground()", [], ScratchPixelsClass.HINT); }
+    static _ofStage(_stage: any): ScratchPixelsClass {
+        return desktopOnlyValue("Pixels.of(stage)", new ScratchPixelsClass(), ScratchPixelsClass.HINT);
+    }
+    static _ofPath(_path: string): ScratchPixelsClass {
+        return desktopOnlyValue("Pixels.of(path)", new ScratchPixelsClass(), ScratchPixelsClass.HINT);
+    }
+    _getWidth(): number { return desktopOnlyValue("Pixels.getWidth()", 0, ScratchPixelsClass.HINT); }
+    _getHeight(): number { return desktopOnlyValue("Pixels.getHeight()", 0, ScratchPixelsClass.HINT); }
+    _getColor(_x: number, _y: number): any { return desktopOnlyValue("Pixels.getColor()", null, ScratchPixelsClass.HINT); }
+    _getArgb(_x: number, _y: number): number { return desktopOnlyValue("Pixels.getArgb()", 0, ScratchPixelsClass.HINT); }
 }
 
 const RECORDER_HINT = "Aufnahmen gibt es nur in der Desktop-Version. / Recording is desktop only.";
 
-/** Base recorder; GifRecorder, FFmpegRecorder and FrameRecorder extend it. */
-export class ScratchRecorderClass extends ObjectClass {
+/** 7.0 keeps only GifRecorder; Recorder, FFmpegRecorder and FrameRecorder are gone. */
+export class ScratchGifRecorderClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.recorder", signature: "class Recorder extends Object", comment: SRC.recorderClassComment },
-        { type: "method", signature: "void start()", native: ScratchRecorderClass.prototype._start, comment: SRC.recorderStartComment },
-        { type: "method", signature: "void stop()", native: ScratchRecorderClass.prototype._stop, comment: SRC.recorderStopComment },
-        { type: "method", signature: "boolean isRecording()", native: ScratchRecorderClass.prototype._isRecording, comment: SRC.recorderIsRecordingComment },
-    ];
-    static type: NonPrimitiveType;
-
-    _start() { desktopOnly("Recorder.start()", RECORDER_HINT); }
-    _stop() { desktopOnly("Recorder.stop()", RECORDER_HINT); }
-    _isRecording(): boolean { return desktopOnlyValue("Recorder.isRecording()", false, RECORDER_HINT); }
-}
-
-export class ScratchGifRecorderClass extends ScratchRecorderClass {
-    static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.recorder", signature: "class GifRecorder extends Recorder", comment: SRC.gifRecorderClassComment },
+        { type: "declaration", package: "org.openpatch.scratch.recorder", signature: "class GifRecorder extends Object", comment: SRC.gifRecorderClassComment },
         { type: "method", signature: "GifRecorder(string path)", native: ScratchGifRecorderClass.prototype._c1, comment: SRC.gifRecorderConstructorComment },
+        { type: "method", signature: "void start()", native: ScratchGifRecorderClass.prototype._start, comment: SRC.recorderStartComment },
+        { type: "method", signature: "void stop()", native: ScratchGifRecorderClass.prototype._stop, comment: SRC.recorderStopComment },
+        { type: "method", signature: "void snapshot()", native: ScratchGifRecorderClass.prototype._snapshot, comment: SRC.gifRecorderSnapshotComment },
     ];
     static type: NonPrimitiveType;
+
     _c1(_path: string) { desktopOnly("GifRecorder", RECORDER_HINT); return this; }
-}
-
-export class ScratchFFmpegRecorderClass extends ScratchRecorderClass {
-    static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.recorder", signature: "class FFmpegRecorder extends Recorder", comment: SRC.fFmpegRecorderClassComment },
-        { type: "method", signature: "FFmpegRecorder(string path)", native: ScratchFFmpegRecorderClass.prototype._c1, comment: SRC.fFmpegRecorderConstructorComment },
-    ];
-    static type: NonPrimitiveType;
-    _c1(_path: string) { desktopOnly("FFmpegRecorder", RECORDER_HINT); return this; }
-}
-
-export class ScratchFrameRecorderClass extends ScratchRecorderClass {
-    static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.recorder", signature: "class FrameRecorder extends Recorder", comment: SRC.frameRecorderClassComment },
-        { type: "method", signature: "FrameRecorder(string path)", native: ScratchFrameRecorderClass.prototype._c1, comment: SRC.frameRecorderConstructorComment },
-    ];
-    static type: NonPrimitiveType;
-    _c1(_path: string) { desktopOnly("FrameRecorder", RECORDER_HINT); return this; }
+    _start() { desktopOnly("GifRecorder.start()", RECORDER_HINT); }
+    _stop() { desktopOnly("GifRecorder.stop()", RECORDER_HINT); }
+    _snapshot() { desktopOnly("GifRecorder.snapshot()", RECORDER_HINT); }
 }
 
 const FILE_HINT = "Auf Dateien kann im Browser nicht zugegriffen werden. / Files are not accessible in the browser.";
 
-/** org.openpatch.scratch.extensions.fs.File */
+/** org.openpatch.scratch.save.File (7.0 members; desktop only in the browser) */
 export class ScratchFileClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.fs", signature: "class File extends Object", comment: SRC.fileClassComment },
-        { type: "method", signature: "File(string path)", native: ScratchFileClass.prototype._c1, comment: SRC.fileConstructorComment },
-        { type: "method", signature: "string read()", native: ScratchFileClass.prototype._read, comment: SRC.fileReadComment },
-        { type: "method", signature: "void write(string content)", native: ScratchFileClass.prototype._write, comment: SRC.fileWriteComment },
-        { type: "method", signature: "void append(string content)", native: ScratchFileClass.prototype._append, comment: SRC.fileAppendComment },
-        { type: "method", signature: "boolean exists()", native: ScratchFileClass.prototype._exists, comment: SRC.fileExistsComment },
-        { type: "method", signature: "void delete()", native: ScratchFileClass.prototype._delete, comment: SRC.fileDeleteComment },
+        { type: "declaration", package: "org.openpatch.scratch.save", signature: "class File extends Object", comment: SRC.fileClassComment },
+        { type: "method", signature: "File()", native: ScratchFileClass.prototype._c0, comment: SRC.fileConstructorComment },
+        { type: "method", signature: "static void save(string path, Object value)", native: ScratchFileClass._save, comment: SRC.fileSaveComment },
+        { type: "method", signature: "static void saveXML(string path, Object value)", native: ScratchFileClass._saveXML, comment: SRC.fileSaveXMLComment },
+        { type: "method", signature: "static Object load(string path, Class type)", native: ScratchFileClass._load, comment: SRC.fileLoadComment },
+        { type: "method", signature: "static Object loadOrCreate(string path, Class type)", native: ScratchFileClass._loadOrCreate, comment: SRC.fileLoadOrCreateComment },
+        { type: "method", signature: "static Object loadXML(string path, Class type)", native: ScratchFileClass._loadXML, comment: SRC.fileLoadXMLComment },
+        { type: "method", signature: "static Object loadXMLOrCreate(string path, Class type)", native: ScratchFileClass._loadXMLOrCreate, comment: SRC.fileLoadXMLOrCreateComment },
     ];
     static type: NonPrimitiveType;
 
-    _c1(_path: string) { desktopOnly("File", FILE_HINT); return this; }
-    _read(): string { return desktopOnlyValue("File.read()", "", FILE_HINT); }
-    _write(_content: string) { desktopOnly("File.write()", FILE_HINT); }
-    _append(_content: string) { desktopOnly("File.append()", FILE_HINT); }
-    _exists(): boolean { return desktopOnlyValue("File.exists()", false, FILE_HINT); }
-    _delete() { desktopOnly("File.delete()", FILE_HINT); }
+    _c0() { desktopOnly("File", FILE_HINT); return this; }
+    static _save(_path: string, _value: any) { desktopOnly("File.save()", FILE_HINT); }
+    static _saveXML(_path: string, _value: any) { desktopOnly("File.saveXML()", FILE_HINT); }
+    static _load(_path: string, _type: any): any { return desktopOnlyValue("File.load()", null, FILE_HINT); }
+    static _loadOrCreate(_path: string, _type: any): any { return desktopOnlyValue("File.loadOrCreate()", null, FILE_HINT); }
+    static _loadXML(_path: string, _type: any): any { return desktopOnlyValue("File.loadXML()", null, FILE_HINT); }
+    static _loadXMLOrCreate(_path: string, _type: any): any { return desktopOnlyValue("File.loadXMLOrCreate()", null, FILE_HINT); }
 }
 
 /** One object out of a Tiled object layer. */
 export class ScratchMapObjectClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.tiled", signature: "class MapObject extends Object", comment: SRC.mapObjectClassComment },
+        { type: "declaration", package: "org.openpatch.scratch.tiled", signature: "class MapObject extends Object", comment: SRC.mapObjectClassComment },
         { type: "method", signature: "Shape getShape()", native: ScratchMapObjectClass.prototype._getShape },
         { type: "field", signature: "double height" },
         { type: "field", signature: "int id" },
@@ -117,6 +104,10 @@ export class ScratchMapObjectClass extends ObjectClass {
         { type: "method", signature: "string getProperty(string name)", native: ScratchMapObjectClass.prototype._getProperty, comment: SRC.mapObjectGetPropertyComment },
         { type: "method", signature: "float getPropertyFloat(string name)", native: ScratchMapObjectClass.prototype._getPropertyFloat, comment: SRC.mapObjectGetPropertyFloatComment },
         { type: "method", signature: "boolean getPropertyBoolean(string name)", native: ScratchMapObjectClass.prototype._getPropertyBoolean, comment: SRC.mapObjectGetPropertyBooleanComment },
+        { type: "method", signature: "void setClassName(string name)", native: ScratchMapObjectClass.prototype._setClassName, comment: SRC.mapObjectSetClassNameComment },
+        { type: "field", signature: "boolean ellipse" },
+        { type: "field", signature: "boolean point" },
+        { type: "field", signature: "Property[] properties" },
     ];
     static type: NonPrimitiveType;
 
@@ -142,24 +133,28 @@ export class ScratchMapObjectClass extends ObjectClass {
     }
     _getPropertyBoolean(name: string): boolean { return this._getProperty(name).toLowerCase() === "true"; }
     _getShape(): ScratchShapeClass { return ScratchShapeClass.of(this.shape.points.map(point => ({ ...point }))); }
+    _setClassName(name: string) { (this as any).className = name; }
 
 }
 
 /** A key/value pair attached to a Tiled object. */
 export class ScratchPropertyClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.tiled", signature: "class Property extends Object", comment: SRC.propertyClassComment },
+        { type: "declaration", package: "org.openpatch.scratch.tiled", signature: "class Property extends Object", comment: SRC.propertyClassComment },
+        { type: "method", signature: "void setText(String text)", native: ScratchPropertyClass.prototype._setText, comment: SRC.propertySetTextComment },
         { type: "field", signature: "String name" },
         { type: "field", signature: "String type" },
         { type: "field", signature: "String value" },
+        { type: "field", signature: "Property[] properties" },
     ];
     static type: NonPrimitiveType;
+    _setText(text: string) { (this as any).text = text; }
 }
 
 /** The image a Tiled tileset refers to. */
 export class ScratchTilesetImageClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.tiled", signature: "class TilesetImage extends Object", comment: SRC.tilesetImageClassComment },
+        { type: "declaration", package: "org.openpatch.scratch.tiled", signature: "class TilesetImage extends Object", comment: SRC.tilesetImageClassComment },
         { type: "field", signature: "String source" },
         { type: "field", signature: "int width" },
         { type: "field", signature: "int height" },

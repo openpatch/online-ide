@@ -17,7 +17,7 @@ export function drawingFinite(...values: number[]) {
 /** A single frame's drawing commands; textures belong to the shared asset cache. */
 export class ScratchDrawingClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.drawing", signature: "class Drawing extends Object" },
+        { type: "declaration", package: "org.openpatch.scratch.drawing", signature: "class Drawing extends Object" },
         { type: "method", signature: "private Drawing()", native: ScratchDrawingClass.prototype._constructor },
         { type: "method", signature: "void polygon(double[] x, double[] y, Color color)", native: ScratchDrawingClass.prototype._polygon },
         { type: "method", signature: "void rectangle(double x, double y, double width, double height, Color color)", native: ScratchDrawingClass.prototype._rectangle },
@@ -115,10 +115,9 @@ export class ScratchDrawingClass extends ObjectClass {
 /** A normal Sprite whose appearance is built by an interpreted draw hook. */
 export class ScratchDrawingSpriteClass extends ScratchSpriteClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.drawing", signature: "class DrawingSprite extends Sprite" },
+        { type: "declaration", package: "org.openpatch.scratch.drawing", signature: "class DrawingSprite extends Sprite" },
         { type: "method", signature: "DrawingSprite()", java: ScratchDrawingSpriteClass.prototype._cj$_constructor_$DrawingSprite$ },
         { type: "method", signature: "void draw(Drawing drawing)", java: ScratchDrawingSpriteClass.prototype._mj$draw$void$Drawing },
-        { type: "method", signature: "void setIsUI(boolean isUI)", native: ScratchDrawingSpriteClass.prototype._setIsUI },
         { type: "method", signature: "void setTransparency(double percent)", native: ScratchDrawingSpriteClass.prototype._setTransparency },
         { type: "method", signature: "void changeTransparency(double step)", native: ScratchDrawingSpriteClass.prototype._changeTransparency },
         { type: "method", signature: "double getTransparency()", native: ScratchDrawingSpriteClass.prototype._getTransparency },
@@ -129,7 +128,6 @@ export class ScratchDrawingSpriteClass extends ScratchSpriteClass {
     _cj$_constructor_$DrawingSprite$(t: Thread, callback: CallbackParameter) {
         this._cj$_constructor_$Sprite$(t, () => { this._disableHitbox(); callback?.(); });
     }
-    _setIsUI(isUI: boolean) { this._setUI(isUI); }
     _setTransparency(percent: number) { drawingFinite(percent); super._setTransparency(percent); }
     _mj$draw$void$Drawing(_t: Thread, callback: CallbackParameter, _drawing: ScratchDrawingClass): void { callback?.(); }
 

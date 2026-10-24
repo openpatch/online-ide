@@ -9,6 +9,7 @@ import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
 import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { resolveAssetUrl } from "./ScratchAssetUrls";
 import { ScratchCostumes } from "./ScratchCostumes";
+import { LayerEnum } from "./LayerEnum";
 import { ScratchMapObjectClass } from "./ScratchDesktopOnlyClasses";
 import { ScratchShapeClass } from "./ScratchShapeClasses";
 import type { ScratchStageClass } from "./ScratchStageClass";
@@ -19,6 +20,7 @@ import type { StaticNonPrimitiveType } from "../../../types/StaticNonPrimitiveTy
 import { ArrayListClass } from "../../system/collections/ArrayListClass";
 import { ScratchSpriteClass } from "./ScratchSpriteClass";
 import { ScratchTiledStamp, tiledTexture } from "./ScratchTiledRendering";
+import { SRC } from "./ScratchLibraryComments";
 
 const children = (element: Element, tag: string) => Array.from(element.children).filter(child => child.tagName === tag);
 const child = (element: Element, tag: string) => children(element, tag)[0];
@@ -74,7 +76,7 @@ type TileLayer = { width: number, height: number, data: number[], paths?: string
 /** Finite orthogonal TMX maps, supplied as workspace assets or fetched by URL. */
 export class ScratchTiledMapClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.tiled", signature: "class TiledMap extends Object" },
+        { type: "declaration", package: "org.openpatch.scratch.tiled", signature: "class TiledMap extends Object" },
         { type: "method", signature: "TiledMap(string path)", java: ScratchTiledMapClass.prototype._cj$_constructor_$TiledMap$string },
         { type: "method", signature: "TiledMap(string path, Stage stage)", java: ScratchTiledMapClass.prototype._cj$_constructor_$TiledMap$string$Stage },
         { type: "method", signature: "int getWidth()", native: ScratchTiledMapClass.prototype._getWidth },
@@ -91,8 +93,8 @@ export class ScratchTiledMapClass extends ObjectClass {
         { type: "method", signature: "Shape[] getTileCollisionShapes(string layerName, int column, int row)", native: ScratchTiledMapClass.prototype._getCellCollisionShapes },
         { type: "method", signature: "MapObject[] getObjectsFromLayer(string name)", native: ScratchTiledMapClass.prototype._getObjectsFromLayer },
         { type: "method", signature: "java.util.List<Sprite> spawn(string layerName)", java: ScratchTiledMapClass.prototype._mj$spawn$List$string },
-        { type: "method", signature: "void stampLayerToForeground(string name)", java: ScratchTiledMapClass.prototype._mj$stampLayerToForeground$void$string },
-        { type: "method", signature: "void stampLayerToBackground(string name)", java: ScratchTiledMapClass.prototype._mj$stampLayerToBackground$void$string },
+        { type: "method", signature: "void showLayer(string name, Layer layer)", java: ScratchTiledMapClass.prototype._mj$showLayer$void$string$Layer, comment: SRC.tiledShowLayerComment },
+        { type: "method", signature: "void hideLayer(string name)", native: ScratchTiledMapClass.prototype._hideLayer, comment: SRC.tiledHideLayerComment },
     ];
     static type: NonPrimitiveType;
     private width = 0;
@@ -286,7 +288,7 @@ export class ScratchTiledMapClass extends ObjectClass {
                 if (!type) continue;
                 const constructors = type.getOwnMethods().filter(method => method.isConstructor && !method.hasOuterClassParameter);
                 const constructor = constructors.find(method => method.parameters.length === 1
-                    && method.parameters[0].type.getAbsoluteName() === 'org.openpatch.scratch.extensions.tiled.MapObject')
+                    && method.parameters[0].type.getAbsoluteName() === 'org.openpatch.scratch.tiled.MapObject')
                     ?? constructors.find(method => method.parameters.length === 2 && method.parameters.every(p => p.type.identifier === 'double'))
                     ?? constructors.find(method => method.parameters.length === 0);
                 if (!constructor || type.isAbstract()) throw new RuntimeExceptionClass(
@@ -318,7 +320,57 @@ export class ScratchTiledMapClass extends ObjectClass {
         };
         next();
     }
-    private stamp(t: Thread, callback: CallbackParameter, name: string, foreground: boolean) {
+    /** The stamp containers the 7.0 layers map onto (MAIN shares the background pass here). */
+    private static containerOf(layer: LayerEnum): "backgroundStamps" | "foregroundStamps" | "uiStamps" {
+        return layer?.name === "FOREGROUND" ? "foregroundStamps"
+            : layer?.name === "UI" ? "uiStamps" : "backgroundStamps";
+    }
+
+    /** The layers showLayer() is currently drawing, by their stamp container. */
+    private shownLayers = new Map<string, "backgroundStamps" | "foregroundStamps" | "uiStamps">();
+    private redrawTicker?: () => void;
+
+    /**
+     * 7.0's showLayer draws the map layer every frame. The browser stamps it
+     * once onto the layer's canvas; eraseAll() detaches that snapshot (it owns
+     * nothing), and this loop puts it back on the next frame, so a shown layer
+     * survives an eraseAll exactly as the desktop's per-frame drawing does.
+     */
+    _mj$showLayer$void$string$Layer(t: Thread, callback: CallbackParameter, name: string, layer: LayerEnum) {
+        const container = ScratchTiledMapClass.containerOf(layer);
+        this.shownLayers.set(name, container);
+        this.ensureRedrawTicker();
+        this.stamp(t, callback, name, container);
+    }
+
+    _hideLayer(name: string) {
+        this.shownLayers.delete(name);
+        for (const stamp of this.layer(name).stamps ?? []) {
+            if (stamp.parent) stamp.parent.removeChild(stamp);
+        }
+    }
+
+    private ensureRedrawTicker() {
+        if (this.redrawTicker || !this.stage?.world?.app?.ticker) return;
+        this.redrawTicker = () => {
+            const stage = this.stage;
+            if (!stage || !stage.scratchLayers) { this.stopRedrawTicker(); return; }
+            for (const [name, container] of this.shownLayers) {
+                const target = stage.scratchLayers[container];
+                for (const stamp of this.layer(name).stamps ?? []) {
+                    if (!stamp.destroyed && !stamp.parent) target?.addChild(stamp);
+                }
+            }
+        };
+        this.stage.world.app.ticker.add(this.redrawTicker);
+    }
+
+    private stopRedrawTicker() {
+        if (this.redrawTicker) this.stage?.world?.app?.ticker?.remove(this.redrawTicker);
+        this.redrawTicker = undefined;
+    }
+
+    private stamp(t: Thread, callback: CallbackParameter, name: string, container: "backgroundStamps" | "foregroundStamps" | "uiStamps") {
         const stage = this.stage;
         if (!stage) throw new RuntimeExceptionClass("This map has no stage. Use new TiledMap(path, stage) to stamp or spawn.");
         const layer = this.layer(name);
@@ -327,7 +379,7 @@ export class ScratchTiledMapClass extends ObjectClass {
         ScratchCostumes.whenLoaded(t, paths, callback, () => {
             const stamps = layer.stamps ??= [];
             const reusable = stamps.find(stamp => !stamp.parent && !stamp.destroyed);
-            const target = stage.scratchLayers[foreground ? "foregroundStamps" : "backgroundStamps"];
+            const target = stage.scratchLayers[container];
             if (reusable) {
                 target.addChild(reusable);
                 return;
@@ -353,6 +405,6 @@ export class ScratchTiledMapClass extends ObjectClass {
             target.addChild(stamp);
         });
     }
-    _mj$stampLayerToForeground$void$string(t: Thread, callback: CallbackParameter, name: string) { this.stamp(t, callback, name, true); }
-    _mj$stampLayerToBackground$void$string(t: Thread, callback: CallbackParameter, name: string) { this.stamp(t, callback, name, false); }
+    _mj$stampLayerToForeground$void$string(t: Thread, callback: CallbackParameter, name: string) { this.stamp(t, callback, name, "foregroundStamps"); }
+    _mj$stampLayerToBackground$void$string(t: Thread, callback: CallbackParameter, name: string) { this.stamp(t, callback, name, "backgroundStamps"); }
 }

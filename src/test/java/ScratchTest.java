@@ -109,12 +109,12 @@ assertEquals(400.0, cam.getZoom(), "Camera.setZoomLimit raises the ceiling");
 cam.resetZoom();
 assertEquals(100.0, cam.getZoom(), "Camera.resetZoom");
 
-// toGlobal and toLocal are inverses of each other
+// toScreen and toWorld are inverses of each other (7.0 names)
 cam.setPosition(30, 60);
 cam.setZoom(200);
-assertEquals(140.0, cam.toGlobalX(100), "Camera.toGlobalX");
-assertEquals(100.0, cam.toLocalX(cam.toGlobalX(100)), "toLocalX undoes toGlobalX");
-assertEquals(-40.0, cam.toLocalY(-200), "Camera.toLocalY");
+assertEquals(140.0, cam.toScreenX(100), "Camera.toScreenX");
+assertEquals(100.0, cam.toWorldX(cam.toScreenX(100)), "toWorldX undoes toScreenX");
+assertEquals(-40.0, cam.toWorldY(-200), "Camera.toWorldY");
 
 /**::
  * Scratch Bounds and Hitbox
@@ -127,12 +127,13 @@ assertEquals(true, a.intersects(b), "Bounds.intersects overlapping");
 assertEquals(false, a.intersects(c), "Bounds.intersects apart");
 assertEquals(10.0, a.width(), "Bounds.width");
 
+// 7.0: the Hitbox class is gone; custom outlines are Shapes
 double[] xs = {0, 10, 10, 0};
 double[] ys = {0, 0, 10, 10};
-Hitbox box = new Hitbox(xs, ys);
-assertEquals(true, box.contains(5, 5), "Hitbox.contains inside");
-assertEquals(false, box.contains(15, 5), "Hitbox.contains outside");
-assertEquals(10.0, box.getBounds().width(), "Hitbox.getBounds");
+Polygon box = new Polygon(xs, ys);
+assertEquals(true, box.contains(5, 5), "Polygon.contains inside");
+assertEquals(false, box.contains(15, 5), "Polygon.contains outside");
+assertEquals(10.0, box.getBounds().width(), "Polygon.getBounds");
 
 /**::
  * Scratch Clock, HtmlColor and ScratchException
@@ -214,14 +215,14 @@ assertEquals(2.0, Operators.round(turned.getBounds().width()), "Shape.rotate wor
  * {"libraries": ["scratch"], "expectedOutput": "weiter"}
  */
 // The point of these stubs: code copied from the desktop library keeps running.
-File f = new File("save.txt");
-assertEquals("", f.read(), "File.read returns empty in the browser");
-assertEquals(false, f.exists(), "File.exists is false in the browser");
+// File's methods are static, like the desktop's.
+File.save("save.txt", 42);
+Object loaded = File.load("save.txt", Integer.class);
 
 GifRecorder rec = new GifRecorder("out.gif");
 rec.start();
+rec.snapshot();
 rec.stop();
-assertEquals(false, rec.isRecording(), "GifRecorder never records here");
 
 print("weiter");
 
@@ -235,7 +236,7 @@ class MyStage extends Stage {
     public MyStage() {
         this.addBackdrop("tappy_plane/background");
         this.addSound("footstep_grass_000");
-        this.setColor(200);
+        this.setColor(200, 40, 60);
         this.broadcast("go");
     }
 
@@ -253,30 +254,37 @@ class MyStage extends Stage {
 
     public void newStageApi() {
         this.getCamera().changeZoom(5);
-        this.setTint(120);
-        this.changeTint(10);
+        this.setColorEffect(25);
+        this.changeColorEffect(10);
+        double fx = this.getColorEffect();
+        this.setColor(new Color(30, 60, 90));
+        this.setTint(new Color(120, 120, 120));
         this.setTransparency(30);
         this.changeTransparency(-10);
-        this.setDebug(true);
-        if (this.isDebug()) this.debug("x", 1, true);
+        this.getTransparency();
         this.setCursor("carrot");
         // NOTE: `this.getWidth()` does not resolve inside a lambda in this
         // compiler, so the implicit-this form is the one to use.
         this.waitUntil(() -> getWidth() > 0);
         this.remove(new Pen());
+        this.sortByY();
+        this.stopSorting();
+        this.waitSeconds(0.1);
         // desktop-only, but has to compile
-        Pixels px = this.getPixels();
+        Pixels px = Pixels.of(this);
+        Pixels fromImage = Pixels.of("terrain.png");
         Shaders sh = this.getShaders();
-        Sorting so = this.getSorting();
     }
 
     // Shaders load assets asynchronously and need WebGL when executed.
     // Their source translation is covered by ScratchShaderTranslationTest;
     // this method checks the Java constructor and uniform signatures.
     public void shaderApi() {
-        Shader shader = new Shader("blur", "blur.frag", "blur.vert");
-        String name = shader.getName();
+        Shaders shaders = this.getShaders();
+        Shader shader = shaders.add("blur", "blur.frag");
         shader.set("radius", 4);
+        shader.set("tint", new Color(255, 0, 0));
+        shader.set("offset", new Vector2(1, 2));
     }
 
     public void windowApi() {
@@ -284,11 +292,14 @@ class MyStage extends Stage {
         // several stages: only the one the window shows runs and reacts to input
         w.setStage(this);
         Stage showing = w.getStage();
-        w.transitionToStage(this, 500);
-        int width = w.getWidth();
-        double dt = w.getDeltaTime();
-        Window.useFullScreen();
-        Window.useTextureSampling(TextureSampling.POINT);
+        w.transitionToStage(this, 0.5);
+        w.transitionToStage(() -> new MyStage(), Transition.FADE, 0.5);
+        boolean busy = w.isTransitioning();
+        Window w2 = Window.getInstance();
+        int width = w2.getWidth();
+        Window.usePixelArt();
+        Window.useSmoothPixelArt();
+        Window.useFrameSmoothing(0.1);
     }
 
     public void countSprites() {
@@ -302,7 +313,7 @@ class MyStage extends Stage {
     public void whenKeyPressed(KeyCode key) { }
     public void whenBackdropSwitches(String name) { }
     public void whenMouseClicked(MouseCode button) { }
-    public void whenMouseWheelMoved(int steps) { }
+    public void whenMouseWheelMoved(double steps) { }
 }
 
 class MySprite extends Sprite {
@@ -331,35 +342,65 @@ class MySprite extends Sprite {
         this.setVolume(80);
         this.changeVolume(-10);
         double v = this.getVolume();
-        this.move(new Vector2(3, 4));
-        this.setDirection(new Vector2(0, 1));
-        this.goToSprite(this);
+        this.move(4);
+        this.setDirection(90);
+        this.pointTowards(this);
+        this.pointTowards(new Vector2(0, 1));
+        this.pointTowardsMousePointer();
         this.addCostumes("tile", "bunny1_stand", 8, 8);
         this.addCostume("head", "bunny1_stand", 0, 0, 16, 16);
-        Sprite twin = this.clone();
+        MySprite twin = this.createClone();
         Stage s = this.getStage();
         this.broadcast("los");
         if (!this.isAsking()) this.ask("Wie alt bist du?");
         String answer = this.getAnswer();
         int n = this.pickRandom(1, 6);
-        double dt = this.getDeltaTime();
         this.getText().showText("hallo");
         this.debug("pos", this.getX());
-        Hitbox box = this.getHitbox();
-        Shape outline = box.getShape();
-        // both setHitbox forms: raw x/y pairs, and a Shape
-        this.setHitbox(-8, -8, 8, -8, 8, 8, -8, 8);
+        Shape outline = this.getHitbox();
+        // setHitbox takes a Shape; the layers, effects and animations are on the sprite
         this.setHitbox(new Circle(0, 0, 12));
         this.setHitbox(new Ellipse(-10, -6, 20, 12));
         this.disableHitbox();
         this.enableHitbox();
+        this.setLayer(Layer.BACKGROUND);
+        this.setLayer(Layer.FOREGROUND);
+        this.setLayer(Layer.UI);
+        Layer l = this.getLayer();
+        this.setColorEffect(50);
+        this.changeColorEffect(20);
+        double fx = this.getColorEffect();
+        this.setTint(new Color(200, 200, 0));
+        this.setTint(200, 200, 0);
+        Color tint = this.getTint();
+        this.setWidth(44.8);
+        this.setHeight(30);
+        this.changeWidth(2.5);
+        this.changeHeight(-1.5);
+        double w = this.getWidth();
+        double h = this.getHeight();
+        this.setNineSlice(4, 4, 4, 4);
+        this.disableNineSlice();
+        this.setRotationStyle(RotationStyle.LEFT_RIGHT);
+        RotationStyle rs = this.getRotationStyle();
+        this.addAnimation("walk", "bunny1_walk%d.png", 4);
+        this.addAnimation("hit", "hit%d.png", 0, 4);
+        this.addAnimation("dance", "bunny1_sheet.png", 8, 8, 0, 1, 2);
+        this.playAnimation("walk");
+        this.playAnimation("dance", true);
+        this.resetAnimation();
+        this.setAnimationFrame(2);
+        this.setAnimationInterval(0.1);
+        double iv = this.getAnimationInterval();
+        int frame = this.getAnimationFrame();
+        boolean played = this.isAnimationPlayed();
     }
 
-    public void whenClicked() { this.say("hi", 500); }
+    public void whenClicked() { this.say("hi", 0.5); }
     public void whenRemovedFromStage() { }
     public void whenIReceive(String message) { this.think("hm"); }
     public void whenMouseMoved(double x, double y) { }
-    public void whenMouseWheelMoved(int steps) { this.changeY(steps); }
+    public void whenMouseWheelMoved(double steps) { this.changeY(steps); }
 }
 
 // The Pen, Text and AnimatedSprite methods added for parity with the desktop.
@@ -367,30 +408,40 @@ class ApiCheck extends Sprite {
     public void penApi() {
         Pen p = this.getPen();
         p.setColor(new Color(0, 0, 255));
+        p.setColor(30);
+        p.setColor(255, 0, 0);
         Color c = p.getColor();
-        // opacity runs 0..255 here, exactly as upstream, where 255 is opaque
-        p.setTransparency(128);
-        p.changeTransparency(40);
-        p.goToForeground();
-        p.goToBackground();
-        if (p.isInBackground()) p.goToMousePointer();
+        // transparency runs 0..100, as in Scratch
+        p.setTransparency(40);
+        p.changeTransparency(10);
+        double tr = p.getTransparency();
+        p.setLayer(Layer.FOREGROUND);
+        Layer l = p.getLayer();
+        boolean down = p.isDown();
+        p.goToMousePointer();
         p.goToRandomPosition();
+        Vector2 pos = p.getPosition();
         p.stamp();
-        String s = p.toString();
-        p.addedToStage(this.getStage());
-        p.removedFromStage(this.getStage());
+        p.eraseAll();
     }
 
     public void textApi() {
         Text t = new Text();
-        Text.useFont("assets/Retro.ttf", 11);
-        Text.useFont("assets/Retro.ttf");
-        Text.useFontSizes(14, 20);
-        Text.useSmoothing(false);
-        int[] sizes = Text.getDefaultFontSizes();
-        boolean smooth = t.isSmoothing();
-        t.setIsUI(true);
-        if (t.isUI()) t.setPosition(0, 0);
+        t.useFont("assets/Retro.ttf", 11);
+        t.useFont("assets/Retro.ttf");
+        String font = t.getDefaultFont();
+        double size = t.getDefaultFontSize();
+        t.setTextSize(12.5);
+        double ts = t.getTextSize();
+        t.setTextColor(new Color(0, 0, 0));
+        t.setTextColor(20, 20, 20);
+        t.setBackgroundColor(new Color(255, 255, 255));
+        t.setStrokeColor(218, 218, 218);
+        t.setLayer(Layer.UI);
+        Layer l = t.getLayer();
+        t.show();
+        t.hide();
+        boolean vis = t.isVisible();
         Stage st = t.getStage();
         // which of several overlapping texts is on top, as on Sprite
         t.goToFrontLayer();
@@ -403,25 +454,20 @@ class ApiCheck extends Sprite {
 // Text subclasses can override the stage hooks, like upstream.
 class MyText extends Text {
     public void whenAddedToStage() { }
-    public void whenAddedToStage(Stage stage) { }
     public void whenRemovedFromStage() { }
-    public void whenRemovedFromStage(Stage stage) { }
 }
 
-class MyAnimatedSprite extends AnimatedSprite {
+// 7.0: animations and the UI are on Sprite itself
+class MyAnimatedSprite extends Sprite {
     public void whenAddedToStage() {
         // "%d" is replaced by 1..frames, as String.format does upstream
         this.addAnimation("walk", "bunny1_walk%d", 2);
-        // builder form: gets 1..frames and returns each frame's image.
-        // The lambda needs an explicitly typed variable — this compiler will not
-        // pick the Function overload from an inline lambda.
-        Function<Integer, String> builder = i -> "bunny1_walk" + i;
-        this.addAnimation("run", builder, 2);
-        // one column of a sheet instead of a row
-        this.addAnimation("fall", "bunny1_stand", 2, 16, 16, 0, true);
-        this.setAnimationInterval(200);
-        AnimatedSprite twin = this.clone();
-        String s = this.toString();
+        // first..last numbers instead of a count
+        this.addAnimation("hit", "bunny1_hit%d.png", 0, 3);
+        // a sheet: frame size, then the frame numbers, row by row from 0
+        this.addAnimation("dance", "bunny1_sheet.png", 16, 16, 0, 1, 2);
+        this.setAnimationInterval(0.2);
+        MyAnimatedSprite twin = this.createClone();
     }
 
     public void run() {
@@ -430,9 +476,10 @@ class MyAnimatedSprite extends AnimatedSprite {
     }
 }
 
-class MyButton extends UISprite {
+class MyButton extends Sprite {
     public void whenAddedToStage() {
         this.addCostume("bunny1_stand");
+        this.setLayer(Layer.UI);
         this.setNineSlice(8, 8, 8, 8);
         this.setWidth(200);
         this.setHeight(60);
@@ -465,6 +512,24 @@ class Portal extends Sprite {
 print("compiled");
 
 /**::
+ * Stage.sortBy takes a Comparator, like the desktop's
+ * {"libraries": ["scratch"], "expectedOutput": "sortiert"}
+ */
+// Compile coverage only: a Stage needs a Window before it and the graphics
+// classes need a browser, so the calls sit in a method nobody calls.
+class SortingStage extends Stage {
+    public void sortApi() {
+        // Stage.sortBy takes a java.util.Comparator, like the desktop's
+        Stage sortStage = new Stage();
+        sortStage.sortBy((a, b) -> (int) Math.signum(b.getY() - a.getY()));
+        sortStage.sortByY();
+        sortStage.stopSorting();
+    }
+}
+
+print("sortiert");
+
+/**::
  * Desktop imports resolve: import org.openpatch.scratch.*
  * {"libraries": ["scratch"], "expectedOutput": "importiert"}
  */
@@ -491,20 +556,21 @@ print("importiert");
  * Desktop imports resolve: single types out of the extension packages
  * {"libraries": ["scratch"], "expectedOutput": "erweitert"}
  */
-import org.openpatch.scratch.extensions.camera.Camera;
-import org.openpatch.scratch.extensions.fs.File;
-import org.openpatch.scratch.extensions.recorder.GifRecorder;
+import org.openpatch.scratch.Camera;
+import org.openpatch.scratch.save.File;
+import org.openpatch.scratch.recorder.GifRecorder;
 import java.util.function.BooleanSupplier;
 
 Camera cam = new Camera();
 cam.setPosition(40, -20);
-assertEquals(40.0, cam.getX(), "Camera comes from extensions.camera");
+assertEquals(40.0, cam.getX(), "Camera comes from the core package");
 
-File f = new File("save.txt");
-assertEquals(false, f.exists(), "File comes from extensions.fs");
+File f = new File();
+f.save("save.txt", 42);
 
 GifRecorder rec = new GifRecorder("out.gif");
-assertEquals(false, rec.isRecording(), "GifRecorder comes from extensions.recorder");
+rec.start();
+rec.snapshot();
 
 BooleanSupplier immerWahr = () -> true;
 assertEquals(true, immerWahr.getAsBoolean(), "BooleanSupplier comes from java.util.function");
@@ -522,6 +588,43 @@ assertEquals(5.0, v.length(), "fully qualified type and constructor");
 // compiler - it reports "package name can't be used as type". Import instead.
 
 print("qualifiziert");
+
+/**::
+ * The gamepad extension compiles, and without a controller everything rests
+ * {"libraries": ["scratch"], "expectedOutput": "gamepad"}
+ */
+// The hooks only exist on classes that implement GamepadListener, like upstream.
+class PadSprite extends Sprite implements GamepadListener {
+  int presses = 0;
+
+  public void run() {
+    this.changePosition(Gamepad.getStick(GamepadStick.LEFT).multiply(5));
+  }
+
+  public void whenGamepadButtonPressed(GamepadButton button) {
+    if (button == GamepadButton.A) {
+      this.presses++;
+    }
+  }
+
+  public void whenGamepadButtonReleased(GamepadButton button) {
+  }
+
+  public void whenGamepadConnected(int player) {
+  }
+}
+
+// Without a controller every query rests, so a game can ask without checking.
+assertEquals(false, Gamepad.isConnected(), "no controller is connected");
+assertEquals(false, Gamepad.isConnected(1), "no player has a controller");
+assertEquals(false, Gamepad.isButtonPressed(GamepadButton.A), "no button is down");
+assertEquals(false, Gamepad.isButtonPressed(2, GamepadButton.START), "no player's button is down");
+assertEquals(0.0, Gamepad.getStick(GamepadStick.RIGHT).getX(), "a resting stick is 0");
+assertEquals(0.0, Gamepad.getStick(1, GamepadStick.LEFT).getY(), "a resting stick is 0");
+assertEquals(0.0, Gamepad.getTrigger(GamepadTrigger.LEFT), "a trigger is 0");
+assertEquals(0.0, Gamepad.getTrigger(3, GamepadTrigger.RIGHT), "a player's trigger is 0");
+
+print("gamepad");
 
 /**::
  * An import that names nothing is an error

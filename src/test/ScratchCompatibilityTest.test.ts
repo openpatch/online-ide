@@ -14,6 +14,27 @@ import reference from './fixtures/scratch-reference-examples.json';
 // Explicit maintenance operation; ordinary test runs only read the snapshot.
 const snapshotPath = path.resolve(__dirname, '../../public/scratch-api.json');
 
+/**
+ * The methods a scratch type declares on itself and on its scratch ancestors.
+ *
+ * ScratchSpriteClass extends the IDE's ShapeClass for its machinery, and the
+ * ShapeClass's public methods (act and friends) would otherwise show up in the
+ * inventory as part of the Scratch API. The desktop library has no such
+ * members, so the inventory - and through it the compatibility contract -
+ * only reports what the scratch classes declare themselves.
+ */
+function scratchDeclaredMethods(type: NonPrimitiveType): any[] {
+    const out: any[] = [...((type as any).methods ?? [])];
+    let sup = (type as any).getExtends?.();
+    while (sup) {
+        const name = sup.getAbsoluteName?.() ?? sup.identifier;
+        if (!name || !String(name).startsWith('org.openpatch.scratch.')) break;
+        out.push(...(sup.methods ?? []));
+        sup = sup.getExtends?.();
+    }
+    return out;
+}
+
 test('the compatibility inventory matches both current browser library flavors', () => {
     const inventory = {};
     for (const [flavor, ids] of Object.entries({ standard: ['scratch'], nrw: ['scratch', 'nrw'] })) {
@@ -24,7 +45,7 @@ test('the compatibility inventory matches both current browser library flavors',
         inventory[flavor] = Object.fromEntries(compiler.libraryModuleManager.javaTypes
             .filter(type => type instanceof NonPrimitiveType && type.getAbsoluteName().startsWith('org.openpatch.scratch.'))
             .map((type: NonPrimitiveType) => [type.pathAndIdentifierAsDotSeparatedString,
-                type.getAllMethods().filter(method => method.visibility === TokenType.keywordPublic
+                scratchDeclaredMethods(type).filter(method => method.visibility === TokenType.keywordPublic
                     && (!method.isConstructor || method.identifier === type.identifier))
                     .map(method => ({
                         name: method.identifier,
@@ -64,7 +85,7 @@ test('known unsupported examples remain readable and cannot be advertised as run
         }
         if (member.status === 'desktop-only') expect(example.runnable, example.id).toBe(false);
     }
-    expect(reference.examples.find(example => example.id === 'Sprite/clone#0')?.runnable).toBe(true);
+    expect(reference.examples.find(example => example.id === 'Sprite/isClone#0')?.runnable).toBe(true);
 });
 
 test.each(reference.examples)('browser compilation of reference $id', async example => {

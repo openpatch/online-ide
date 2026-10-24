@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { decodeTextAsset, isAssetFile } from "../../../../../client/workspace/AssetFile";
 import type { Workspace } from "../../../../../client/workspace/Workspace";
-import { trackTexture } from "./ScratchTextureSampling";
+import { trackTexture } from "./ScratchPixelArt";
 
 /**
  * The files of the workspace a Scratch program can load by path: its own

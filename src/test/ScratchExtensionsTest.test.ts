@@ -22,16 +22,14 @@ test.each([false, true])('new extension declarations compile together, NRW=%s', 
     libraries.addLibrariesToCompiler(compiler);
     const file = new CompilerFile('Extensions.java');
     file.setText(`
-import org.openpatch.scratch.extensions.drawing.*;
-import org.openpatch.scratch.extensions.text.*;
-import org.openpatch.scratch.extensions.sound.*;
-import org.openpatch.scratch.extensions.tiled.*;
+import org.openpatch.scratch.drawing.*;
+import org.openpatch.scratch.tiled.*;
 import java.util.List;
 class Road extends DrawingSprite {
   public void draw(Drawing canvas) {
     canvas.clip(0,0,100,100);
     canvas.rectangle(0,0,100,100,new Color(255,0,0));
-    canvas.polygon(new double[]{0,20,0},new double[]{0,0,20},new Color());
+    canvas.polygon(new double[]{0,20,0},new double[]{0,0,20},new Color(255,255,255));
     canvas.image("slimeGreen",0,0,20,20);
     int width=canvas.imageWidth("slimeGreen");
     canvas.noClip();
@@ -39,10 +37,10 @@ class Road extends DrawingSprite {
 }
 void main() {
   Window w=new Window(320,200); Stage s=new Stage(); w.setStage(s);
-  Road road=new Road(); road.setIsUI(true); s.add(road);
+  Road road=new Road(); road.setLayer(Layer.UI); s.add(road);
   BitmapText score=new BitmapText("font%03d.png"); score.addGlyph('A',"slimeGreen");
   score.showText("A"); score.setAlign(TextAlign.CENTER); score.setSpaceWidth(4);
-  score.setLetterSpacing(1); score.setLineSpacing(2); score.setIsUI(true); s.add(score);
+  score.setLetterSpacing(1); score.setLineSpacing(2); score.setLayer(Layer.UI); s.add(score);
   println(score.getContent()+score.getWidth()+score.getHeight());
   s.addSound("hit","impactWood_heavy_001");
   SoundPlayback p=s.playSoundCopy("hit",30); p.setVolume(20); println(p.isPlaying()); p.stop(); p.close();

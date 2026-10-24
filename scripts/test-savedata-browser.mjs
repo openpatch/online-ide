@@ -31,7 +31,7 @@ try {
         const gameId = `org.openpatch.savetest.${flavor}`;
         const types = `
             import java.io.IOException;
-            import org.openpatch.scratch.extensions.fs.SaveData;
+            import org.openpatch.scratch.save.SaveData;
             class Child { public int number = 5; }
             class Progress {
                 public int version = 1;

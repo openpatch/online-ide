@@ -5,13 +5,13 @@ import { ScratchVector2Class } from "./ScratchVector2Class";
 import { SRC } from "./ScratchLibraryComments";
 
 /**
- * The stage's camera, mirroring org.openpatch.scratch.extensions.camera.Camera.
- * Moving it scrolls everything except the UI layer; the zoom is a percentage
- * and pivots on the middle of the stage.
+ * The stage's camera, mirroring org.openpatch.scratch.Camera (7.0, formerly
+ * extensions.camera.Camera). Moving it scrolls everything except the UI
+ * layer; the zoom is a percentage and pivots on the middle of the stage.
  */
 export class ScratchCameraClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.camera", signature: "class Camera extends Object", comment: SRC.cameraClassComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Camera extends Object", comment: SRC.cameraClassComment },
 
         { type: "method", signature: "Camera()", native: ScratchCameraClass.prototype._c0, comment: SRC.cameraConstructorComment },
 
@@ -19,12 +19,12 @@ export class ScratchCameraClass extends ObjectClass {
         { type: "method", signature: "void setPosition(Vector2 v)", native: ScratchCameraClass.prototype._setPositionV, comment: SRC.cameraSetPosition2Comment },
         { type: "method", signature: "Vector2 getPosition()", native: ScratchCameraClass.prototype._getPosition, comment: SRC.cameraGetPositionComment },
 
-        { type: "method", signature: "Vector2 toLocalPosition(Vector2 v)", native: ScratchCameraClass.prototype._toLocalPosition, comment: SRC.cameraToLocalPositionComment },
-        { type: "method", signature: "double toLocalX(double x)", native: ScratchCameraClass.prototype._toLocalX, comment: SRC.cameraToLocalXComment },
-        { type: "method", signature: "double toLocalY(double y)", native: ScratchCameraClass.prototype._toLocalY, comment: SRC.cameraToLocalYComment },
-        { type: "method", signature: "Vector2 toGlobalPosition(Vector2 v)", native: ScratchCameraClass.prototype._toGlobalPosition, comment: SRC.cameraToGlobalPositionComment },
-        { type: "method", signature: "double toGlobalX(double x)", native: ScratchCameraClass.prototype._toGlobalX, comment: SRC.cameraToGlobalXComment },
-        { type: "method", signature: "double toGlobalY(double y)", native: ScratchCameraClass.prototype._toGlobalY, comment: SRC.cameraToGlobalYComment },
+        { type: "method", signature: "Vector2 toScreenPosition(Vector2 world)", native: ScratchCameraClass.prototype._toScreenPosition, comment: SRC.cameraToScreenPositionComment },
+        { type: "method", signature: "double toScreenX(double worldX)", native: ScratchCameraClass.prototype._toScreenX, comment: SRC.cameraToScreenXComment },
+        { type: "method", signature: "double toScreenY(double worldY)", native: ScratchCameraClass.prototype._toScreenY, comment: SRC.cameraToScreenYComment },
+        { type: "method", signature: "Vector2 toWorldPosition(Vector2 screen)", native: ScratchCameraClass.prototype._toWorldPosition, comment: SRC.cameraToWorldPositionComment },
+        { type: "method", signature: "double toWorldX(double screenX)", native: ScratchCameraClass.prototype._toWorldX, comment: SRC.cameraToWorldXComment },
+        { type: "method", signature: "double toWorldY(double screenY)", native: ScratchCameraClass.prototype._toWorldY, comment: SRC.cameraToWorldYComment },
 
         { type: "method", signature: "double getX()", native: ScratchCameraClass.prototype._getX, comment: SRC.cameraGetXComment },
         { type: "method", signature: "void setX(double x)", native: ScratchCameraClass.prototype._setX, comment: SRC.cameraSetXComment },
@@ -54,25 +54,24 @@ export class ScratchCameraClass extends ObjectClass {
     _setPositionV(v: ScratchVector2Class) { this._setPosition(v.x, v.y); }
     _getPosition(): ScratchVector2Class { return new ScratchVector2Class(this.x, this.y); }
 
-    _toLocalPosition(v: ScratchVector2Class): ScratchVector2Class {
+    _toWorldPosition(screen: ScratchVector2Class): ScratchVector2Class {
         const s = this.zoom / 100;
-        return new ScratchVector2Class(v.x / s + this.x, v.y / s + this.y);
+        return new ScratchVector2Class(screen.x / s + this.x, screen.y / s + this.y);
     }
-    _toLocalX(x: number): number { return x / (this.zoom / 100) + this.x; }
-    _toLocalY(y: number): number { return y / (this.zoom / 100) + this.y; }
+    _toWorldX(screenX: number): number { return screenX / (this.zoom / 100) + this.x; }
+    _toWorldY(screenY: number): number { return screenY / (this.zoom / 100) + this.y; }
 
-    _toGlobalPosition(v: ScratchVector2Class): ScratchVector2Class {
+    _toScreenPosition(world: ScratchVector2Class): ScratchVector2Class {
         const s = this.zoom / 100;
-        return new ScratchVector2Class((v.x - this.x) * s, (v.y - this.y) * s);
+        return new ScratchVector2Class((world.x - this.x) * s, (world.y - this.y) * s);
     }
-    _toGlobalX(x: number): number { return (x - this.x) * (this.zoom / 100); }
-    _toGlobalY(y: number): number { return (y - this.y) * (this.zoom / 100); }
+    _toScreenX(worldX: number): number { return (worldX - this.x) * (this.zoom / 100); }
+    _toScreenY(worldY: number): number { return (worldY - this.y) * (this.zoom / 100); }
 
     _getX(): number { return this.x; }
     _setX(x: number) { this.x = x; }
-    // NOTE: upstream's changeX reads the y FIELD instead of its parameter
-    // (`setX(getX() + y)`) — a typo that makes horizontal panning move by the
-    // camera's y. Fixed here on purpose; see the note to the maintainer.
+    // 6.x upstream's changeX read the y field instead of its parameter; 7.0
+    // fixed the typo (`this.x += dx`), which is what this always did.
     _changeX(dx: number) { this._setX(this.x + dx); }
     _getY(): number { return this.y; }
     _setY(y: number) { this.y = y; }

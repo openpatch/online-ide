@@ -12,7 +12,6 @@ import { SRC } from "./ScratchLibraryComments";
 export class ScratchHtmlColorClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch", signature: "class HtmlColor extends Object", comment: SRC.htmlColorClassComment },
-        { type: "method", signature: "HtmlColor()", native: ScratchHtmlColorClass.prototype._c0 },
 
         { type: "field", signature: "static Color ALICE_BLUE" },
         { type: "field", signature: "static Color ANTIQUE_WHITE" },
@@ -159,7 +158,6 @@ export class ScratchHtmlColorClass extends ObjectClass {
 
     static type: NonPrimitiveType;
 
-    _c0() { return this; }
 
     static _getRandom(): ScratchColorClass {
         const names = Object.keys(ScratchHtmlColorClass.HEX);

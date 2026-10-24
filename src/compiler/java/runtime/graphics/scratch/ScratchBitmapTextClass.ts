@@ -9,7 +9,7 @@ import { TextAlign, TextAlignEnum } from "./TextAlignEnum";
 
 export class ScratchBitmapTextClass extends ScratchDrawingSpriteClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.text", signature: "class BitmapText extends DrawingSprite" },
+        { type: "declaration", package: "org.openpatch.scratch.drawing", signature: "class BitmapText extends DrawingSprite" },
         { type: "method", signature: "BitmapText(string pattern)", java: ScratchBitmapTextClass.prototype._cj$_constructor_$BitmapText$string },
         { type: "method", signature: "void showText(string text)", java: ScratchBitmapTextClass.prototype._mj$showText$void$string },
         { type: "method", signature: "string getContent()", native: ScratchBitmapTextClass.prototype._getContent },

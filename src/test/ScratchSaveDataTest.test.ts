@@ -12,7 +12,7 @@ test.each([{ ids: ['scratch'] }, { ids: ['scratch', 'nrw'] }])('portable SaveDat
     const file = new CompilerFile('SaveProbe.java');
     file.setText(`
         import java.io.IOException;
-        import org.openpatch.scratch.extensions.fs.SaveData;
+        import org.openpatch.scratch.save.SaveData;
         class Progress { public int coins = 0; }
         void main() {
             SaveData<Progress> save = new SaveData<>("org.example.game", "slot1", Progress.class);

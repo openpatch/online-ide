@@ -11,22 +11,20 @@ import { KeyCodeEnum } from "./KeyCodeEnum";
 import { LayerEnum } from "./LayerEnum";
 import { MouseCodeEnum } from "./MouseCodeEnum";
 import { RotationStyleEnum } from "./RotationStyleEnum";
-import { ScratchAnimatedSpriteClass } from "./ScratchAnimatedSpriteClass";
+import { GamepadButtonEnum, GamepadListenerInterface, GamepadStickEnum, GamepadTriggerEnum, ScratchGamepadClass } from "./ScratchGamepadClasses";
 import { ScratchBoundsClass } from "./ScratchBoundsClass";
 import { ScratchCameraClass } from "./ScratchCameraClass";
 import { ScratchClockClass } from "./ScratchClockClass";
 import { ScratchColorClass } from "./ScratchColorClass";
 import {
-    ScratchFFmpegRecorderClass, ScratchFileClass, ScratchFrameRecorderClass, ScratchGifRecorderClass,
-    ScratchMapObjectClass, ScratchPixelsClass, ScratchRecorderClass,
+    ScratchFileClass, ScratchGifRecorderClass,
+    ScratchMapObjectClass, ScratchPixelsClass,
     ScratchPropertyClass,
     ScratchTilesetImageClass,
 } from "./ScratchDesktopOnlyClasses";
 import { ScratchShaderClass, ScratchShadersClass } from "./ScratchShaders";
-import { ScratchSortingClass } from "./ScratchSortingClass";
 import { ScratchIOExceptionClass, ScratchSaveDataClass } from './ScratchSaveDataClass';
 import { ScratchExceptionClass } from "./ScratchExceptionClass";
-import { ScratchHitboxClass } from "./ScratchHitboxClass";
 import { ScratchHtmlColorClass } from "./ScratchHtmlColorClass";
 import { ScratchListFlavour } from "./ScratchLists";
 import {
@@ -40,12 +38,11 @@ import { ScratchStageClass } from "./ScratchStageClass";
 import { ScratchSpriteClass } from "./ScratchSpriteClass";
 import { ScratchTextClass } from "./ScratchTextClass";
 import { ScratchTimerClass } from "./ScratchTimerClass";
-import { ScratchUISpriteClass } from "./ScratchUISpriteClass";
 import { ScratchVector2Class } from "./ScratchVector2Class";
+import { TransitionEnum } from "./TransitionEnum";
 import { ScratchWindowClass } from "./ScratchWindowClass";
 import { TextAlignEnum } from "./TextAlignEnum";
 import { TextStyleEnum } from "./TextStyleEnum";
-import { TextureSamplingEnum } from "./TextureSamplingEnum";
 
 /**
  * "Scratch for Java" library — a browser port of org.openpatch.scratch
@@ -69,25 +66,27 @@ export class ScratchModule extends JavaLibraryModule implements ScratchListFlavo
         super();
         this.classesInterfacesEnums.push(
             KeyCodeEnum, MouseCodeEnum, RotationStyleEnum, LayerEnum, TextAlignEnum, TextStyleEnum,
-            TextureSamplingEnum,
+            TransitionEnum,
+            // the gamepad extension, org.openpatch.scratch.gamepad
+            GamepadButtonEnum, GamepadStickEnum, GamepadTriggerEnum,
             BooleanSupplierInterface,
-            SupplierInterface, AutoCloseableInterface,
+            SupplierInterface, AutoCloseableInterface, GamepadListenerInterface,
             ScratchDrawingClass, ScratchDrawingSpriteClass, ScratchBitmapTextClass, ScratchSoundPlaybackClass,
             ScratchIOExceptionClass, ScratchSaveDataClass,
-            ScratchOperatorsClass, ScratchRandomClass, ScratchClockClass,
+            ScratchOperatorsClass, ScratchRandomClass, ScratchClockClass, ScratchGamepadClass,
             ScratchHtmlColorClass, ScratchExceptionClass,
             ScratchColorClass, ScratchVector2Class, ScratchTimerClass, ScratchCameraClass,
-            ScratchBoundsClass, ScratchHitboxClass,
+            ScratchBoundsClass,
             // geometry for custom hitboxes; these names also exist in the
             // always-on graphics module, and Scratch's win (see getStandardImports)
             ScratchShapeClass, ScratchCircleClass, ScratchRectangleClass,
             ScratchEllipseClass, ScratchTriangleClass, ScratchPolygonClass,
             ScratchWindowClass,
-            ScratchStageClass, ScratchSpriteClass, ScratchAnimatedSpriteClass, ScratchUISpriteClass,
+            ScratchStageClass, ScratchSpriteClass,
             ScratchPenClass, ScratchTextClass,
             // desktop-only: declared so copied code still compiles and runs
-            ScratchPixelsClass, ScratchSortingClass, ScratchShaderClass, ScratchShadersClass,
-            ScratchRecorderClass, ScratchGifRecorderClass, ScratchFFmpegRecorderClass, ScratchFrameRecorderClass,
+            ScratchPixelsClass, ScratchShaderClass, ScratchShadersClass,
+            ScratchGifRecorderClass,
             ScratchFileClass, ScratchMapObjectClass, ScratchTiledMapClass,
             ScratchPropertyClass, ScratchTilesetImageClass,
         );
@@ -113,17 +112,13 @@ export class ScratchModule extends JavaLibraryModule implements ScratchListFlavo
     getStandardImports(): string[][] {
         return [
             ["org", "openpatch", "scratch", "*"],
+            // the gamepad extension
+            ["org", "openpatch", "scratch", "gamepad", "*"],
             ["java", "lang", "AutoCloseable"],
-            ["org", "openpatch", "scratch", "extensions", "camera", "*"],
-            ["org", "openpatch", "scratch", "extensions", "drawing", "*"],
-            ["org", "openpatch", "scratch", "extensions", "text", "*"],
-            ["org", "openpatch", "scratch", "extensions", "sound", "*"],
-            ["org", "openpatch", "scratch", "extensions", "fs", "*"],
-            ["org", "openpatch", "scratch", "extensions", "pixels", "*"],
-            ["org", "openpatch", "scratch", "extensions", "recorder", "*"],
-            ["org", "openpatch", "scratch", "extensions", "shader", "*"],
-            ["org", "openpatch", "scratch", "extensions", "sorting", "*"],
-            ["org", "openpatch", "scratch", "extensions", "tiled", "*"],
+            ["org", "openpatch", "scratch", "drawing", "*"],
+            ["org", "openpatch", "scratch", "save", "*"],
+            ["org", "openpatch", "scratch", "recorder", "*"],
+            ["org", "openpatch", "scratch", "tiled", "*"],
             // Stage.waitUntil takes a java.util.function.BooleanSupplier
             ["java", "util", "function", "*"],
             ["java", "io", "*"],

@@ -4,12 +4,15 @@ import { EnumClass } from "../../system/javalang/EnumClass";
 import { SRC } from "./ScratchLibraryComments";
 
 /**
- * Which drawing layer something goes onto, mirroring org.openpatch.scratch.Layer.
- *  - BACKGROUND: behind the sprites (where the pen also draws)
- *  - FOREGROUND: in front of the sprites
- *  - UI:         on top of everything
+ * Which drawing layer something goes onto, mirroring org.openpatch.scratch.Layer
+ * (7.0). Values follow the declaration order of the desktop enum, which is also
+ * back-to-front:
+ *  - BACKGROUND: behind the sprites
+ *  - MAIN:        where sprites and texts live by default
+ *  - FOREGROUND:  in front of the sprites, behind the UI
+ *  - UI:          on top of everything, unaffected by the camera
  */
-export enum Layer { BACKGROUND, FOREGROUND, UI }
+export enum Layer { BACKGROUND, MAIN, FOREGROUND, UI }
 
 export class LayerEnum extends EnumClass {
     static __javaDeclarations: LibraryDeclarations = [
@@ -20,6 +23,7 @@ export class LayerEnum extends EnumClass {
 
     static values = [
         new LayerEnum("BACKGROUND", Layer.BACKGROUND),
+        new LayerEnum("MAIN", Layer.MAIN),
         new LayerEnum("FOREGROUND", Layer.FOREGROUND),
         new LayerEnum("UI", Layer.UI),
     ];

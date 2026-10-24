@@ -20,6 +20,8 @@ export class ScratchBoundsClass extends ObjectClass {
         { type: "method", signature: "double height()", template: "§1.bheight", comment: SRC.boundsHeightComment },
         { type: "method", signature: "boolean intersects(Bounds other)", native: ScratchBoundsClass.prototype._intersects, comment: SRC.boundsIntersectsComment },
         { type: "method", signature: "String toString()", java: ScratchBoundsClass.prototype._mj$toString$String$, comment: SRC.boundsToStringComment },
+        { type: "method", signature: "boolean equals(Object other)", java: ScratchBoundsClass.prototype._mj$equals$boolean$Object },
+        { type: "method", signature: "int hashCode()", native: ScratchBoundsClass.prototype._hashCode },
     ];
 
     static type: NonPrimitiveType;
@@ -49,6 +51,26 @@ export class ScratchBoundsClass extends ObjectClass {
         t.s.push(new StringClass(
             `Bounds[x=${d(this.bx)}, y=${d(this.by)}, width=${d(this.bwidth)}, height=${d(this.bheight)}]`));
         if (callback) callback();
+    }
+
+    /** Records are equal when all four components are equal. */
+    _mj$equals$boolean$Object(t: Thread, callback: CallbackFunction, other: any): void {
+        t.s.push(other instanceof ScratchBoundsClass
+            && other.bx === this.bx && other.by === this.by
+            && other.bwidth === this.bwidth && other.bheight === this.bheight);
+        if (callback) callback();
+    }
+
+    /** java.util.Objects.hash over the four doubles, as a record hashes. */
+    _hashCode(): number {
+        const bytes = new DataView(new ArrayBuffer(8));
+        let hash = 1;
+        for (const value of [this.bx, this.by, this.bwidth, this.bheight]) {
+            bytes.setFloat64(0, value);
+            const channel = Number.isNaN(value) ? 0x7ff80000 : bytes.getInt32(0) ^ bytes.getInt32(4);
+            hash = (Math.imul(hash, 31) + channel) | 0;
+        }
+        return hash;
     }
 
     _intersects(other: ScratchBoundsClass): boolean {

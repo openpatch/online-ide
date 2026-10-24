@@ -1,9 +1,7 @@
 import org.openpatch.scratch.*;
-import org.openpatch.scratch.extensions.drawing.*;
-import org.openpatch.scratch.extensions.text.BitmapText;
-import org.openpatch.scratch.extensions.tiled.TiledMap;
-import org.openpatch.scratch.extensions.sound.SoundPlayback;
-import org.openpatch.scratch.extensions.tiled.MapObject;
+import org.openpatch.scratch.drawing.*;
+import org.openpatch.scratch.tiled.TiledMap;
+import org.openpatch.scratch.tiled.MapObject;
 import java.util.List;
 
 class SpawnMap extends Sprite {
@@ -52,16 +50,18 @@ class UnclippedDrawing extends DrawingSprite {
     }
 }
 class ExtensionsStage extends Stage {
-    UISprite ui;
+    Sprite ui;
     BitmapText text;
     int frames = 0;
     ExtensionsStage() {
         Window.getInstance().pause();
         setColor(255, 255, 255);
-        ui = new UISprite();
+        ui = new Sprite();
+        ui.setLayer(Layer.UI);
         ui.addCostume("red", "/test/extensions-glyph.png");
         ui.setPosition(-100, 60); add(ui); ui.stamp(Layer.UI); ui.setPosition(-60, 60);
-        UISprite pen = new UISprite();
+        Sprite pen = new Sprite();
+        pen.setLayer(Layer.UI);
         pen.setPosition(40, -50); add(pen);
         pen.getPen().setColor(0, 0, 255); pen.getPen().setSize(6);
         pen.getPen().down(); pen.setPosition(60, -50); pen.getPen().up(); pen.hide();
@@ -70,7 +70,7 @@ class ExtensionsStage extends Stage {
         add(new UnclippedDrawing());
         text = new BitmapText("glyph%d.png");
         text.addGlyph('A', "/test/extensions-glyph.png");
-        text.showText("AA"); text.setIsUI(true); text.setPosition(-100, 0); add(text);
+        text.showText("AA"); text.setLayer(Layer.UI); text.setPosition(-100, 0); add(text);
         if (text.getWidth()!=12 || text.getHeight()!=6) throw new RuntimeException("bitmap measurement");
         TiledMap map = new TiledMap("/test/extensions-map.tmx");
         if (map.getWidth()!=2 || map.getHeight()!=1 || map.getTileId("ground",1,0)!=7)
@@ -80,7 +80,7 @@ class ExtensionsStage extends Stage {
         if (shapes.length!=1 || shapes[0].getBounds().x()!=26 || shapes[0].getBounds().y()!=-9)
             throw new RuntimeException("map collision flip");
         TiledMap renderedMap=new TiledMap("/test/extensions-map.tmx",this);
-        renderedMap.stampLayerToBackground("ground");
+        renderedMap.showLayer("ground", Layer.BACKGROUND);
         List<Sprite> made=renderedMap.spawn("spawn");
         if (made.size()!=3 || !(made.get(0) instanceof SpawnMap) || !(made.get(1) instanceof SpawnXY)
             || !(made.get(2) instanceof SpawnDefault)) throw new RuntimeException("spawn order and markers");

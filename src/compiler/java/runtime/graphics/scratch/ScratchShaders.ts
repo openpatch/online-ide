@@ -176,20 +176,15 @@ function source(path: string): Promise<string> {
 /** A single GLSL program. */
 export class ScratchShaderClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.shader", signature: "class Shader extends Object", comment: SRC.shaderClassComment },
-        { type: "method", signature: "Shader(string name, string fragmentShaderPath, string vertexShaderPath)", java: ScratchShaderClass.prototype._cj$_constructor_$Shader$string$string$string, comment: SRC.shaderConstructorComment },
-        { type: "method", signature: "Shader(Shader shader)", native: ScratchShaderClass.prototype._cCopy, comment: SRC.shaderConstructor2Comment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Shader extends Object", comment: SRC.shaderClassComment },
         { type: "method", signature: "string getName()", native: ScratchShaderClass.prototype._getName, comment: SRC.shaderGetNameComment },
         { type: "method", signature: "void setName(string name)", native: ScratchShaderClass.prototype._setName, comment: SRC.shaderSetNameComment },
         { type: "method", signature: "void set(string name, int x)", native: ScratchShaderClass.prototype._set1, comment: SRC.shaderSetComment },
         { type: "method", signature: "void set(string name, boolean x)", native: ScratchShaderClass.prototype._setBool1, comment: SRC.shaderSet2Comment },
         { type: "method", signature: "void set(string name, double x)", native: ScratchShaderClass.prototype._set1, comment: SRC.shaderSet3Comment },
-        { type: "method", signature: "void set(string name, int x, int y)", native: ScratchShaderClass.prototype._set2, comment: SRC.shaderSet4Comment },
-        { type: "method", signature: "void set(string name, boolean x, boolean y)", native: ScratchShaderClass.prototype._setBool2, comment: SRC.shaderSet5Comment },
-        { type: "method", signature: "void set(string name, double x, double y)", native: ScratchShaderClass.prototype._set2, comment: SRC.shaderSet6Comment },
+        { type: "method", signature: "void set(string name, double x, double y)", native: ScratchShaderClass.prototype._set2, comment: SRC.shaderSet4Comment },
         { type: "method", signature: "void set(string name, Vector2 vec)", native: ScratchShaderClass.prototype._setVector, comment: SRC.shaderSet7Comment },
         { type: "method", signature: "void set(string name, Color c)", native: ScratchShaderClass.prototype._setColor, comment: SRC.shaderSet8Comment },
-        { type: "method", signature: "void set(string name, int[] values, int ncoords)", native: ScratchShaderClass.prototype._setArray, comment: SRC.shaderSet9Comment },
         { type: "method", signature: "void set(string name, double[] values, int ncoords)", native: ScratchShaderClass.prototype._setArray, comment: SRC.shaderSet10Comment },
     ];
     static type: NonPrimitiveType;
@@ -297,10 +292,8 @@ export class ScratchShaderClass extends ObjectClass {
  */
 export class ScratchShadersClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch.extensions.shader", signature: "class Shaders extends Object", comment: SRC.shadersClassComment },
-        { type: "method", signature: "Shaders(string owner)", native: ScratchShadersClass.prototype._c1, comment: SRC.shadersConstructorComment },
-        { type: "method", signature: "Shaders(Shaders shaders)", native: ScratchShadersClass.prototype._cCopy },
-        { type: "method", signature: "Shader add(string name, string fragmentShaderPath, string vertexShaderPath)", java: ScratchShadersClass.prototype._mj$add$Shader$string$string$string, comment: SRC.shadersAddComment },
+        { type: "declaration", package: "org.openpatch.scratch", signature: "class Shaders extends Object", comment: SRC.shadersClassComment },
+        { type: "method", signature: "Shader add(string name, string fragmentShaderPath)", java: ScratchShadersClass.prototype._mj$add$Shader$string$string, comment: SRC.shadersAddComment },
         { type: "method", signature: "Shader get(string name)", native: ScratchShadersClass.prototype._get, comment: SRC.shadersGetComment },
         { type: "method", signature: "void switchTo(string name)", native: ScratchShadersClass.prototype._switchToName, comment: SRC.shadersSwitchToComment },
         { type: "method", signature: "void switchTo(double index)", native: ScratchShadersClass.prototype._switchToIndex, comment: SRC.shadersSwitchTo2Comment },
@@ -364,6 +357,16 @@ export class ScratchShadersClass extends ObjectClass {
     /** the active shaders in the order they were added */
     private activeShaders(): ScratchShaderClass[] {
         return this.shaders.filter(s => this.active.has(s));
+    }
+
+    /**
+     * 7.0's only form: the fragment shader body. The vertexShaderPath of the
+     * 6.x form stays as an internal parameter (the browser substitutes its
+     * default vertex shader anyway, as it always did for the third argument).
+     */
+    _mj$add$Shader$string$string(t: Thread, callback: CallbackParameter,
+        name: string, fragmentShaderPath: string) {
+        this._mj$add$Shader$string$string$string(t, callback, name, fragmentShaderPath, undefined);
     }
 
     _mj$add$Shader$string$string$string(t: Thread, callback: CallbackParameter,

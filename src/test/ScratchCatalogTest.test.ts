@@ -21,8 +21,8 @@ test('Javadoc supplies English help while the stable identifier retains its Germ
 
 test('desktop availability is visible and additional browser declarations keep their comments', () => {
     const klass: LibraryKlassType = { __javaDeclarations: [
-        { type: 'declaration', signature: 'class Stage' },
-        { type: 'method', signature: 'int[] getPixels()', comment: () => 'original', native: () => {} },
+        { type: 'declaration', signature: 'class Window' },
+        { type: 'method', signature: 'static void useFullScreen()', comment: () => 'original', native: () => {} },
         { type: 'method', signature: 'void browserExtra()', comment: () => 'extra', native: () => {} },
     ] };
     applyScratchCatalog(klass);

@@ -17,17 +17,21 @@
         'libraries': ['scratch']
     }">
         <script type="text/plain" title="MyStage.java" data-type="java">
-new Level1();
+// The window comes first and carries the size; the stage is shown with setStage().
+Window fenster = new Window(480, 360);
+fenster.setStage(new Level1());
 
 // Two stages in one program. Bühne 2 is built right away but waits off screen
 // until transitionToStage() fades over to it; while it waits, nothing on it runs.
 class Level1 extends Stage {
     Level2 zwei;
     Laeufer laeufer;
+    Timer uhr = new Timer();
     boolean gewechselt = false;
+    boolean vorgestellt = false;
 
     public Level1() {
-        super(480, 360);
+        super();
         this.setColor(0, 0, 180);
         this.laeufer = new Laeufer();
         this.add(this.laeufer);
@@ -36,15 +40,18 @@ class Level1 extends Stage {
         this.add(t);
         t.showText("Bühne 1");
         this.zwei = new Level2(this.laeufer);
-        print("Bühne 1 ist aktiv: " + (Window.getInstance().getStage() == this));
-        print("Laeufer kennt seine Bühne: " + (this.laeufer.getStage() == this));
     }
 
     public void run() {
-        if (!this.gewechselt && Timer.millis() > 2500) {
+        if (!this.vorgestellt) {
+            this.vorgestellt = true;
+            print("Bühne 1 ist aktiv: " + (Window.getInstance().getStage() == this));
+            print("Laeufer kennt seine Bühne: " + (this.laeufer.getStage() == this));
+        }
+        if (!this.gewechselt && this.uhr.after(2.5)) {
             this.gewechselt = true;
             print("Schritte auf Bühne 1 beim Wechsel: " + this.laeufer.schritte);
-            Window.getInstance().transitionToStage(this.zwei, 150);
+            Window.getInstance().transitionToStage(this.zwei, 0.15);
         }
     }
 }
@@ -52,10 +59,11 @@ class Level1 extends Stage {
 class Level2 extends Stage {
     Laeufer alter;
     Karotte karotte;
+    Timer uhr = new Timer();
     boolean gemeldet = false;
 
     public Level2(Laeufer alter) {
-        super(480, 360);
+        super();
         this.alter = alter;
         this.setColor(255, 140, 0);
         this.karotte = new Karotte();
@@ -67,7 +75,7 @@ class Level2 extends Stage {
 
     public void run() {
         this.karotte.turnRight(4);
-        if (!this.gemeldet && Timer.millis() > 4500) {
+        if (!this.gemeldet && this.uhr.getSeconds() > 4.5) {
             this.gemeldet = true;
             print("Bühne 2 ist aktiv: " + (Window.getInstance().getStage() == this));
             print("Schritte auf Bühne 1 danach (soll gleich sein): " + this.alter.schritte);
