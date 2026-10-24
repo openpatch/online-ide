@@ -1060,6 +1060,15 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         if (millis <= 0) return;
         t.scheduler.suspendThread(t);
         t.state = ThreadState.timedWaiting;
+        // While a transition fades out or builds the next stage, no stage runs,
+        // so the game clock stands still and a game-time deadline would never
+        // fire. Upstream's supplier runs on the game thread, whose waitSeconds
+        // is a real sleep (Stage.waitSeconds): a constructor that waits while
+        // the screen stays black holds real time, or the transition deadlocks.
+        if (!scratchStagesRunning()) {
+            setTimeout(() => t.scheduler.restoreThread(t), millis);
+            return;
+        }
         // Game time, like the desktop's waitSeconds: it waits until the game
         // clock has advanced that far, so the wait follows the game speed,
         // holds while the game is paused and needs Window.step() ticks to pass.
