@@ -116,6 +116,11 @@ export function translate(source: string): Translated {
     return { fragment: header + s + footer, uniforms, glslTypes };
 }
 
+/** Whether a filter is a learner's shader (not one of the effects). */
+export function isScratchShaderFilter(filter: unknown): boolean {
+    return filter instanceof ScratchShaderFilter;
+}
+
 /** A shader's filter; game time goes into `time` each time it is drawn. */
 class ScratchShaderFilter extends PIXI.Filter {
     constructor(glProgram: PIXI.GlProgram, private readonly group: PIXI.UniformGroup) {
@@ -160,6 +165,10 @@ async function loadSource(path: string): Promise<string> {
 
 /** Loaded sources, so that cloned sprites do not download a shader again. */
 const sources: Map<string, Promise<string>> = new Map();
+/** A shader file's text, from the workspace or downloaded (also for transition shaders). */
+export function loadShaderSource(path: string): Promise<string> {
+    return source(path);
+}
 function source(path: string): Promise<string> {
     // Workspace sources are refreshed each run and may have been edited.
     const own = ScratchWorkspaceAssets.getText(path);

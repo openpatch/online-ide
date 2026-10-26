@@ -2529,8 +2529,12 @@ export class SRC {
 
     // ---- extensions, 7.0 changes ----
     static pixelsOfComment = () => lm({
-        "de": "Liest die Bildpunkte der Bühne oder eines Bildes",
-        "en": "Reads the pixels of a stage or an image",
+        "de": "Liest die Bildpunkte der Bühne, wie ihre Ebenen sie gerade zeigen (ohne Texte, Shader und die UI-Ebene)",
+        "en": "Reads the pixels of the stage as its world layers show them now (without texts, shaders and the UI layer)",
+    });
+    static pixelsOf2Comment = () => lm({
+        "de": "Liest die Bildpunkte einer Bilddatei",
+        "en": "Reads the pixels of an image file",
     });
     static pixelsGetWidthComment = () => lm({
         "de": "Gibt die Breite in Pixeln zurück",

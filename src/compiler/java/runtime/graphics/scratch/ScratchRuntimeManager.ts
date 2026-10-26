@@ -24,7 +24,7 @@ export interface IScratchEventReceiver {
     _mj$whenClicked$void$?: (t: Thread, cb: any) => void;
     _mj$whenMouseClicked$void$MouseCode?: (t: Thread, cb: any, code: MouseCodeEnum) => void;
     _mj$whenMouseMoved$void$double$double?: (t: Thread, cb: any, x: number, y: number) => void;
-    _mj$whenMouseWheelMoved$void$int?: (t: Thread, cb: any, steps: number) => void;
+    _mj$whenMouseWheelMoved$void$double?: (t: Thread, cb: any, steps: number) => void;
     _mj$whenAddedToStage$void$?: (t: Thread, cb: any) => void;
     _mj$whenRemovedFromStage$void$?: (t: Thread, cb: any) => void;
     // GamepadListener hooks; only objects implementing the interface have them.
@@ -80,15 +80,15 @@ export class ScratchRuntimeManager implements InternalMouseListener {
     }
 
     /**
-     * `steps` follows Processing's MouseEvent.getCount(), which upstream passes
-     * straight through: positive when the wheel is rolled down (toward the user).
+     * `steps` as upstream's whenMouseWheelMoved(double): positive when the
+     * wheel is rolled down (toward the user), one per notch as GLFW counts it.
      */
     private wheelListener = (e: WheelEvent) => {
         const list = [...this.lists.mouseWheelMoved].filter(o => this.receivesInput(o));
         if (list.length === 0 || e.deltaY === 0) return;
         const steps = e.deltaY > 0 ? 1 : -1;
         const t = this.interpreter.scheduler.createThread("scratch whenMouseWheelMoved");
-        for (const obj of list) obj._mj$whenMouseWheelMoved$void$int!(t, undefined, steps);
+        for (const obj of list) obj._mj$whenMouseWheelMoved$void$double!(t, undefined, steps);
         t.state = ThreadState.running;
     };
 
@@ -201,7 +201,8 @@ export class ScratchRuntimeManager implements InternalMouseListener {
 
     onKeyPressed(browserKey: string) {
         if (this.stageIsAsking()) return;
-        const list = [...this.lists.keyPressed].filter(o => this.receivesInput(o));
+        // as upstream: the stage first, then its sprites from back to front
+        const list = ScratchRuntimeManager.backToFront([...this.lists.keyPressed].filter(o => this.receivesInput(o)));
         if (list.length === 0) return;
         const code = this.keyCodeFor(browserKey);
         if (!code) return;
@@ -212,7 +213,8 @@ export class ScratchRuntimeManager implements InternalMouseListener {
 
     onKeyReleased(browserKey: string) {
         if (this.stageIsAsking()) return;
-        const list = [...this.lists.keyReleased].filter(o => this.receivesInput(o));
+        // as upstream: the stage first, then its sprites from back to front
+        const list = ScratchRuntimeManager.backToFront([...this.lists.keyReleased].filter(o => this.receivesInput(o)));
         if (list.length === 0) return;
         const code = this.keyCodeFor(browserKey);
         if (!code) return;
@@ -267,6 +269,12 @@ export class ScratchRuntimeManager implements InternalMouseListener {
         t.state = ThreadState.running;
     }
 
+    /** A stage before its sprites, the sprites back to front (upstream: spritesInOrder). */
+    private static frontness(o: any): number { return o._frontmostOrder ? o._frontmostOrder() : -Infinity; }
+    private static backToFront<T>(list: T[]): T[] {
+        return list.sort((a, b) => ScratchRuntimeManager.frontness(a) - ScratchRuntimeManager.frontness(b));
+    }
+
     // ---- mouse ----
     onMouseEvent(kind: MouseEventKind, x: number, y: number): void {
         if (kind === "mousemove") { this.fireMouseMoved(x, y); return; }
@@ -278,14 +286,20 @@ export class ScratchRuntimeManager implements InternalMouseListener {
 
         const t = this.interpreter.scheduler.createThread("scratch click");
         const code = MouseCodeEnum.values.find(m => m.button === this.lastMouseButton) || MouseCodeEnum.values[0];
-        for (const obj of mouseClicked) obj._mj$whenMouseClicked$void$MouseCode!(t, undefined, code);
-        // only the frontmost sprite under the pointer, as in Scratch (6.x
-        // called every sprite under it, on mouse-up)
-        const hit = clicked
-            .filter(obj => obj._containsPoint && obj._containsPoint(x, y))
-            .sort((a, b) => (a._frontmostOrder?.() ?? 0) - (b._frontmostOrder?.() ?? 0));
-        const frontmost = hit[hit.length - 1];
-        if (frontmost) frontmost._mj$whenClicked$void$!(t, undefined);
+        // as upstream's Stage.dispatch: the stage's whenMouseClicked, then its
+        // sprites' from back to front ...
+        const order = ScratchRuntimeManager.frontness;
+        for (const obj of ScratchRuntimeManager.backToFront(mouseClicked)) {
+            obj._mj$whenMouseClicked$void$MouseCode!(t, undefined, code);
+        }
+        // ... then whenClicked of the frontmost sprite under the pointer, as in
+        // Scratch; a sprite in front that does not listen keeps the click from
+        // the ones behind it (6.x called every sprite under it, on mouse-up)
+        const sprites: any[] = activeScratchStage<{ sprites: any[] }>()?.sprites ?? [];
+        const frontmost = sprites
+            .filter(s => s._touchesPoint?.(x, y))
+            .sort((a, b) => order(a) - order(b)).at(-1);
+        if (frontmost && clicked.includes(frontmost)) frontmost._mj$whenClicked$void$!(t, undefined);
         t.state = ThreadState.running;
     }
 

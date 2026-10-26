@@ -5,16 +5,17 @@ import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass, StringClass } from "../../system/javalang/ObjectClassStringClass";
 import { IWorld } from "../IWorld";
 import { ScratchStageClass } from "./ScratchStageClass";
-import { scratchStageTransitioning, setActiveScratchStage, transitionToScratchStage, TransitionKind } from "./ScratchStages";
+import { scratchStageTransitioning, setActiveScratchStage, transitionToScratchStage } from "./ScratchStages";
 import { currentScratchStage, desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
-import { isPixelArt, setPixelArt } from "./ScratchPixelArt";
+import { getFrameSmoothing, isPixelArt, isSmoothPixelArt, setFrameSmoothing, setPixelArt } from "./ScratchPixelArt";
 import { SRC } from "./ScratchLibraryComments";
 import { scratchBrowserVersion } from './ScratchCompatibility';
-import { scratchGameClock } from './ScratchGameClock';
+import { ScratchGameClock, scratchGameClock } from './ScratchGameClock';
 import { SupplierInterface } from './SupplierInterface';
 import { Program } from '../../../../common/interpreter/Program';
 import { ThreadState } from '../../../../common/interpreter/ThreadState';
 import { NullPointerExceptionClass } from '../../system/javalang/NullPointerExceptionClass';
+import { IllegalArgumentExceptionClass } from '../../system/javalang/IllegalArgumentException';
 
 /**
  * The application window, mirroring org.openpatch.scratch.Window.
@@ -72,7 +73,7 @@ export class ScratchWindowClass extends ObjectClass {
         { type: "method", signature: "static boolean isPixelArt()", native: ScratchWindowClass.isPixelArtStatic, comment: SRC.windowIsPixelArtComment },
         { type: "method", signature: "static void useSmoothPixelArt()", native: ScratchWindowClass.useSmoothPixelArt, comment: SRC.windowUseSmoothPixelArtComment },
         { type: "method", signature: "static boolean isSmoothPixelArt()", native: ScratchWindowClass.isSmoothPixelArtStatic, comment: SRC.windowIsSmoothPixelArtComment },
-        { type: "method", signature: "static void useFrameSmoothing(double seconds)", native: ScratchWindowClass.useFrameSmoothing, comment: SRC.windowUseFrameSmoothingComment },
+        { type: "method", signature: "static void useFrameSmoothing(double percent)", native: ScratchWindowClass.useFrameSmoothing, comment: SRC.windowUseFrameSmoothingComment },
         { type: "method", signature: "static double getFrameSmoothing()", native: ScratchWindowClass.getFrameSmoothing, comment: SRC.windowGetFrameSmoothingComment },
         { type: "method", signature: "static void useSplashLogo(string path)", native: ScratchWindowClass.useSplashLogo, comment: SRC.windowUseSplashLogoComment },
     ];
@@ -149,7 +150,13 @@ export class ScratchWindowClass extends ObjectClass {
     _resume() { scratchGameClock().resume(); }
     _isPaused() { return scratchGameClock().paused; }
     _step() { scratchGameClock().step(); }
-    _setGameSpeed(speed: number) { scratchGameClock().setSpeed(speed); }
+    _setGameSpeed(speed: number) {
+        // as upstream's TickClock.setGameSpeed
+        if (!(speed >= 0 && speed <= ScratchGameClock.MAX_STEPS_PER_FRAME)) {
+            throw new IllegalArgumentExceptionClass("The game speed has to be between 0 and 8, not " + speed + ".");
+        }
+        scratchGameClock().setSpeed(speed);
+    }
     _getGameSpeed() { return scratchGameClock().speed; }
 
     _getStage(): ScratchStageClass | undefined { return this.currentStage(); }
@@ -159,7 +166,7 @@ export class ScratchWindowClass extends ObjectClass {
 
     /** Fade to black, swap stages, fade back. */
     _transitionToStage(stage: ScratchStageClass, seconds: number) {
-        transitionToScratchStage(stage, seconds * 1000);
+        transitionToScratchStage(stage, seconds);
     }
 
     _isTransitioning(): boolean { return ScratchWindowClass.isTransitioning(); }
@@ -168,23 +175,10 @@ export class ScratchWindowClass extends ObjectClass {
         this._transitionToStageSupplierTransition(t, callback, supplier, undefined, seconds);
     }
 
-    /** TransitionEnum names map straight onto the built-in kinds. */
-    private static kindOf(transition: any): TransitionKind {
-        const name = transition?.name;
-        return typeof name === "string"
-            && ["fade", "crossfade", "slide-left", "slide-right", "slide-up", "slide-down"].includes(name)
-            ? name as TransitionKind
-            : "fade";   // fromShader and the default render the built-in fade
-    }
-
-    /**
-     * The browser renders one built-in transition; a Transition chosen by the
-     * program (including fromShader) is accepted and reported, but which
-     * built-in is drawn does not change yet.
-     */
+    /** Upstream draws every transition with a shader, the built-in ones too. */
     _transitionToStageSupplierTransition(t: Thread, callback: CallbackParameter,
         supplier: SupplierInterface, transition: any, seconds: number) {
-        const kind = ScratchWindowClass.kindOf(transition);
+        const body: string | undefined = transition?.transitionBody?.();
         if (!supplier) throw new NullPointerExceptionClass('Stage supplier must not be null');
         const module = t.currentProgramState.program.module;
         transitionToScratchStage((ready, failed) => {
@@ -214,7 +208,7 @@ export class ScratchWindowClass extends ObjectClass {
             thread.pushProgram(program);
             thread.state = ThreadState.running;
             return () => { thread.state = ThreadState.terminated; };
-        }, seconds * 1000, kind);
+        }, seconds, body);
         callback?.();
     }
 
@@ -249,8 +243,8 @@ export class ScratchWindowClass extends ObjectClass {
     /** Nearest-neighbour filtering keeps scaled-up pixel art sharp. */
     static usePixelArt() { setPixelArt(true); }
     static isPixelArtStatic(): boolean { return isPixelArt(); }
-    static useSmoothPixelArt() { setPixelArt(false); }
-    static isSmoothPixelArtStatic(): boolean { return !isPixelArt(); }
+    static useSmoothPixelArt() { setPixelArt(true, true); }
+    static isSmoothPixelArtStatic(): boolean { return isSmoothPixelArt(); }
 
     /**
      * 7.0's frame smoothing: how long the renderer blends frames, in seconds.
@@ -258,9 +252,8 @@ export class ScratchWindowClass extends ObjectClass {
      * re-blend previous frames, so the value is stored and reported as asked
      * but does not change what is drawn.
      */
-    private static frameSmoothing = 0;
-    static useFrameSmoothing(seconds: number) { ScratchWindowClass.frameSmoothing = Math.max(0, seconds); }
-    static getFrameSmoothing(): number { return ScratchWindowClass.frameSmoothing; }
+    static useFrameSmoothing(percent: number) { setFrameSmoothing(percent); }
+    static getFrameSmoothing(): number { return getFrameSmoothing(); }
     static useSplashLogo(path: string) {
         ScratchWindowClass.splashLogo = path;
         desktopOnly("Window.useSplashLogo()");

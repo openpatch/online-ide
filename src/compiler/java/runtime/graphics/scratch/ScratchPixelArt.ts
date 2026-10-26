@@ -3,8 +3,9 @@ import type { Interpreter } from "../../../../common/interpreter/Interpreter";
 
 /**
  * 7.0's Window.usePixelArt(): nearest-neighbour filtering for every costume,
- * so pixel art scaled up keeps sharp squares; useSmoothPixelArt() goes back to
- * the default linear filter.
+ * so pixel art scaled up keeps sharp squares. useSmoothPixelArt() is pixel art
+ * as well (upstream: pixelArt and smoothPixelArt), whose stage fills the
+ * output at any scale instead of stepping whole numbers.
  *
  * Costumes share their texture sources (one atlas holds hundreds of them, and
  * an image used by several sprites is loaded once), so the filter belongs to
@@ -13,6 +14,7 @@ import type { Interpreter } from "../../../../common/interpreter/Interpreter";
  */
 
 let pixelArt = false;
+let smoothPixelArt = false;
 const sources: Set<PIXI.TextureSource> = new Set();
 const watchedInterpreters: WeakSet<Interpreter> = new WeakSet();
 
@@ -20,8 +22,21 @@ export function isPixelArt(): boolean {
     return pixelArt;
 }
 
-export function setPixelArt(on: boolean) {
+/** Window.useFrameSmoothing: how much of the previous frame each one keeps, 0 to 100 */
+let frameSmoothing = 0;
+export function getFrameSmoothing(): number { return frameSmoothing; }
+export function setFrameSmoothing(percent: number) {
+    frameSmoothing = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
+}
+
+export function isSmoothPixelArt(): boolean {
+    return smoothPixelArt;
+}
+
+/** usePixelArt(): (true, false); useSmoothPixelArt(): (true, true); a new run: (false, false) */
+export function setPixelArt(on: boolean, smooth: boolean = false) {
     pixelArt = on;
+    smoothPixelArt = on && smooth;
     for (const source of sources) {
         if (source.destroyed) sources.delete(source);
         else applySampling(source);
@@ -45,7 +60,7 @@ export function resetPixelArtOnEveryRun(interpreter: Interpreter) {
     // an interpreter without events (as in some tests) has no runs to tell apart
     if (!interpreter?.eventManager || watchedInterpreters.has(interpreter)) return;
     watchedInterpreters.add(interpreter);
-    interpreter.eventManager.on("resetRuntime", () => setPixelArt(false));
+    interpreter.eventManager.on("resetRuntime", () => { setPixelArt(false); setFrameSmoothing(0); });
 }
 
 function applySampling(source: PIXI.TextureSource) {

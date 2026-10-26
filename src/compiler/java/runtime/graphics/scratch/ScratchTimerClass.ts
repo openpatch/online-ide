@@ -2,7 +2,7 @@ import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
 import { SRC } from "./ScratchLibraryComments";
-import { resetScratchGameClock, scratchGameClock } from './ScratchGameClock';
+import { resetScratchGameClock, ScratchGameClock, scratchGameClock } from './ScratchGameClock';
 
 /**
  * Timing helper, mirroring org.openpatch.scratch.Timer (7.0). All durations are
@@ -40,8 +40,9 @@ export class ScratchTimerClass extends ObjectClass {
         return Math.trunc(scratchGameClock().millis);
     }
 
-    private static _now(): number {
-        return ScratchTimerClass._millis() / 1000;
+    /** Game time in seconds, as upstream's Game.getTime(): ticks x 1/60. */
+    static _now(): number {
+        return scratchGameClock().steps * ScratchGameClock.STEP_SECONDS;
     }
 
     private start = 0;

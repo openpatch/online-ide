@@ -1,5 +1,6 @@
 import * as PIXI from "pixi.js";
 import { IWorld } from "../IWorld";
+import { BUILT_IN_TRANSITIONS, ScratchTransitionView } from "./ScratchTransitionView";
 
 /**
  * Which of the program's stages is on screen — the job org.openpatch.scratch's
@@ -39,20 +40,21 @@ type Transition = {
     factory?: ScratchStageFactory;
     cancelFactory?: () => void;
     detachStop?: () => void;
-    /** "out" fades the old stage away, "in" fades the new one up. */
-    phase: "out" | "creating" | "in";
-    start: number;
-    duration: number;
-    overlay?: PIXI.Graphics;
-    /** 7.0's Transition kinds; the built-ins render exactly as upstream's shaders do. */
-    kind: TransitionKind;
-    /** the old stage's frozen root, kept visible under the new one */
-    fromRoot?: PIXI.Container;
-    tick: () => void;
+    /**
+     * "requested": the old stage is drawn and the supplier runs in the next
+     * frame; "creating": the supplier is building the stage; "playing": the
+     * shader mixes the two stages. Both stand still all the time, as upstream.
+     */
+    phase: "requested" | "creating" | "playing";
+    /** how long, and how far along, in game ticks (upstream: round(seconds * 60)) */
+    ticks: number;
+    tick: number;
+    /** the transition shader's body, a built-in one or Transition.fromShader's */
+    body: string;
+    view?: ScratchTransitionView;
+    frame: () => void;
     world: IWorld;
 };
-
-export type TransitionKind = "fade" | "crossfade" | "slide-left" | "slide-right" | "slide-up" | "slide-down";
 
 let transition: Transition | undefined;
 
@@ -133,12 +135,25 @@ export function isScratchStageActive(stage: IScratchStageLike | undefined): bool
 }
 
 /**
- * Whether the stages should be stepping. False while the old stage is fading
- * out: upstream stops calling the stage's render loop for that half of a
- * transition, so the picture that fades away is frozen.
+ * Whether the stages should be stepping. False for the whole of a transition:
+ * upstream holds both stages still and starts the new one's run() once the
+ * transition is over.
  */
 export function scratchStagesRunning(): boolean {
-    return !transition || transition.phase === "in";
+    return !transition;
+}
+
+/** Whether a transition is being drawn: the game clock counts its ticks. */
+export function scratchTransitionPlaying(): boolean {
+    return transition?.phase === "playing";
+}
+
+/** One game tick of the transition; the last one ends it and the new stage runs from the next. */
+export function advanceScratchTransition(): void {
+    const tr = transition;
+    if (!tr || tr.phase !== "playing") return;
+    if (++tr.tick >= tr.ticks) endTransition(true);
+    else tr.view?.setProgress(tr.tick / tr.ticks);
 }
 
 /** Whether a transition is still fading, upstream's Window.isTransitioning(). */
@@ -154,115 +169,77 @@ export function setActiveScratchStage(stage: IScratchStageLike | undefined): voi
 }
 
 /**
- * Fade to black, switch to `stage`, fade back — upstream's
- * Applet.transitionToStage, driven by the PIXI ticker because it has to keep
- * going while the stages themselves are held still.
- *
- * NOTE on the timing: upstream computes the fade with
- * `lerp(0, 255, elapsed / duration / 2)`, so one half of the transition takes
- * `2 * duration` milliseconds and the whole thing `4 * duration` — almost
- * certainly not what the parameter name suggests, but a program has to take the
- * same time in both places, so the formula is copied as it stands.
+ * Upstream's Game.transition: in the next frame the old stage's picture is
+ * taken and `stage` is made (a factory runs then); the transition then lasts
+ * round(seconds * 60) game ticks, with both stages standing still, and the new
+ * stage's run() starts once it is over. Without an old stage, or without time,
+ * the new stage comes at once. Requests made meanwhile are ignored.
  */
 export function transitionToScratchStage(stage: IScratchStageLike | ScratchStageFactory | undefined,
-    duration: number, kind: TransitionKind = "fade"): void {
-    // upstream only transitions while the applet is in its RUNNING state, which
-    // rules out starting a second transition on top of a running one
+    seconds: number, body: string = BUILT_IN_TRANSITIONS["fade"]): void {
     if (!stage || transition || !registryWorld || stage === active) return;
     const world = registryWorld;
     const app = world.app;
     if (!app?.ticker) return;
 
-    const overlay = new PIXI.Graphics();
-    overlay.rect(0, 0, world.width, world.height).fill({ color: 0x000000 });
-    overlay.alpha = 0;
-    app.stage.addChild(overlay);
-
-    const tick = () => stepTransition();
+    const frame = () => frameTransition();
     transition = {
         target: typeof stage === "function" ? undefined : stage,
         factory: typeof stage === "function" ? stage : undefined,
-        phase: "out", start: performance.now(),
-        duration: Math.max(1, duration),
-        // fade goes through a black overlay; the other kinds move the roots
-        // themselves and keep the overlay around only for the cleanup path
-        overlay: kind === "fade" ? overlay : undefined,
-        kind,
-        fromRoot: kind === "fade" ? undefined : (active as any)?.scratchLayers?.root as PIXI.Container | undefined,
-        tick, world,
+        phase: "requested",
+        ticks: Math.round(seconds * 60), tick: 0,
+        body, frame, world,
     };
-    if (kind !== "fade") overlay.destroy();
     const events = world.interpreter?.eventManager;
     if (events) {
         const stop = () => endTransition(false);
         events.once("stop", stop);
         transition.detachStop = () => events.off(stop);
     }
-    app.ticker.add(tick);
+    // before the renderer, as the pre-render: the frame shows the mix it drew
+    app.ticker.add(frame, undefined, PRE_RENDER_PRIORITY);
 }
 
-function stepTransition() {
+/** The stage's colour, which the renderer paints as the background: white unless set. */
+function colourOf(stage: IScratchStageLike | undefined): number {
+    const colour = (stage as any)?._getColor?.();
+    return colour ? colour._get() & 0xffffff : 0xffffff;
+}
+
+function rootOf(stage: IScratchStageLike | undefined): PIXI.Container | undefined {
+    const root = (stage as any)?.scratchLayers?.root as PIXI.Container | undefined;
+    return root && !root.destroyed ? root : undefined;
+}
+
+function frameTransition() {
     const tr = transition;
     if (!tr) return;
-    if (tr.overlay?.destroyed) { endTransition(false); return; }
-
-    // a stage built after the transition started would otherwise sit on top of
-    // the black overlay — transitionToStage(new Level2(), …) does exactly that
-    const parent = tr.overlay?.parent;
-    if (parent && parent.getChildIndex(tr.overlay!) !== parent.children.length - 1) {
-        parent.setChildIndex(tr.overlay!, parent.children.length - 1);
-    }
-
-    const elapsed = performance.now() - tr.start;
-    const amount = elapsed / tr.duration / 2;
-    if (tr.phase === "out") {
-        if (amount < 1) {
-            tr.overlay.alpha = amount;
-            return;
+    if (tr.phase === "requested") {
+        tr.phase = "creating";
+        // the old stage's picture before the supplier runs: it may move sprites over
+        const renderer = tr.world.app?.renderer as PIXI.Renderer | undefined;
+        const fromRoot = rootOf(active);
+        if (renderer && fromRoot && tr.ticks > 0) {
+            tr.view = new ScratchTransitionView(renderer, tr.world.width, tr.world.height, tr.body);
+            active?._preRender?.();
+            tr.view.snapshotFrom(fromRoot, colourOf(active));
         }
-        tr.overlay.alpha = 1;
-        if (tr.factory) {
-            // Leave a fully black frame on screen before a constructor starts.
-            tr.phase = "creating";
-        } else {
-            tr.phase = "in";
-            tr.start = performance.now();
-            setActiveScratchStage(tr.target);
-        }
-        return;
-    }
-    if (tr.phase === "creating") {
-        const factory = tr.factory;
-        tr.factory = undefined;
         const ready = (stage: IScratchStageLike) => {
             if (transition !== tr || tr.phase !== "creating") return;
             tr.target = stage;
             tr.cancelFactory = undefined;
-            setActiveScratchStage(stage);
-            tr.phase = "in";
-            tr.start = performance.now();
-            if (tr.kind !== "fade") {
-                // the old stage's frozen picture stays visible under the new
-                // one, exactly what upstream's "from" texture holds
-                const fromRoot = tr.fromRoot;
-                const newRoot = (stage as any)?.scratchLayers?.root as PIXI.Container | undefined;
-                if (fromRoot && !fromRoot.destroyed && newRoot) {
-                    fromRoot.visible = true;
-                    const parent = newRoot.parent;
-                    if (parent && parent.getChildIndex(fromRoot) > parent.getChildIndex(newRoot)) {
-                        parent.setChildIndex(fromRoot, parent.getChildIndex(newRoot));
-                    }
-                    if (tr.kind === "crossfade") newRoot.alpha = 0;
-                    if (tr.kind === "slide-left") { fromRoot.x = 0; newRoot.x = worldWidth(tr); }
-                    if (tr.kind === "slide-right") { fromRoot.x = 0; newRoot.x = -worldWidth(tr); }
-                    if (tr.kind === "slide-up") { fromRoot.y = 0; newRoot.y = worldHeight(tr); }
-                    if (tr.kind === "slide-down") { fromRoot.y = 0; newRoot.y = -worldHeight(tr); }
-                }
+            if (!tr.view) {
+                endTransition(true);
+                return;
             }
+            setActiveScratchStage(stage);
+            tr.phase = "playing";
+            tr.world.app.stage.addChild(tr.view.mesh);
+            drawTransition(tr);
         };
-        if (factory) {
+        if (tr.factory) {
             try {
-                const cancel = factory(ready, () => {
+                const cancel = tr.factory(ready, () => {
                     if (transition === tr) endTransition(false);
                 });
                 if (transition === tr && tr.phase === "creating") tr.cancelFactory = cancel || undefined;
@@ -273,30 +250,24 @@ function stepTransition() {
         } else if (tr.target) ready(tr.target);
         return;
     }
-    if (tr.kind !== "fade") {
-        // crossfade mixes the frozen old picture with the new stage; the slides
-        // move both, as upstream's slide shaders sample their two textures
-        const fromRoot = tr.fromRoot;
-        const newRoot = (tr.target as any)?.scratchLayers?.root as PIXI.Container | undefined;
-        if (fromRoot && !fromRoot.destroyed && newRoot) {
-            if (tr.kind === "crossfade") newRoot.alpha = amount;
-            if (tr.kind === "slide-left") { fromRoot.x = -worldWidth(tr) * amount; newRoot.x = worldWidth(tr) * (1 - amount); }
-            if (tr.kind === "slide-right") { fromRoot.x = worldWidth(tr) * amount; newRoot.x = -worldWidth(tr) * (1 - amount); }
-            if (tr.kind === "slide-up") { fromRoot.y = -worldHeight(tr) * amount; newRoot.y = worldHeight(tr) * (1 - amount); }
-            if (tr.kind === "slide-down") { fromRoot.y = worldHeight(tr) * amount; newRoot.y = -worldHeight(tr) * (1 - amount); }
-        }
-        if (amount < 1) return;
-    } else if (amount < 1) {
-        if (tr.overlay && !tr.overlay.destroyed) tr.overlay.alpha = 1 - amount;
-        return;
-    }
-    endTransition(true);
+    if (tr.phase === "playing") drawTransition(tr);
 }
 
-function worldWidth(tr: Transition): number { return tr.world.width; }
-function worldHeight(tr: Transition): number { return tr.world.height; }
+/** The new stage as it stands, mixed with the old picture over everything else. */
+function drawTransition(tr: Transition) {
+    const view = tr.view;
+    if (!view) return;
+    // a stage shown after the mesh went up would otherwise sit on top of it
+    const parent = view.mesh.parent;
+    if (parent && parent.getChildIndex(view.mesh) !== parent.children.length - 1) {
+        parent.setChildIndex(view.mesh, parent.children.length - 1);
+    }
+    tr.target?._preRender?.();
+    view.drawTo(rootOf(tr.target), colourOf(tr.target));
+    view.setProgress(tr.tick / tr.ticks);
+}
 
-/** Take the overlay down. `switchNow` finishes a transition that was cut short. */
+/** Take the transition down. `switchNow` shows the new stage, also when cut short. */
 function endTransition(switchNow: boolean) {
     const tr = transition;
     transition = undefined;
@@ -305,9 +276,16 @@ function endTransition(switchNow: boolean) {
     tr.cancelFactory?.();
     if (switchNow) setActiveScratchStage(tr.target);
     try {
-        tr.world.app?.ticker?.remove(tr.tick);
+        tr.world.app?.ticker?.remove(tr.frame);
     } catch {
         // the app is gone with the stopped program; nothing left to detach from
     }
-    if (!tr.overlay.destroyed) tr.overlay.destroy();
+    if (tr.view) {
+        try {
+            tr.view.mesh.removeFromParent();
+            tr.view.destroy();
+        } catch {
+            // destroyed with the renderer of a stopped program
+        }
+    }
 }

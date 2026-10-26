@@ -37,23 +37,25 @@ class SourceStage extends Stage {
 
 class DestinationStage extends Stage {
   private TransitionProbe window;
-  private boolean sawFadeIn;
+  private boolean passed;
   DestinationStage(TransitionProbe window) {
     this.window = window;
-    // An interpreted constructor can wait for assets while the screen stays black.
+    // An interpreted constructor can wait for assets while the old stage stands still.
     this.waitSeconds(0.5);
   }
 
   public void run() {
+    // pause() holds the next batch of ticks; the rest of this one still runs, as upstream
+    if (passed) return;
+    // 7.0: the new stage's run() starts once the transition is over
     if (window.isTransitioning()) {
-      sawFadeIn = true;
-      window.transitionToStage(() -> { throw new RuntimeException("Fade-in request ran"); }, 0.03);
-      return;
+      throw new RuntimeException("New stage ran during the transition");
     }
-    if (!sawFadeIn || TransitionProbe.factories != 1 || TransitionProbe.oldFrames != 1) {
+    if (TransitionProbe.factories != 1 || TransitionProbe.oldFrames != 1) {
       throw new RuntimeException("Transition lifecycle mismatch");
     }
     println("TRANSITION_PASS");
+    passed = true;
     window.pause();
   }
 }

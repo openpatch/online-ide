@@ -2,8 +2,8 @@ import { Interpreter } from "../../../../common/interpreter/Interpreter";
 import { activeScratchStage } from "./ScratchStages";
 
 /**
- * Parts of Scratch for Java cannot work in a browser: GLSL shaders, the raw
- * pixel buffer, GIF/video recording, the file system, real fullscreen. Those
+ * Parts of Scratch for Java cannot work in a browser: GIF recording, the file
+ * system, real fullscreen, extensions of the program's own. Those
  * methods are still declared here, so a program written against the desktop
  * library compiles and runs unchanged — calling one prints a notice into the
  * output and otherwise does nothing.

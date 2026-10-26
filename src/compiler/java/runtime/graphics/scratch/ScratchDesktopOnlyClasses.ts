@@ -7,40 +7,14 @@ import { desktopOnly, desktopOnlyValue } from "./ScratchUnsupported";
 import { SRC } from "./ScratchLibraryComments";
 
 /**
- * The parts of Scratch for Java that a browser cannot provide: the raw pixel
- * buffer, GIF/video recording and the file system.
+ * The parts of Scratch for Java that a browser cannot provide: GIF recording
+ * and the file system.
  *
  * They are declared so that a program written against the desktop library still
  * compiles and runs here. Every method prints a one-time notice (see
  * ScratchUnsupported.ts) and then does nothing, so the rest of the program is
  * unaffected.
  */
-
-/** Raw access to the three render buffers — no equivalent in the browser. */
-export class ScratchPixelsClass extends ObjectClass {
-    static __javaDeclarations: LibraryDeclarations = [
-        { type: "declaration", package: "org.openpatch.scratch", signature: "class Pixels extends Object", comment: SRC.pixelsClassComment },
-        { type: "method", signature: "static Pixels of(Stage stage)", native: ScratchPixelsClass._ofStage, comment: SRC.pixelsOfComment },
-        { type: "method", signature: "static Pixels of(String path)", native: ScratchPixelsClass._ofPath, comment: SRC.pixelsOfComment },
-        { type: "method", signature: "int getWidth()", native: ScratchPixelsClass.prototype._getWidth, comment: SRC.pixelsGetWidthComment },
-        { type: "method", signature: "int getHeight()", native: ScratchPixelsClass.prototype._getHeight, comment: SRC.pixelsGetHeightComment },
-        { type: "method", signature: "Color getColor(int x, int y)", native: ScratchPixelsClass.prototype._getColor, comment: SRC.pixelsGetColorComment },
-        { type: "method", signature: "int getArgb(int x, int y)", native: ScratchPixelsClass.prototype._getArgb, comment: SRC.pixelsGetArgbComment },
-    ];
-    static type: NonPrimitiveType;
-
-    private static readonly HINT = "Der Bildpuffer ist im Browser nicht zugänglich. / The pixel buffer is not reachable in the browser.";
-    static _ofStage(_stage: any): ScratchPixelsClass {
-        return desktopOnlyValue("Pixels.of(stage)", new ScratchPixelsClass(), ScratchPixelsClass.HINT);
-    }
-    static _ofPath(_path: string): ScratchPixelsClass {
-        return desktopOnlyValue("Pixels.of(path)", new ScratchPixelsClass(), ScratchPixelsClass.HINT);
-    }
-    _getWidth(): number { return desktopOnlyValue("Pixels.getWidth()", 0, ScratchPixelsClass.HINT); }
-    _getHeight(): number { return desktopOnlyValue("Pixels.getHeight()", 0, ScratchPixelsClass.HINT); }
-    _getColor(_x: number, _y: number): any { return desktopOnlyValue("Pixels.getColor()", null, ScratchPixelsClass.HINT); }
-    _getArgb(_x: number, _y: number): number { return desktopOnlyValue("Pixels.getArgb()", 0, ScratchPixelsClass.HINT); }
-}
 
 const RECORDER_HINT = "Aufnahmen gibt es nur in der Desktop-Version. / Recording is desktop only.";
 
@@ -90,6 +64,8 @@ export class ScratchFileClass extends ObjectClass {
 export class ScratchMapObjectClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch.tiled", signature: "class MapObject extends Object", comment: SRC.mapObjectClassComment },
+        // upstream's data classes are made by its TMX reader, and have the default constructor
+        { type: "method", signature: "MapObject()", native: ScratchMapObjectClass.prototype._c0 },
         { type: "method", signature: "Shape getShape()", native: ScratchMapObjectClass.prototype._getShape },
         { type: "field", signature: "double height" },
         { type: "field", signature: "int id" },
@@ -134,6 +110,7 @@ export class ScratchMapObjectClass extends ObjectClass {
     _getPropertyBoolean(name: string): boolean { return this._getProperty(name).toLowerCase() === "true"; }
     _getShape(): ScratchShapeClass { return ScratchShapeClass.of(this.shape.points.map(point => ({ ...point }))); }
     _setClassName(name: string) { (this as any).className = name; }
+    _c0() { return this; }
 
 }
 
@@ -141,6 +118,7 @@ export class ScratchMapObjectClass extends ObjectClass {
 export class ScratchPropertyClass extends ObjectClass {
     static __javaDeclarations: LibraryDeclarations = [
         { type: "declaration", package: "org.openpatch.scratch.tiled", signature: "class Property extends Object", comment: SRC.propertyClassComment },
+        { type: "method", signature: "Property()", native: ScratchPropertyClass.prototype._c0 },
         { type: "method", signature: "void setText(String text)", native: ScratchPropertyClass.prototype._setText, comment: SRC.propertySetTextComment },
         { type: "field", signature: "String name" },
         { type: "field", signature: "String type" },
@@ -149,6 +127,7 @@ export class ScratchPropertyClass extends ObjectClass {
     ];
     static type: NonPrimitiveType;
     _setText(text: string) { (this as any).text = text; }
+    _c0() { return this; }
 }
 
 /** The image a Tiled tileset refers to. */
@@ -158,6 +137,8 @@ export class ScratchTilesetImageClass extends ObjectClass {
         { type: "field", signature: "String source" },
         { type: "field", signature: "int width" },
         { type: "field", signature: "int height" },
+        { type: "method", signature: "TilesetImage()", native: ScratchTilesetImageClass.prototype._c0 },
     ];
     static type: NonPrimitiveType;
+    _c0() { return this; }
 }

@@ -854,8 +854,8 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "Sprite/extension",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "For extensions, which run against the desktop's window and render threads. The browser ships its extensions natively and loads no others."
   },
   {
     "id": "Sprite/getAnimationFrame",
@@ -1444,8 +1444,8 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "Stage/extension",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "For extensions, which run against the desktop's window and render threads. The browser ships its extensions natively and loads no others."
   },
   {
     "id": "Stage/find",
@@ -2349,33 +2349,33 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "drawing/DrawingExtension/constructor",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "drawing/DrawingExtension/id",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "drawing/DrawingExtension/install",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "drawing/DrawingExtension/name",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "drawing/DrawingExtension/requires",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "drawing/DrawingExtension/version",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "drawing/DrawingSprite/constructor",
@@ -2704,53 +2704,53 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "recorder/GifEncoder/addFrame",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/constructor",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/finish",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/setDelay",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/setDispose",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/setFrameRate",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/setQuality",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/setRepeat",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/setTransparent",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifEncoder/start",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The encoder behind the desktop's GifRecorder; recording is desktop-only."
   },
   {
     "id": "recorder/GifRecorder/constructor",
@@ -2774,33 +2774,33 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "recorder/RecorderExtension/constructor",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "recorder/RecorderExtension/id",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "recorder/RecorderExtension/install",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "recorder/RecorderExtension/name",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "recorder/RecorderExtension/requires",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "recorder/RecorderExtension/version",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "save/File/constructor",
@@ -2864,33 +2864,33 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "save/SaveExtension/constructor",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "save/SaveExtension/id",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "save/SaveExtension/name",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "save/SaveExtension/requires",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "save/SaveExtension/version",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "tiled/MapObject/constructor",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "implemented",
+    "reason": "Declared by the browser; behavioral limitations and compiler dialect differences still apply."
   },
   {
     "id": "tiled/MapObject/getProperty",
@@ -2924,8 +2924,8 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "tiled/Property/constructor",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "implemented",
+    "reason": "Declared by the browser; behavioral limitations and compiler dialect differences still apply."
   },
   {
     "id": "tiled/Property/setText",
@@ -2934,33 +2934,33 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "tiled/TiledExtension/constructor",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "tiled/TiledExtension/id",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "tiled/TiledExtension/install",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "tiled/TiledExtension/name",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "tiled/TiledExtension/requires",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "tiled/TiledExtension/version",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "The extension's entry point for the desktop's ServiceLoader. The browser ships this extension natively."
   },
   {
     "id": "tiled/TiledMap/constructor",
@@ -3039,12 +3039,12 @@ export const scratchBrowserMembers = [
   },
   {
     "id": "tiled/TiledMap/toString",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "desktop-only",
+    "reason": "Prints the desktop's parsed TMX tree as JSON; the browser reads maps without it."
   },
   {
     "id": "tiled/TilesetImage/constructor",
-    "status": "awaiting-browser-support",
-    "reason": "Some desktop overloads are not declared by the browser. See the missing signatures in the compatibility contract."
+    "status": "implemented",
+    "reason": "Declared by the browser; behavioral limitations and compiler dialect differences still apply."
   }
 ];

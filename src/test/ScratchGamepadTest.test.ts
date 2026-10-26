@@ -247,6 +247,7 @@ test('the game clock polls the gamepads and re-applies the sort once per batch o
     beginScratchStages({ width: 800, height: 400, app: { stage: { addChild: (c: any) => c } } } as any);
     const stage: any = Object.create(ScratchStageClass.prototype);
     stage.sprites = [];
+    stage.texts = new Set();
     stage.isActing = false;
     stage._activate = () => { };
     stage._deactivate = () => { };
@@ -256,20 +257,22 @@ test('the game clock polls the gamepads and re-applies the sort once per batch o
     stage.runtime = { pollAndDispatchGamepads: polls };
     stage._applySorting = sorts;
     registerScratchStage(stage);
+    // a frame of 1/60 s of real time before each batch: the clock runs ticks by real time
+    const frame = () => { (clock as any).lastFrame = performance.now() - 1000 / 60; clock.runFrame(undefined as any, [stage]); };
 
-    clock.runFrame(undefined as any, [stage]);
+    frame();
     expect(polls).toHaveBeenCalledTimes(1);      // the batch ran its ticks
     expect(sorts).toHaveBeenCalledTimes(1);
 
     clock.pause();
     polls.mockClear();
     sorts.mockClear();
-    clock.runFrame(undefined as any, [stage]);
+    frame();
     expect(polls).not.toHaveBeenCalled();       // paused: no ticks run, so —
     expect(sorts).not.toHaveBeenCalled();       // like the desktop — nothing is handed out
 
     clock.step();                               // Window.step(): one tick while paused
-    clock.runFrame(undefined as any, [stage]);
+    frame();
     expect(polls).toHaveBeenCalledTimes(1);
     expect(sorts).toHaveBeenCalledTimes(1);
 });

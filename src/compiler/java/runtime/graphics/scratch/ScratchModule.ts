@@ -18,10 +18,11 @@ import { ScratchClockClass } from "./ScratchClockClass";
 import { ScratchColorClass } from "./ScratchColorClass";
 import {
     ScratchFileClass, ScratchGifRecorderClass,
-    ScratchMapObjectClass, ScratchPixelsClass,
+    ScratchMapObjectClass,
     ScratchPropertyClass,
     ScratchTilesetImageClass,
 } from "./ScratchDesktopOnlyClasses";
+import { ScratchPixelsClass } from "./ScratchPixels";
 import { ScratchShaderClass, ScratchShadersClass } from "./ScratchShaders";
 import { ScratchIOExceptionClass, ScratchSaveDataClass } from './ScratchSaveDataClass';
 import { ScratchExceptionClass } from "./ScratchExceptionClass";

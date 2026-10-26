@@ -2,8 +2,9 @@ import * as PIXI from 'pixi.js';
 import { describe, expect, test, vi } from 'vitest';
 import { IWorld } from '../compiler/java/runtime/graphics/IWorld';
 import {
-    activeScratchStage, beginScratchStages, isScratchStageActive, registerScratchStage,
-    scratchStagesRunning, scratchStageTransitioning, setActiveScratchStage, transitionToScratchStage,
+    activeScratchStage, advanceScratchTransition, beginScratchStages, isScratchStageActive, registerScratchStage,
+    scratchStagesRunning, scratchStageTransitioning, scratchTransitionPlaying, setActiveScratchStage,
+    transitionToScratchStage,
 } from '../compiler/java/runtime/graphics/scratch/ScratchStages';
 
 /**
@@ -13,6 +14,8 @@ import {
  */
 
 class FakeStage {
+    /** what a transition draws of the stage */
+    scratchLayers = { root: new PIXI.Container() };
     activations: number = 0;
     deactivations: number = 0;
     preRenders: number = 0;
@@ -52,6 +55,19 @@ function fakeWorld(): FakeWorld {
         tick: () => { for (const l of listeners.slice()) l.cb(); },
         priorities: () => listeners.map(l => l.priority),
     } as any;
+}
+
+/** A world that can draw: the transition takes its pictures through the renderer. */
+function drawingWorld(): FakeWorld & { renders: any[] } {
+    const world = fakeWorld() as FakeWorld & { renders: any[] };
+    world.renders = [];
+    (world.app as any).renderer = { render: (options: any) => world.renders.push(options) };
+    return world;
+}
+
+/** The game clock's ticks while a transition is drawn. */
+function transitionTicks(count: number) {
+    for (let i = 0; i < count; i++) advanceScratchTransition();
 }
 
 const sleep = (millis: number) => new Promise(resolve => setTimeout(resolve, millis));
@@ -109,33 +125,6 @@ describe('Scratch stages', () => {
         expect(beginScratchStages(world)).toBe(false);
     });
 
-    test('transitionToStage holds the stages still, then swaps them halfway', async () => {
-        const world = fakeWorld();
-        beginScratchStages(world);
-        const one = new FakeStage(), two = new FakeStage();
-        registerScratchStage(one);
-        registerScratchStage(two);
-
-        // one millisecond per half, so a short wait is enough to end each of them
-        transitionToScratchStage(two, 1);
-        expect(scratchStagesRunning()).toBe(false);
-        expect(activeScratchStage()).toBe(one);
-
-        await sleep(10);
-        world.tick();       // fade out is over: the new stage comes up
-        expect(activeScratchStage()).toBe(two);
-        expect(scratchStagesRunning()).toBe(true);
-
-        await sleep(10);
-        world.tick();       // fade in is over: the overlay goes away
-        expect(activeScratchStage()).toBe(two);
-        expect(scratchStagesRunning()).toBe(true);
-
-        // and the ticker callback is gone, so a later tick does nothing
-        world.tick();
-        expect(two.activations).toBe(1);
-    });
-
     test('the stage on screen is asked to draw once per frame, just before the frame is', () => {
         const world = fakeWorld();
         beginScratchStages(world);
@@ -152,23 +141,6 @@ describe('Scratch stages', () => {
 
         expect(one.preRenders).toBe(2);
         expect(two.preRenders).toBe(0);     // the stage waiting off screen draws nothing
-    });
-
-    test('the stage held still by a transition does not draw either', async () => {
-        const world = fakeWorld();
-        beginScratchStages(world);
-        const one = new FakeStage(), two = new FakeStage();
-        registerScratchStage(one);
-        registerScratchStage(two);
-
-        transitionToScratchStage(two, 1);
-        world.tick();
-        expect(one.preRenders).toBe(0);
-
-        await sleep(10);
-        world.tick();       // the fade out is over and the new stage is up
-        world.tick();
-        expect(two.preRenders).toBeGreaterThan(0);
     });
 
     test('a new run stops drawing the stages of the previous one', () => {
@@ -196,86 +168,129 @@ describe('Scratch stages', () => {
         expect(one.activations).toBe(1);
     });
 
-    test('a supplier runs once at black, stays reserved while loading and starts the fade when ready', () => {
-        let now = 0;
-        const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
-        try {
-            const world = fakeWorld();
-            beginScratchStages(world);
-            const first = new FakeStage(), next = new FakeStage();
-            registerScratchStage(first);
-            const ignored = vi.fn();
-            let finish!: (stage: FakeStage) => void;
-            const factory = vi.fn(ready => {
-                expect(scratchStageTransitioning()).toBe(true);
-                expect(activeScratchStage()).toBe(first);
-                transitionToScratchStage(ignored, 100);
-                finish = ready;
-            });
-            transitionToScratchStage(factory, 100);
-            transitionToScratchStage(ignored, 100);
-            expect(factory).not.toHaveBeenCalled();
-            now = 200;
-            world.tick();
-            expect(factory).not.toHaveBeenCalled();
-            expect((world.app.stage as any).children.at(-1).alpha).toBe(1);
-            world.tick();
-            expect(factory).toHaveBeenCalledTimes(1);
-            now = 2000;
-            world.tick();
-            expect(scratchStagesRunning()).toBe(false);
-            expect(activeScratchStage()).toBe(first);
-            finish(next);
-            expect(activeScratchStage()).toBe(next);
-            expect(scratchStagesRunning()).toBe(true);
-            transitionToScratchStage(ignored, 100);
-            now = 2100;
-            world.tick();
+    test('a transition holds both stages still for round(seconds * 60) game ticks, then the new one runs', () => {
+        const world = drawingWorld();
+        beginScratchStages(world);
+        const one = new FakeStage(), two = new FakeStage();
+        registerScratchStage(one);
+        registerScratchStage(two);
+
+        transitionToScratchStage(two, 0.5);
+        expect(scratchStagesRunning()).toBe(false);
+        expect(scratchTransitionPlaying()).toBe(false);
+        expect(activeScratchStage()).toBe(one);
+
+        world.tick();       // the next frame: the old picture, then the new stage under the shader
+        expect(world.renders[0].container).toBe(one.scratchLayers.root);
+        expect(activeScratchStage()).toBe(two);
+        expect(scratchTransitionPlaying()).toBe(true);
+        expect(scratchStagesRunning()).toBe(false);
+        expect((world.app.stage as any).children.at(-1)).toBeInstanceOf(PIXI.Mesh);
+
+        transitionTicks(29);
+        expect(scratchStageTransitioning()).toBe(true);
+        transitionTicks(1); // tick 30 of 30
+        expect(scratchStageTransitioning()).toBe(false);
+        expect(scratchStagesRunning()).toBe(true);
+        expect(activeScratchStage()).toBe(two);
+        expect(two.activations).toBe(1);
+    });
+
+    test('without time, or without an old picture, the new stage comes at once', () => {
+        const world = drawingWorld();
+        beginScratchStages(world);
+        const one = new FakeStage(), two = new FakeStage(), three = new FakeStage();
+        registerScratchStage(one);
+
+        transitionToScratchStage(two, 0);
+        world.tick();
+        expect(activeScratchStage()).toBe(two);
+        expect(scratchStageTransitioning()).toBe(false);
+
+        // a world that cannot draw has no picture to mix
+        const blind = fakeWorld();
+        beginScratchStages(blind);
+        registerScratchStage(one);
+        transitionToScratchStage(three, 1);
+        blind.tick();
+        expect(activeScratchStage()).toBe(three);
+        expect(scratchStageTransitioning()).toBe(false);
+    });
+
+    test('the pre-render of a held stage is left out; the transition draws it into its picture', () => {
+        const world = drawingWorld();
+        beginScratchStages(world);
+        const one = new FakeStage(), two = new FakeStage();
+        registerScratchStage(one);
+        registerScratchStage(two);
+
+        transitionToScratchStage(two, 1);
+        world.tick();
+        world.tick();
+        expect(one.preRenders).toBe(1);     // once, for the old picture
+        expect(two.preRenders).toBe(2);     // once per frame it is mixed in
+        expect(world.renders.at(-1).container).toBe(two.scratchLayers.root);
+    });
+
+    test('a supplier runs in the next frame, stays reserved while loading and starts the transition when ready', () => {
+        const world = drawingWorld();
+        beginScratchStages(world);
+        const first = new FakeStage(), next = new FakeStage();
+        registerScratchStage(first);
+        const ignored = vi.fn();
+        let finish!: (stage: FakeStage) => void;
+        const factory = vi.fn(ready => {
             expect(scratchStageTransitioning()).toBe(true);
-            now = 2200;
-            world.tick();
-            expect(scratchStageTransitioning()).toBe(false);
-            expect(ignored).not.toHaveBeenCalled();
-        } finally { clock.mockRestore(); }
+            expect(activeScratchStage()).toBe(first);
+            transitionToScratchStage(ignored, 100);
+            finish = ready;
+        });
+        transitionToScratchStage(factory, 0.25);
+        transitionToScratchStage(ignored, 100);
+        expect(factory).not.toHaveBeenCalled();
+        world.tick();
+        expect(factory).toHaveBeenCalledTimes(1);
+        world.tick();
+        expect(scratchStagesRunning()).toBe(false);
+        expect(scratchTransitionPlaying()).toBe(false);   // no time passes while it loads
+        expect(activeScratchStage()).toBe(first);
+        finish(next);
+        expect(activeScratchStage()).toBe(next);
+        expect(scratchTransitionPlaying()).toBe(true);
+        transitionToScratchStage(ignored, 100);
+        transitionTicks(15);
+        expect(scratchStageTransitioning()).toBe(false);
+        expect(ignored).not.toHaveBeenCalled();
     });
 
     test('a new run cancels a pending supplier and ignores its late completion', () => {
-        const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
-        try {
-            const world = fakeWorld();
-            beginScratchStages(world);
-            const first = new FakeStage(), stale = new FakeStage(), fresh = new FakeStage();
-            registerScratchStage(first);
-            const cancel = vi.fn();
-            let finish!: (stage: FakeStage) => void;
-            transitionToScratchStage(ready => { finish = ready; return cancel; }, 100);
-            clock.mockReturnValue(200);
-            world.tick();
-            world.tick();
-            beginScratchStages(fakeWorld());
-            registerScratchStage(fresh);
-            expect(cancel).toHaveBeenCalledOnce();
-            finish(stale);
-            expect(activeScratchStage()).toBe(fresh);
-            expect(stale.activations).toBe(0);
-            expect(scratchStageTransitioning()).toBe(false);
-        } finally { clock.mockRestore(); }
+        const world = drawingWorld();
+        beginScratchStages(world);
+        const first = new FakeStage(), stale = new FakeStage(), fresh = new FakeStage();
+        registerScratchStage(first);
+        const cancel = vi.fn();
+        let finish!: (stage: FakeStage) => void;
+        transitionToScratchStage(ready => { finish = ready; return cancel; }, 1);
+        world.tick();
+        beginScratchStages(fakeWorld());
+        registerScratchStage(fresh);
+        expect(cancel).toHaveBeenCalledOnce();
+        finish(stale);
+        expect(activeScratchStage()).toBe(fresh);
+        expect(stale.activations).toBe(0);
+        expect(scratchStageTransitioning()).toBe(false);
     });
 
-    test('a failed supplier removes the overlay and releases the transition', () => {
-        const clock = vi.spyOn(performance, 'now').mockReturnValue(0);
-        try {
-            const world = fakeWorld();
-            beginScratchStages(world);
-            const first = new FakeStage();
-            registerScratchStage(first);
-            transitionToScratchStage(() => { throw new Error('failed constructor'); }, 100);
-            clock.mockReturnValue(200);
-            world.tick();
-            expect(() => world.tick()).toThrow('failed constructor');
-            expect(scratchStageTransitioning()).toBe(false);
-            expect(scratchStagesRunning()).toBe(true);
-            expect(activeScratchStage()).toBe(first);
-        } finally { clock.mockRestore(); }
+    test('a failed supplier releases the transition', () => {
+        const world = drawingWorld();
+        beginScratchStages(world);
+        const first = new FakeStage();
+        registerScratchStage(first);
+        transitionToScratchStage(() => { throw new Error('failed constructor'); }, 1);
+        expect(() => world.tick()).toThrow('failed constructor');
+        expect(scratchStageTransitioning()).toBe(false);
+        expect(scratchStagesRunning()).toBe(true);
+        expect(activeScratchStage()).toBe(first);
+        expect((world.app.stage as any).children.some((c: any) => c instanceof PIXI.Mesh)).toBe(false);
     });
 });

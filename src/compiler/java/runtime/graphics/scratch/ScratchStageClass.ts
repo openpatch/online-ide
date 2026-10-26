@@ -521,8 +521,15 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     _remove(sprite: ScratchSpriteClass) {
         if (sprite?.stage === this) sprite._remove();
     }
+    /** As upstream: the sprites, then the texts, then the pens. */
     _removeAll() {
         for (const s of this.sprites.slice()) this._remove(s);
+        this.removeTextsAndPens();
+    }
+
+    private removeTextsAndPens() {
+        for (const text of [...this.texts]) this._removeText(text);
+        for (const pen of [...this.pens]) this._removePen(pen);
     }
 
     _mj$remove$void$Sprite(t: Thread, callback: CallbackParameter, sprite: ScratchSpriteClass) {
@@ -541,7 +548,7 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     }
 
     _mj$removeAll$void$(t: Thread, callback: CallbackParameter) {
-        this.removeSprites(t, callback, [...this.sprites]);
+        this.removeSprites(t, () => { this.removeTextsAndPens(); callback?.(); }, [...this.sprites]);
     }
 
     _mj$remove$void$Class(t: Thread, callback: CallbackParameter, c: ClassClass) {
@@ -723,8 +730,19 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
     _display(text: string) { this.displayText(text, undefined); }
     _displayFor(text: string, seconds: number) { this.displayText(text, seconds * 1000); }
 
+    /**
+     * Upstream's Stage.tick, after the run()s: timed texts count the tick,
+     * the stage's own first, then the sprites' bubbles, then the display band.
+     */
+    _tickTimedTexts() {
+        for (const text of [...this.texts]) text.tickTimer();
+        for (const sprite of [...this.sprites]) sprite.tickSpeech();
+        if (this.displayTicksLeft > 0 && --this.displayTicksLeft === 0) this.displayText("", undefined);
+    }
+
     private displayContainer?: PIXI.Container;
-    private displayTimeout?: any;
+    /** ticks of the stage the display band stays, -1 for good (upstream: its Text's ticksLeft) */
+    private displayTicksLeft = -1;
     private displayHeight: number = 0;
 
     /**
@@ -737,11 +755,11 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
      * itself and be rounded on its top two corners only.
      */
     private displayText(text: string, millis?: number) {
-        if (this.displayTimeout) { this.displayTimeout(); this.displayTimeout = undefined; }
+        this.displayTicksLeft = -1;
         if (this.displayContainer) { this.displayContainer.destroy({ children: true }); this.displayContainer = undefined; }
         this.displayContainer = this.makeBottomBand(text);
         this.positionDisplayBand();
-        if (millis !== undefined) this.displayTimeout = scratchGameClock().schedule(() => this.displayText("", undefined), millis);
+        if (millis !== undefined) this.displayTicksLeft = Math.max(1, Math.round(millis * 60 / 1000));
     }
 
     /**
@@ -1060,11 +1078,20 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         if (millis <= 0) return;
         t.scheduler.suspendThread(t);
         t.state = ThreadState.timedWaiting;
+        // Upstream (Stage.waitSeconds): called in run() or an event - on the
+        // game thread - the whole game waits for real time, as it does for any
+        // slow code. Here those are the act thread and the event threads, and
+        // holding the game clock stops every tick until the wait is over.
+        if (ScratchStageClass.onGameThread(t)) {
+            const release = scratchGameClock().hold();
+            setTimeout(() => { release(); t.scheduler.restoreThread(t); }, millis);
+            return;
+        }
         // While a transition fades out or builds the next stage, no stage runs,
         // so the game clock stands still and a game-time deadline would never
         // fire. Upstream's supplier runs on the game thread, whose waitSeconds
-        // is a real sleep (Stage.waitSeconds): a constructor that waits while
-        // the screen stays black holds real time, or the transition deadlocks.
+        // is a real sleep: a constructor that waits while the screen stays
+        // black holds real time, or the transition deadlocks.
         if (!scratchStagesRunning()) {
             setTimeout(() => t.scheduler.restoreThread(t), millis);
             return;
@@ -1074,6 +1101,11 @@ export class ScratchStageClass extends ActorClass implements InternalMouseListen
         // holds while the game is paused and needs Window.step() ticks to pass.
         // The clock runs the deadlines once per tick (see advance()).
         scratchGameClock().schedule(() => t.scheduler.restoreThread(t), millis);
+    }
+
+    /** Whether `t` runs a tick or an event, where upstream's game thread would. */
+    private static onGameThread(t: Thread): boolean {
+        return t.name === "act method-thread" || t.name?.startsWith("scratch ") === true;
     }
 
     /**

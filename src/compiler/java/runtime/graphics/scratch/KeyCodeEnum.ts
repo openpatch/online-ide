@@ -62,7 +62,26 @@ export class KeyCodeEnum extends EnumClass {
         this.browserKeys = browserKeys;
     }
 
-    static values: KeyCodeEnum[] = Object.keys(KEY_MAP).map(
+    /**
+     * upstream's order of the constants, so values() and ordinal() agree; where
+     * two keys share a browser key the first of them is delivered, and in this
+     * order that is still the main one (LEFT before KP_LEFT, MINUS before SUBTRACT)
+     */
+    private static readonly ORDER = [
+    "ENTER", "BACKSPACE", "TAB", "CANCEL", "CLEAR", "SHIFT", "CTRL", "ALT", "PAUSE", "CAPS_LOCK",
+    "ESCAPE", "SPACE", "PAGE_UP", "PAGE_DOWN", "END", "HOME", "LEFT", "UP", "RIGHT", "DOWN",
+    "COMMA", "MINUS", "PERIOD", "SLASH", "DIGIT_0", "DIGIT_1", "DIGIT_2", "DIGIT_3", "DIGIT_4",
+    "DIGIT_5", "DIGIT_6", "DIGIT_7", "DIGIT_8", "DIGIT_9", "SEMICOLON", "EQUALS", "A", "B", "C",
+    "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V",
+    "W", "X", "Y", "Z", "OPEN_BRACKET", "BACK_SLASH", "CLOSE_BRACKET", "NUMPAD_0", "NUMPAD_1",
+    "NUMPAD_2", "NUMPAD_3", "NUMPAD_4", "NUMPAD_5", "NUMPAD_6", "NUMPAD_7", "NUMPAD_8", "NUMPAD_9",
+    "MULTIPLY", "ADD", "SUBTRACT", "DECIMAL", "DIVIDE", "F1", "F2", "F3", "F4", "F5", "F6", "F7",
+    "F8", "F9", "F10", "F11", "F12", "DELETE", "NUM_LOCK", "SCROLL_LOCK", "PRINT_SCREEN", "INSERT",
+    "HELP", "META", "BACK_QUOTE", "QUOTE", "KP_UP", "KP_DOWN", "KP_LEFT", "KP_RIGHT", "WINDOWS",
+    "CONTEXT_MENU", "UNKNOWN"
+    ];
+
+    static values: KeyCodeEnum[] = KeyCodeEnum.ORDER.map(
         (name, index) => new KeyCodeEnum(name, index, KEY_MAP[name])
     );
 }

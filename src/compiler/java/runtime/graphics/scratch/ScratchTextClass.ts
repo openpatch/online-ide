@@ -1,5 +1,4 @@
 import * as PIXI from "pixi.js";
-import { scratchGameClock } from './ScratchGameClock';
 import { CallbackParameter } from "../../../../common/interpreter/CallbackParameter";
 import { Thread } from "../../../../common/interpreter/Thread";
 import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
@@ -190,7 +189,8 @@ export class ScratchTextClass extends ObjectClass {
     private strokeColor: ScratchColorClass = ScratchColorClass.fromRGB(201, 201, 201);
 
     private container?: PIXI.Container;
-    private hideTimeout?: any;
+    /** upstream's ticksLeft: how many ticks of its stage a timed text stays, -1 for good */
+    private ticksLeft = -1;
     private sprite?: ScratchSpriteClass;
     private static attached = new WeakMap<IWorld, WeakIterableSet<ScratchTextClass>>();
 
@@ -402,14 +402,28 @@ export class ScratchTextClass extends ObjectClass {
     }
 
     _showText(text: string) {
-        if (this.hideTimeout) { this.hideTimeout(); this.hideTimeout = undefined; }
+        this.ticksLeft = -1;
         this.text = text ?? "";
         this.visible = this.text.length > 0;
         this.redraw();
     }
     _showTextFor(text: string, seconds: number) {
         this._showText(text);
-        this.hideTimeout = scratchGameClock().schedule(() => this._showText(""), seconds * 1000);
+        this.ticksLeft = Math.max(1, Math.round(seconds * 60));
+    }
+
+    /** upstream's Text.tick(), once per tick of its stage: a timed text hides and keeps its words */
+    tickTimer() {
+        if (this.ticksLeft > 0 && --this.ticksLeft === 0) {
+            this.ticksLeft = -1;
+            this._hide();
+        }
+    }
+
+    /** What the sprite this text belongs to says or thinks, as upstream's bubble is this text. */
+    mirrorSpeech(text: string, style: TextStyle) {
+        this.text = text ?? "";
+        this.style = style;
     }
 
     // ---- position ----
@@ -530,7 +544,7 @@ export class ScratchTextClass extends ObjectClass {
 
     _remove() {
         if (this.world) ScratchTextClass.attached.get(this.world)?.delete(this);
-        if (this.hideTimeout) { this.hideTimeout(); this.hideTimeout = undefined; }
+        this.ticksLeft = -1;
         if (this.container && !this.container.destroyed) this.container.destroy({ children: true });
         this.container = undefined;
         this.visible = false;

@@ -29,6 +29,7 @@ import { createColorEffectFilter } from "./ScratchEffects";
 import { roundToScratchPixelGrid, scratchDefaultFontFamily } from "./ScratchFont";
 import { ScratchShapeClass } from "./ScratchShapeClasses";
 import { ScratchTextClass } from "./ScratchTextClass";
+import { TextStyle } from "./TextStyleEnum";
 import { TextAlign } from "./TextAlignEnum";
 import { ScratchTimerClass } from "./ScratchTimerClass";
 import { ScratchVector2Class } from "./ScratchVector2Class";
@@ -402,7 +403,6 @@ export class ScratchSpriteClass extends ShapeClass {
             if (callback) callback();
             return;
         }
-        this.stepGlide();
         this._mj$run$void$(t, callback);
     }
     _mj$run$void$(_t: Thread, callback: CallbackParameter): void { if (callback) callback(); }
@@ -471,7 +471,8 @@ export class ScratchSpriteClass extends ShapeClass {
     private speechTail?: PIXI.Graphics;
     private speechBubbleWidth: number = 0;
     private speechThink: boolean = false;
-    private speechTimeout?: any;
+    /** ticks of its stage a timed bubble stays (upstream: its Text's ticksLeft), -1 for good */
+    private speechTicksLeft = -1;
 
     /**
      * Speech and thought bubbles, matching org.openpatch.scratch.Text as a
@@ -487,6 +488,9 @@ export class ScratchSpriteClass extends ShapeClass {
      */
     private showSpeech(text: string, think: boolean) {
         this.clearSpeech();
+        this.spokenText = text ?? "";
+        this.spokenThink = think;
+        this.spriteText?.mirrorSpeech(this.spokenText, think ? TextStyle.THINK : TextStyle.SPEAK);
         if (!text || text.length === 0) return;
 
         const fontSize = roundToScratchPixelGrid(ScratchSpriteClass.BUBBLE_FONT_SIZE);
@@ -647,22 +651,37 @@ export class ScratchSpriteClass extends ShapeClass {
     }
 
     private clearSpeech() {
-        if (this.speechTimeout) { this.speechTimeout(); this.speechTimeout = undefined; }
+        this.speechTicksLeft = -1;
         if (this.speechBubble) { this.speechBubble.destroy({ children: true }); this.speechBubble = undefined; }
         this.speechTail = undefined;
     }
 
     _say(text: string) { this.showSpeech(text, false); }
     _think(text: string) { this.showSpeech(text, true); }
-    _sayFor(text: string, seconds: number) { this.showSpeech(text, false); this.speechTimeout = scratchGameClock().schedule(() => this.clearSpeech(), seconds * 1000); }
-    _thinkFor(text: string, seconds: number) { this.showSpeech(text, true); this.speechTimeout = scratchGameClock().schedule(() => this.clearSpeech(), seconds * 1000); }
+    _sayFor(text: string, seconds: number) { this.showSpeech(text, false); this.speechTicksLeft = Math.max(1, Math.round(seconds * 60)); }
+    _thinkFor(text: string, seconds: number) { this.showSpeech(text, true); this.speechTicksLeft = Math.max(1, Math.round(seconds * 60)); }
+
+    /** Once per tick of its stage, after the run()s: a timed bubble goes, its words stay with getText(). */
+    tickSpeech() {
+        if (this.speechTicksLeft > 0 && --this.speechTicksLeft === 0) this.clearSpeech();
+        this.spriteText?.tickTimer();
+    }
 
     // ---- coordinate conversion + transform ----
     // scaleMagnitudeX/Y give the (positive) scale of the costume container.
     // A normal sprite scales uniformly by size%; UISprite overrides these to size
     // its costume in pixels. The LEFT_RIGHT flip and rotation are applied on top.
-    protected scaleMagnitudeX(): number { return this.size / 100; }
-    protected scaleMagnitudeY(): number { return this.size / 100; }
+    /** 7.0's setWidth / setHeight: drawn this many stage pixels wide or high, 0 to follow size */
+    private ownWidth = 0;
+    private ownHeight = 0;
+    protected scaleMagnitudeX(): number {
+        const w = this.costumes[this.currentCostume]?.texture.width ?? 0;
+        return this.ownWidth > 0 && w > 0 ? this.ownWidth / w : this.size / 100;
+    }
+    protected scaleMagnitudeY(): number {
+        const h = this.costumes[this.currentCostume]?.texture.height ?? 0;
+        return this.ownHeight > 0 && h > 0 ? this.ownHeight / h : this.size / 100;
+    }
 
     protected applyState() {
         if (!this.container || this.container.destroyed) return;
@@ -693,6 +712,7 @@ export class ScratchSpriteClass extends ShapeClass {
         this.directionRad = rotDeg * Math.PI / 180;
         this.setWorldTransformAndHitPolygonDirty();
         this.positionSpeech();
+        this.applyNineSlice();
         // pen follows the sprite (draws a segment when the pen is down)
         this.penObj?._setPosition(this.sx, this.sy);
     }
@@ -768,11 +788,18 @@ export class ScratchSpriteClass extends ShapeClass {
      * object; here the bubbles are drawn directly, so this is a separate Text
      * that follows the sprite and is yours to position and style.
      */
+    /** what the sprite last said or thought: upstream's getText() is its bubble */
+    private spokenText?: string;
+    private spokenThink = false;
+
     _getText(): ScratchTextClass {
         if (!this.spriteText) {
             this.spriteText = new ScratchTextClass();
             this.spriteText.world = this.world as any;
             this.spriteText._setPosition(this.sx, this.sy);
+            if (this.spokenText !== undefined) {
+                this.spriteText.mirrorSpeech(this.spokenText, this.spokenThink ? TextStyle.THINK : TextStyle.SPEAK);
+            }
         }
         return this.spriteText;
     }
@@ -918,10 +945,20 @@ export class ScratchSpriteClass extends ShapeClass {
         display.destroy();
     }
 
-    /** Build the PIXI display object for a costume. UISprite overrides for nine-slice. */
+    /** Build the PIXI display object for a costume: a nine-slice in a container while it counts. */
     protected createCostumeDisplay(texture: PIXI.Texture): PIXI.Container {
-        const sprite = new PIXI.Sprite(texture);
         const center = this.rotationCenterOf(texture.width, texture.height);
+        if (this.nineSliceOn()) {
+            // in the container's units, which are the costume's pixels
+            const holder = new PIXI.Container();
+            const nine = new PIXI.NineSliceSprite({ texture });
+            nine.position.set(-center.x, -center.y);
+            holder.addChild(nine);
+            this.nineDisplay = nine;
+            return holder;
+        }
+        this.nineDisplay = undefined;
+        const sprite = new PIXI.Sprite(texture);
         sprite.anchor.set(center.x / texture.width, center.y / texture.height);
         return sprite;
     }
@@ -1030,35 +1067,31 @@ export class ScratchSpriteClass extends ShapeClass {
     _getPosition(): ScratchVector2Class { return new ScratchVector2Class(this.sx, this.sy); }
 
     // ---- glide ----
-    // Interpolated over wall-clock time and advanced once per frame from act().
+    // As upstream: a glide takes round(seconds * 60) ticks, at least one, and
+    // moves one tick's worth before each run() of the sprite's stage.
     private glideFromX = 0; private glideFromY = 0;
     private glideToX = 0; private glideToY = 0;
-    private glideMillis = 0;
-    private glideStart = -1;   // -1 = not gliding
+    private glideTicks = 0;
+    private glideTick = -1;   // -1 = not gliding
 
     _glide(seconds: number, x: number, y: number) {
-        if (seconds <= 0) { this._setPosition(x, y); this.glideStart = -1; return; }
         this.glideFromX = this.sx; this.glideFromY = this.sy;
         this.glideToX = x; this.glideToY = y;
-        this.glideMillis = seconds * 1000;
-        this.glideStart = ScratchTimerClass._millis();
+        this.glideTicks = Math.max(1, Math.round(seconds * 60));
+        this.glideTick = 0;
     }
-    _isGliding(): boolean { return this.glideStart >= 0; }
+    _isGliding(): boolean { return this.glideTick >= 0; }
 
-    /** Advance an in-progress glide; called once per frame from act(). */
-    private stepGlide() {
-        if (this.glideStart < 0) return;
-        const elapsed = ScratchTimerClass._millis() - this.glideStart;
-        if (elapsed >= this.glideMillis) {
-            this.glideStart = -1;
-            this._setPosition(this.glideToX, this.glideToY);
-            return;
-        }
-        const f = elapsed / this.glideMillis;
+    /** One tick of the glide; the clock calls it for every sprite before the stage's run(). */
+    advanceGlide() {
+        if (this.glideTick < 0) return;
+        this.glideTick++;
+        const t = Math.min(1, this.glideTick / this.glideTicks);
         this._setPosition(
-            this.glideFromX + (this.glideToX - this.glideFromX) * f,
-            this.glideFromY + (this.glideToY - this.glideFromY) * f,
+            this.glideFromX + (this.glideToX - this.glideFromX) * t,
+            this.glideFromY + (this.glideToY - this.glideFromY) * t,
         );
+        if (t >= 1) this.glideTick = -1;
     }
 
     _goToMousePointer() { this._setPosition(this._getMouseX(), this._getMouseY()); }
@@ -1180,7 +1213,7 @@ export class ScratchSpriteClass extends ShapeClass {
     _show() { this.container.visible = true; }
     _hide() { this.container.visible = false; }
     _isVisibleScratch(): boolean { return this.container.visible; }
-    _setSize(percentage: number) { this.size = percentage; this.applyState(); }
+    _setSize(percentage: number) { this.size = Math.max(0, percentage); this.applyState(); }
     _changeSize(amount: number) { this._setSize(this.size + amount); }
     _changeTransparency(step: number) { this._setTransparency(this.transparency + step); }
     _getTransparency(): number { return this.transparency; }
@@ -1212,35 +1245,67 @@ export class ScratchSpriteClass extends ShapeClass {
         const scale = this.size / 100;
         // 7.0: widths and heights are doubles (35 % of 128 pixels is 44.8)
         return {
-            width: costume.texture.width * scale,
-            height: costume.texture.height * scale,
+            width: this.ownWidth > 0 ? this.ownWidth : costume.texture.width * scale,
+            height: this.ownHeight > 0 ? this.ownHeight : costume.texture.height * scale,
         };
     }
 
-    /** Stretch the sprite to the given width in pixels, by its size percentage. */
-    _setWidth(width: number) {
-        const costume = this.costumes[this.currentCostume];
-        if (costume && costume.texture.width > 0) this._setSize(width / costume.texture.width * 100);
-    }
-    _setHeight(height: number) {
-        const costume = this.costumes[this.currentCostume];
-        if (costume && costume.texture.height > 0) this._setSize(height / costume.texture.height * 100);
-    }
+    /**
+     * As upstream: draw the sprite this wide, whatever its costume's width and
+     * size; 0 follows the costume and size again. The size stays as it was.
+     */
+    _setWidth(width: number) { this.ownWidth = Math.max(0, width); this.applyState(); }
+    _setHeight(height: number) { this.ownHeight = Math.max(0, height); this.applyState(); }
     _changeWidth(by: number) { this._setWidth(this._getSpriteWidth() + by); }
     _changeHeight(by: number) { this._setHeight(this._getSpriteHeight() + by); }
 
     /**
-     * The 7.0 nine-slice margins. The browser's costume rendering has no
-     * nine-slice plane yet, so the values are stored but do not change what is
-     * drawn — a documented browser limitation until the renderer grows one.
+     * The 7.0 nine-slice margins. As upstream they count while the sprite is
+     * drawn at its own width or height: the corners keep their size, scaled
+     * with the sprite's size, and the edges and the middle stretch.
+     *
+     * The costume display keeps the transform that stretches the sprite to its
+     * own size, which the hitbox follows too. While the nine-slice counts, that
+     * display is a plain container around a NineSliceSprite, scaled back so
+     * that only the sprite's size reaches the corners (see createCostumeDisplay).
+     * Colour sensing does not see such a sprite.
      */
     private nineSlice?: { left: number, top: number, right: number, bottom: number };
+    private nineDisplay?: PIXI.NineSliceSprite;
     // Parameter order follows the desktop library (top, right, bottom, left);
     // the stored object keeps its own order.
     _setNineSlice(top: number, right: number, bottom: number, left: number) {
         this.nineSlice = { left, top, right, bottom };
+        this.applyNineSlice();
     }
-    _disableNineSlice() { this.nineSlice = undefined; }
+    _disableNineSlice() { this.nineSlice = undefined; this.applyNineSlice(); }
+
+    private nineSliceOn(): boolean {
+        return !!this.nineSlice && (this.ownWidth > 0 || this.ownHeight > 0) && this.currentCostume >= 0;
+    }
+
+    private applyNineSlice() {
+        const shown = !!this.nineDisplay && !this.nineDisplay.destroyed && this.nineDisplay.parent === this.container;
+        if (this.nineSliceOn() !== shown) {
+            // the other kind of costume display; applyState comes back here
+            if (this.currentCostume >= 0) this._applyCostumeIndex(this.currentCostume);
+            return;
+        }
+        if (!shown) return;
+        const nine = this.nineDisplay!;
+        const texture = this.costumes[this.currentCostume].texture;
+        const slice = this.nineSlice!;
+        nine.leftWidth = slice.left;
+        nine.topHeight = slice.top;
+        nine.rightWidth = slice.right;
+        nine.bottomHeight = slice.bottom;
+        // the corners get only the size; the rest of the stretch is the nine-slice's own
+        const k = Math.max(this.size / 100, 1e-6);
+        const sx = this.scaleMagnitudeX(), sy = this.scaleMagnitudeY();
+        nine.width = sx * texture.width / k;
+        nine.height = sy * texture.height / k;
+        nine.scale.set(k / sx, k / sy);
+    }
 
     // ---- animations (7.0: on every sprite) ----
     /** animation name -> the costume names making up its frames */
@@ -1257,8 +1322,9 @@ export class ScratchSpriteClass extends ShapeClass {
      * bunny1_walk1, bunny1_walk2, ... Numbered from 1 by the frames form, or
      * from the given first to the given last number.
      */
+    /** upstream's String.format(pattern, number): %d and %0Nd; without them the pattern as it is */
     private formatFrame(pattern: string, frameNumber: number): string {
-        if (pattern.indexOf("%") < 0) return pattern + frameNumber;
+        if (pattern.indexOf("%") < 0) return pattern;
         return pattern.replace(/%(0(\d+))?d/, (_m, _pad, width) =>
             width ? String(frameNumber).padStart(parseInt(width), "0") : String(frameNumber));
     }
@@ -1272,8 +1338,10 @@ export class ScratchSpriteClass extends ShapeClass {
 
     _mj$addAnimation$void$string$string$int$int(t: Thread, callback: CallbackParameter,
         name: string, pattern: string, from: number, to: number) {
+        // as upstream: from the first number to the last, also counting down
         const paths: string[] = [];
-        for (let i = from; i <= to; i++) paths.push(this.formatFrame(pattern, i));
+        const step = to >= from ? 1 : -1;
+        for (let i = 0; i <= Math.abs(to - from); i++) paths.push(this.formatFrame(pattern, from + i * step));
         ScratchCostumes.whenLoaded(t, paths, callback, () => this._addAnimationPaths(name, pattern, paths));
     }
 
@@ -1290,7 +1358,8 @@ export class ScratchSpriteClass extends ShapeClass {
     private _addAnimationPaths(name: string, _pattern: string, paths: string[]) {
         const frameNames: string[] = [];
         for (let i = 0; i < paths.length; i++) {
-            const costumeName = "_animation_" + name + "_" + i;
+            // upstream names an animation's costumes name#0, name#1, ...
+            const costumeName = name + "#" + i;
             this._addCostumeFromName(costumeName, paths[i]);
             frameNames.push(costumeName);
         }
@@ -1303,7 +1372,8 @@ export class ScratchSpriteClass extends ShapeClass {
         if (!base) throw new RuntimeExceptionClass("Unbekanntes Bild / unknown image: " + sheetPath);
         const perRow = Math.max(1, Math.floor(base.frame.width / frameWidth));
         const frameNames: string[] = [];
-        for (const n of frameNumbers) {
+        for (let i = 0; i < frameNumbers.length; i++) {
+            const n = frameNumbers[i];
             const row = Math.floor(n / perRow);
             const col = n % perRow;
             const rect = new PIXI.Rectangle(
@@ -1312,7 +1382,7 @@ export class ScratchSpriteClass extends ShapeClass {
                 frameWidth, frameHeight,
             );
             const texture = new PIXI.Texture({ source: base.source, frame: rect });
-            const costumeName = "_animation_" + name + "_" + n;
+            const costumeName = name + "#" + i;
             if (!this.costumes.some(c => c.name === costumeName)) {
                 this.costumes.push({ name: costumeName, texture });
                 if (this.currentCostume < 0) this._applyCostumeIndex(this.costumes.length - 1);
@@ -1343,7 +1413,7 @@ export class ScratchSpriteClass extends ShapeClass {
             console.warn(`Scratch: animation '${name}' not found. Use addAnimation() first.`);
             return;
         }
-        const now = ScratchTimerClass._millis() / 1000;
+        const now = ScratchTimerClass._now();
         if (name !== this.animationName) {
             this.animationName = name;
             this.animationFrame = 0;
@@ -1387,9 +1457,9 @@ export class ScratchSpriteClass extends ShapeClass {
         this.tintColor._changeColor(step);
         this.applyTint();
     }
-    _getTint(): ScratchColorClass {
-        if (!this.tintColor) this.tintColor = ScratchColorClass.defaultColor();
-        return this.tintColor;
+    /** As upstream: null while there is no tint. */
+    _getTint(): ScratchColorClass | null {
+        return this.tintColor ?? null;
     }
 
     // ---- layering ----
@@ -1472,9 +1542,15 @@ export class ScratchSpriteClass extends ShapeClass {
         if (this.speechBubble && !this.speechBubble.destroyed) container.addChild(this.speechBubble);
     }
 
+    /**
+     * As upstream's Sprite#touches: not itself, on the same stage, on the UI
+     * layer both or neither, and a hidden sprite or one whose hitbox is
+     * disabled touches nothing.
+     */
     _isTouchingSprite(other: ScratchSpriteClass): boolean {
-        if (!other || !other.container) return false;
-        if (this.isUI() || other.isUI()) return false;
+        if (!other || !other.container || other === this || other.stage !== this.stage) return false;
+        if (this.isUI() !== other.isUI()) return false;
+        if (!this.container?.visible || !other.container.visible) return false;
         if (!this.hitboxEnabled || !other.hitboxEnabled) return false;
         return this._collidesWith(other);
     }
@@ -1545,10 +1621,13 @@ export class ScratchSpriteClass extends ShapeClass {
         return this.touchingColor(colorKey(color.r, color.g, color.b), colorKey(other.r, other.g, other.b));
     }
 
+    /** As upstream: a hitbox on the border counts; a hidden sprite touches nothing. */
     _isTouchingEdge(): boolean {
-        if (!this.hitboxEnabled) return false;
-        const over = this.edgeOverlap();
-        return over.left > 0 || over.right > 0 || over.top > 0 || over.bottom > 0;
+        if (!this.hitboxEnabled || !this.container?.visible || !this.stage) return false;
+        const b = this._getHitbox()._getBounds();
+        const halfWidth = this.world.width / 2, halfHeight = this.world.height / 2;
+        return b.bx <= -halfWidth || b.by <= -halfHeight
+            || b.bx + b.bwidth >= halfWidth || b.by + b.bheight >= halfHeight;
     }
     _isKeyPressed(key: KeyCodeEnum): boolean {
         const km = (this.world as any).interpreter?.keyboardManager;
@@ -1582,7 +1661,12 @@ export class ScratchSpriteClass extends ShapeClass {
     }
 
     _isTouchingMousePointer(): boolean {
-        return this._containsPoint(ScratchSpriteClass.mouseScreenX, ScratchSpriteClass.mouseScreenY);
+        return this._touchesPoint(ScratchSpriteClass.mouseScreenX, ScratchSpriteClass.mouseScreenY);
+    }
+
+    /** As upstream's touchHitbox: a hidden sprite, or one without its hitbox, touches no point. */
+    _touchesPoint(screenX: number, screenY: number): boolean {
+        return !!this.container?.visible && this.hitboxEnabled && this._containsPoint(screenX, screenY);
     }
     _getMouseX(): number { return ScratchSpriteClass.mouseLogicalX(this.world); }
     _getMouseY(): number { return ScratchSpriteClass.mouseLogicalY(this.world); }
@@ -1651,8 +1735,11 @@ export class ScratchSpriteClass extends ShapeClass {
      * hit polygon, so it reflects where the sprite is right now.
      */
     /** The collision outline as a Shape, where the sprite is on the stage now. */
-    _getHitboxShape(): ScratchShapeClass {
-        return ScratchShapeClass.of(this.hitboxShapePoints());
+    _getHitboxShape(): ScratchShapeClass | null {
+        // as upstream: no costume and no hitbox of its own, no hitbox
+        if (!this.costumes[this.currentCostume] && !this.customHitboxPoints) return null;
+        // 7.0: stage coordinates, y up, as every other Shape
+        return ScratchShapeClass.of(this.hitboxShapePoints().map(p => ({ x: p.x, y: -p.y })));
     }
 
     private hitboxShapePoints(): { x: number, y: number }[] {
@@ -1665,11 +1752,12 @@ export class ScratchSpriteClass extends ShapeClass {
         return polygon.map(p => ({ x: p.x - cx, y: p.y - cy }));
     }
 
-    /** @deprecated internal: the 6.x Hitbox form; goes away with its tests. */
+    /** internal: the outline with y pointing down, for the edge checks */
     _getHitbox(): { _getBounds(): ScratchBoundsClass, points: { x: number, y: number }[] } {
+        const points = this.hitboxShapePoints();
         return {
-            _getBounds: () => this._getHitboxShape()._getBounds(),
-            points: this.hitboxShapePoints(),
+            _getBounds: () => ScratchShapeClass.of(points)._getBounds(),
+            points,
         };
     }
 
@@ -1851,7 +1939,8 @@ export class ScratchSpriteClass extends ShapeClass {
         this.container = new PIXI.Container();
         this.pendingStamps = [];
         this.speechBubble = undefined;
-        this.speechTimeout = undefined;
+        this.nineDisplay = undefined;
+        this.speechTicksLeft = -1;
         this.spriteText = undefined;
         this.variableMonitors = new ScratchMonitors();
         this.timer = undefined;

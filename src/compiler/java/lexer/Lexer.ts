@@ -954,7 +954,11 @@ export class Lexer {
         }
 
 
-        let value: number = (tt == TokenType.integerLiteral) ? Number.parseInt(base, radix) : Number.parseFloat(base);
+        let value: number = (tt == TokenType.integerLiteral || tt == TokenType.longConstant)
+            ? Number.parseInt(base, radix) : Number.parseFloat(base);
+        // Java: a hexadecimal, octal or binary int literal names the 32 bits, so
+        // 0xffffffff is -1 and 0x80000000 is Integer.MIN_VALUE
+        if (tt == TokenType.integerLiteral && radix != 10) value = value | 0;
         value *= sign;
         if (exponent != 0) value *= Math.pow(10, exponent);
 

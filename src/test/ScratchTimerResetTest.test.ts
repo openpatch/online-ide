@@ -5,10 +5,13 @@ import { ScratchStageClass } from '../compiler/java/runtime/graphics/scratch/Scr
 import { ScratchTimerClass } from '../compiler/java/runtime/graphics/scratch/ScratchTimerClass';
 import { scratchGameClock } from '../compiler/java/runtime/graphics/scratch/ScratchGameClock';
 
+/** That much game time, in frames of 1/60 s: one frame never runs more than 8 ticks. */
 function advanceGame(millis: number) {
     const clock = scratchGameClock();
-    const steps = clock.frame(millis / 1000);
-    for (let index = 0; index < steps; index++) clock.advance();
+    for (let frame = 0; frame < Math.round(millis * 60 / 1000); frame++) {
+        const steps = clock.frame(1 / 60);
+        for (let index = 0; index < steps; index++) clock.advance();
+    }
 }
 
 /**

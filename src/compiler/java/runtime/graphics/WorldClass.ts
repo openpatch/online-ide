@@ -1,5 +1,6 @@
 
 import * as PIXI from 'pixi.js';
+import { isPixelArt, isSmoothPixelArt } from "./scratch/ScratchPixelArt";
 import { CallbackParameter } from '../../../common/interpreter/CallbackParameter.ts';
 import { Interpreter } from '../../../common/interpreter/Interpreter.ts';
 import { Thread } from "../../../common/interpreter/Thread.ts";
@@ -231,25 +232,24 @@ export class WorldClass extends BaseWorldClass implements IWorld, GraphicSystem,
         this.app!.canvas.style.width = "10px";
         this.app!.canvas.style.height = "10px";
 
-        this.app?.renderer.resize(width, height, 1);
-
         let rect = this.graphicsDiv!.parentElement!.parentElement!.getBoundingClientRect();
         if (rect.width == 0 || rect.height == 0) rect = this.graphicsDiv!.parentElement!.getBoundingClientRect();
 
-        let newCanvasWidth: number;
-        let newCanvasHeight: number;
-        if (width / height > rect.width / rect.height) {
-            newCanvasWidth = rect.width;
-            newCanvasHeight = rect.width / width * height;
-        } else {
-            newCanvasHeight = rect.height;
-            newCanvasWidth = rect.height / height * width;
-        }
+        // Scratch for Java 7's display modes: pixel art scales by whole numbers
+        // and keeps its pixels square; smooth pixel art fills the output and is
+        // drawn at the output's resolution, so it moves without stepping whole
+        // stage pixels. Both are off unless a program asks (ScratchPixelArt).
+        const pixelArt = isPixelArt(), smoothPixelArt = isSmoothPixelArt();
+        let scale = Math.min(rect.width / width, rect.height / height);
+        if (pixelArt && !smoothPixelArt && scale >= 1) scale = Math.floor(scale);
+        const resolution = pixelArt && smoothPixelArt
+            ? Math.max(1, scale * (globalThis.devicePixelRatio || 1)) : 1;
+        this.app?.renderer.resize(width, height, resolution);
 
-        newCanvasHeight = Math.min(newCanvasHeight, rect.height);
-        newCanvasWidth = Math.min(newCanvasWidth, rect.width);
+        let newCanvasWidth = Math.min(width * scale, rect.width);
+        let newCanvasHeight = Math.min(height * scale, rect.height);
 
-
+        this.app!.canvas.style.imageRendering = pixelArt && !smoothPixelArt ? "pixelated" : "";
         this.app!.canvas.style.width = newCanvasWidth + "px";
         this.app!.canvas.style.height = newCanvasHeight + "px";
 

@@ -77,7 +77,8 @@ export class ValueRenderer {
     private static renderObject(value: RuntimeObject | null, maxLength: number): string {
         if(value == null) return "null";
 
-        if(value["value"]) return ValueRenderer.renderValue(value["value"], maxLength);
+        // a boxed false or 0 is falsy, but it is a wrapper all the same
+        if((value.constructor as any)?.isPrimitiveTypeWrapper || value["value"]) return ValueRenderer.renderValue(value["value"], maxLength);
 
         let s: string = "{ ";
             let type = value.getType();
