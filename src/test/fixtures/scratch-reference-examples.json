@@ -957,7 +957,7 @@
       "files": [
         {
           "name": "Example.java",
-          "source": "void main() {\n  Window myWindow = new Window(600, 240);\n  Stage myStage = new Stage();\n  myWindow.setStage(myStage);\n  Sprite mySprite = new Sprite(\"slime\", \"slimeGreen\");\n  myStage.add(mySprite);\n\n  // a fragment shader file, and null for Processing's default vertex shader\n  mySprite.getShaders().add(\"invert\", \"assets/invert.frag\");\n}\n"
+          "source": "void main() {\n  Window myWindow = new Window(600, 240);\n  Stage myStage = new Stage();\n  myWindow.setStage(myStage);\n  Sprite mySprite = new Sprite(\"slime\", \"slimeGreen\");\n  myStage.add(mySprite);\n\n  // a name for the shader and its fragment shader file\n  mySprite.getShaders().add(\"invert\", \"assets/invert.frag\");\n}\n"
         }
       ],
       "expectedDiagnostics": []
