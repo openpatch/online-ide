@@ -17,7 +17,7 @@ async function threeShaders(onChange: (filters: any[]) => void): Promise<Scratch
     for (const name of ['tint', 'waves', 'blur']) {
         const callback = vi.fn();
         const thread = { state: ThreadState.running, s: [], throwRuntimeExceptionOnLastExecutedStep: vi.fn() };
-        shaders._mj$add$Shader$string$string$string(thread as unknown as Thread, callback, name, `${name}.frag`, null as any);
+        shaders._mj$add$Shader$string$string(thread as unknown as Thread, callback, name, `${name}.frag`);
         await vi.waitFor(() => expect(callback).toHaveBeenCalledOnce());
     }
     return shaders;

@@ -6,36 +6,32 @@ import { LibraryDeclarations } from "../../../module/libraries/DeclareType";
 import { NonPrimitiveType } from "../../../types/NonPrimitiveType";
 import { ArrayListClass } from "../../system/collections/ArrayListClass";
 import { ObjectClass } from "../../system/javalang/ObjectClassStringClass";
+import { IllegalArgumentExceptionClass } from "../../system/javalang/IllegalArgumentException";
 import { RuntimeExceptionClass } from "../../system/javalang/RuntimeException";
 import { resolveAssetUrl } from "./ScratchAssetUrls";
 import { ScratchColorClass } from "./ScratchColorClass";
+import { scratchGameClock } from "./ScratchGameClock";
 import { SRC } from "./ScratchLibraryComments";
-import { desktopOnly } from "./ScratchUnsupported";
 import { ScratchVector2Class } from "./ScratchVector2Class";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
 
 /**
- * org.openpatch.scratch.extensions.shader — the same shader files as on the
- * desktop, as PIXI filters.
+ * org.openpatch.scratch's shaders - the same shader files as on the desktop,
+ * as PIXI filters.
  *
- * Upstream hands a fragment shader written for Processing to OpenGL. A browser
- * speaks WebGL 2, whose GLSL ES 3.00 differs in a handful of fixed ways, so the
- * source is rewritten before it is compiled (see translate()):
+ * A Scratch for Java 7 shader is the body of a fragment shader; the library
+ * puts names in front of it (upstream's Programs.studentFragment):
  *
- *  - `vertTexCoord`, Processing's 0..1 across the costume, is worked out from
- *    PIXI's filter coordinates, and reading `texture` at such a point is
- *    mapped back, so a shader that pixelates in steps of 1/20 does so here too;
- *  - `texture2D` becomes `texture`, `gl_FragColor` an output;
- *  - `texOffset` and `textureSize(texture, 0)`, which Processing fills in, are
- *    supplied.
+ *  - `costume`, the picture being drawn, and `uv`, where on it this pixel is
+ *    (0,0 top left to 1,1 bottom right), worked out from PIXI's filter
+ *    coordinates, so a shader that pixelates in steps of 1/20 does so here too;
+ *  - `texture()` hands out straight colours and `color` takes one, which is
+ *    multiplied by its transparency afterwards, as upstream;
+ *  - `resolution`, the size in pixels, and `time`, game time in seconds.
  *
  * Lines keep their numbers, so a compile error points at the line in the file.
  * WebGL is stricter than desktop drivers - `x == 1` with a float x is an error
  * there - and such errors are reported as they are, with that line.
- *
- * A PIXI filter has a vertex stage of its own. Processing's default vertex
- * shader, which the demos pass along, does nothing it would not do, so it is
- * accepted; any other is desktop only and ignored after a notice.
  *
  * The filter works on a sprite as it is drawn, so on a turned sprite a pattern
  * stays level with the screen, where upstream's turns with the costume.
@@ -75,26 +71,18 @@ const COMPONENTS: Record<string, number> = {
     bvec2: 2, bvec3: 3, bvec4: 4, mat2: 4, mat3: 9, mat4: 16,
 };
 
-/** Replace what matches with blank lines of the same count, so line numbers stay. */
-function blank(source: string, pattern: RegExp): string {
-    return source.replace(pattern, m => m.replace(/[^\n]/g, ""));
-}
+/** The names the library fills in; Shader.set refuses them, as upstream. */
+const HEADER = new Set(["costume", "resolution", "time", "uv", "color"]);
 
 export function translate(source: string): Translated {
     let s = source.replace(/\r\n?/g, "\n");
-    s = blank(s, /^[ \t]*#version[^\n]*/m);
-    s = blank(s, /^[ \t]*#define[ \t]+PROCESSING_\w+[^\n]*/gm);
-    s = blank(s, /^[ \t]*(?:varying|in)\s+vec4\s+(?:vertTexCoord|vertColor)\s*;/gm);
-    s = blank(s, /^[ \t]*uniform\s+sampler2D\s+texture\s*;/m);
-    const usesTexOffset = /uniform\s+vec2\s+texOffset\s*;/.test(s);
-    s = blank(s, /^[ \t]*uniform\s+vec2\s+texOffset\s*;/m);
 
-    const uniforms: Translated["uniforms"] = {};
+    const uniforms: Translated["uniforms"] = { time: { type: "f32", value: 0 } };
     const glslTypes: Translated["glslTypes"] = {};
     const declaration = /uniform\s+(?:(?:lowp|mediump|highp)\s+)?(\w+)\s*(?:\[\s*(\d+)\s*\])?\s+(\w+)\s*(?:\[\s*(\d+)\s*\])?\s*;/g;
     for (const m of s.matchAll(declaration)) {
         const [, type, n1, name, n2] = m;
-        if (!PIXI_TYPES[type]) continue;
+        if (!PIXI_TYPES[type] || HEADER.has(name)) continue;
         const count = parseInt(n1 ?? n2 ?? "1", 10);
         const length = COMPONENTS[type] * count;
         const integer = /^(int|bool|ivec|bvec)/.test(type);
@@ -105,30 +93,42 @@ export function translate(source: string): Translated {
         glslTypes[name] = { type, count };
     }
 
-    s = s.replace(/textureSize\s*\(\s*texture\s*,\s*0\s*\)/g, "ivec2(uOutputFrame.zw)");
-    s = s.replace(/\b(?:texture2D|texture)\s*\(\s*texture\s*,\s*/g, "_pTexture(");
-    s = s.replace(/\btexture2D\s*\(/g, "texture(");
-    s = s.replace(/\bvoid\s+main\s*\(\s*(?:void)?\s*\)/, "void _pMain()");
+    // PIXI's input texture is larger than the costume; upstream gives the costume's size
+    s = s.replace(/textureSize\s*\(\s*costume\s*,\s*0\s*\)/g, "ivec2(resolution)");
 
-    // One line, so that `#line 1` below makes the file's first line line 1.
-    const header = "#version 300 es\nprecision highp float; precision highp int;"
+    // Lines up to `#line 1`, so that the file's first line is line 1.
+    const header = "#version 300 es\n"
+        + "precision highp float; precision highp int;"
         + " in vec2 vTextureCoord; out vec4 _pFragColor;"
         + " uniform sampler2D uTexture; uniform vec4 uInputSize; uniform vec4 uOutputFrame;"
-        + " vec4 vertTexCoord;"
-        + " vec4 _pTexture(vec2 p) { return texture(uTexture, p * uOutputFrame.zw * uInputSize.zw); }\n"
-        + "#define gl_FragColor _pFragColor\n"
-        + (usesTexOffset ? "#define texOffset (1.0 / uOutputFrame.zw)\n" : "")
+        + " uniform float time; vec2 uv; vec4 color;"
+        + " vec4 _pTexture(sampler2D s, vec2 p) {"
+        + " vec4 c = texture(s, p * uOutputFrame.zw * uInputSize.zw);"
+        + " return c.a > 0.0 ? vec4(c.rgb / c.a, c.a) : vec4(0.0); }\n"
+        + "#define costume uTexture\n"
+        + "#define resolution (uOutputFrame.zw)\n"
+        + "#define texture(s, p) _pTexture(s, p)\n"
+        + "#define main _student\n"
         + "#line 1\n";
-    const footer = "\nvoid main(void) {"
-        + " vertTexCoord = vec4(vTextureCoord * uInputSize.xy / uOutputFrame.zw, 0.0, 1.0);"
-        + " _pMain(); }\n";
+    const footer = "\n#undef main\nvoid main(void) {"
+        + " uv = vTextureCoord * uInputSize.xy / uOutputFrame.zw; color = vec4(0.0);"
+        + " _student(); _pFragColor = vec4(color.rgb * color.a, color.a); }\n";
     return { fragment: header + s + footer, uniforms, glslTypes };
 }
 
-/** Processing's default vertex shader, or one that does the same. */
-export function isDefaultVertexShader(source: string): boolean {
-    return /gl_Position\s*=\s*transformMatrix\s*\*\s*position/.test(source)
-        && /vertTexCoord\s*=\s*texMatrix\s*\*\s*vec4\s*\(\s*texCoord/.test(source);
+/** A shader's filter; game time goes into `time` each time it is drawn. */
+class ScratchShaderFilter extends PIXI.Filter {
+    constructor(glProgram: PIXI.GlProgram, private readonly group: PIXI.UniformGroup) {
+        super({ glProgram, resources: { scratchUniforms: group } });
+    }
+
+    override apply(filterManager: PIXI.FilterSystem, input: PIXI.Texture,
+        output: PIXI.RenderSurface, clearMode: boolean): void {
+        // upstream: tick / 60.0
+        (this.group.uniforms as any).time = scratchGameClock().steps / 60;
+        this.group.update();
+        super.apply(filterManager, input, output, clearMode);
+    }
 }
 
 /**
@@ -194,12 +194,12 @@ export class ScratchShaderClass extends ObjectClass {
     private group: PIXI.UniformGroup | undefined;
     private glslTypes: Translated["glslTypes"] = {};
 
-    _cj$_constructor_$Shader$string$string$string(t: Thread, callback: CallbackParameter,
-        name: string, fragmentShaderPath: string, vertexShaderPath: string) {
+    _cj$_constructor_$Shader$string$string(t: Thread, callback: CallbackParameter,
+        name: string, fragmentShaderPath: string) {
         this.name = name;
         const oldState = t.state;
         t.state = ThreadState.waiting;
-        this.load(fragmentShaderPath, vertexShaderPath).then(() => {
+        this.load(fragmentShaderPath).then(() => {
             t.state = oldState;
             t.s.push(this);
             if (callback) callback();
@@ -211,21 +211,13 @@ export class ScratchShaderClass extends ObjectClass {
     }
 
     /** Read, check and compile the files; rejects with an explanation. */
-    async load(fragmentShaderPath: string, vertexShaderPath: string | null | undefined): Promise<void> {
+    async load(fragmentShaderPath: string): Promise<void> {
         let fragmentSource: string;
         try {
             fragmentSource = await source(fragmentShaderPath);
         } catch (e: any) {
             throw new RuntimeExceptionClass(
                 `Shader-Datei nicht gefunden / could not load shader file '${fragmentShaderPath}': ${e?.message ?? e}`);
-        }
-        if (vertexShaderPath) {
-            const vertexSource = await source(vertexShaderPath).catch(() => undefined);
-            if (vertexSource !== undefined && !isDefaultVertexShader(vertexSource)) {
-                desktopOnly("Shader (vertex shader)",
-                    "Eigene Vertex-Shader gibt es nur in der Desktop-Version; hier wird der Standard verwendet. / "
-                    + "Custom vertex shaders are desktop only; the default one is used here.");
-            }
         }
 
         const translated = translate(fragmentSource);
@@ -240,7 +232,7 @@ export class ScratchShaderClass extends ObjectClass {
         this.glslTypes = translated.glslTypes;
         this.group = new PIXI.UniformGroup(translated.uniforms as any);
         const glProgram = PIXI.GlProgram.from({ vertex: VERTEX, fragment: translated.fragment, name: "scratch-shader" });
-        this.filter = new PIXI.Filter({ glProgram, resources: { scratchUniforms: this.group } });
+        this.filter = new ScratchShaderFilter(glProgram, this.group);
     }
 
     /** upstream's copy constructor: the same program under the same name */
@@ -257,9 +249,13 @@ export class ScratchShaderClass extends ObjectClass {
 
     /** Store values into a uniform, converted to what the shader declared it as. */
     private store(name: string, values: number[]) {
+        if (HEADER.has(name)) {
+            throw new IllegalArgumentExceptionClass("\"" + name + "\" is filled in by Scratch for Java; remove the line "
+                + "that sets it, or use a uniform of your own with another name.");
+        }
         const group: any = this.group;
         const declared = this.glslTypes[name];
-        // Processing ignores a name the shader does not use; so does this.
+        // upstream ignores a name the shader does not use; so does this.
         if (!group || !declared) return;
         const current = group.uniforms[name];
         if (typeof current === "number") {
@@ -359,18 +355,8 @@ export class ScratchShadersClass extends ObjectClass {
         return this.shaders.filter(s => this.active.has(s));
     }
 
-    /**
-     * 7.0's only form: the fragment shader body. The vertexShaderPath of the
-     * 6.x form stays as an internal parameter (the browser substitutes its
-     * default vertex shader anyway, as it always did for the third argument).
-     */
     _mj$add$Shader$string$string(t: Thread, callback: CallbackParameter,
         name: string, fragmentShaderPath: string) {
-        this._mj$add$Shader$string$string$string(t, callback, name, fragmentShaderPath, undefined);
-    }
-
-    _mj$add$Shader$string$string$string(t: Thread, callback: CallbackParameter,
-        name: string, fragmentShaderPath: string, vertexShaderPath: string) {
         const existing = this._get(name);
         if (existing) {
             t.s.push(existing);
@@ -378,13 +364,13 @@ export class ScratchShadersClass extends ObjectClass {
             return;
         }
         const shader = new ScratchShaderClass();
-        shader._cj$_constructor_$Shader$string$string$string(t, () => {
+        shader._cj$_constructor_$Shader$string$string(t, () => {
             // the constructor left the shader on the stack for us to return
             if (this.shaders.length === 0 && this.activateFirst) this.active.add(shader);
             this.shaders.push(shader);
             this.changed();
             if (callback) callback();
-        }, name, fragmentShaderPath, vertexShaderPath);
+        }, name, fragmentShaderPath);
     }
 
     _get(name: string): ScratchShaderClass | undefined {

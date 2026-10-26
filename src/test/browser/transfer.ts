@@ -17,7 +17,7 @@ MainEmbedded.prototype.init = async function (...args) {
         async shaderFragment(path: string) {
             await ScratchWorkspaceAssets.load(ide.getCurrentWorkspace());
             const shader = new ScratchShaderClass();
-            await shader.load(path, null);
+            await shader.load(path);
             return shader.filter!.glProgram!.fragment;
         },
         snapshot() {

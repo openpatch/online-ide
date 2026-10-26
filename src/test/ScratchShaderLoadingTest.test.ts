@@ -12,10 +12,10 @@ test('the shader constructor waits for loading and then resumes the Java thread'
     const load = vi.spyOn(shader, 'load').mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
     const callback = vi.fn();
     const thread = { state: ThreadState.running, s: [], throwRuntimeExceptionOnLastExecutedStep: vi.fn() };
-    shader._cj$_constructor_$Shader$string$string$string(thread as unknown as Thread, callback, 'blur', 'blur.frag', 'blur.vert');
+    shader._cj$_constructor_$Shader$string$string(thread as unknown as Thread, callback, 'blur', 'blur.frag');
     expect(thread.state).toBe(ThreadState.waiting);
     expect(callback).not.toHaveBeenCalled();
-    expect(load).toHaveBeenCalledWith('blur.frag', 'blur.vert');
+    expect(load).toHaveBeenCalledWith('blur.frag');
     finish();
     await vi.waitFor(() => expect(callback).toHaveBeenCalledOnce());
     expect(thread.state).toBe(ThreadState.running);
@@ -30,7 +30,7 @@ test('a shader load failure restores the thread and reports a Java runtime excep
     vi.spyOn(shader, 'load').mockRejectedValue(error);
     const callback = vi.fn();
     const thread = { state: ThreadState.running, s: [], throwRuntimeExceptionOnLastExecutedStep: vi.fn() };
-    shader._cj$_constructor_$Shader$string$string$string(thread as unknown as Thread, callback, 'blur', 'blur.frag', 'blur.vert');
+    shader._cj$_constructor_$Shader$string$string(thread as unknown as Thread, callback, 'blur', 'blur.frag');
     await vi.waitFor(() => expect(thread.throwRuntimeExceptionOnLastExecutedStep).toHaveBeenCalledWith(error));
     expect(thread.state).toBe(ThreadState.running);
     expect(callback).not.toHaveBeenCalled();

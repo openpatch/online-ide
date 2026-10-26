@@ -441,12 +441,8 @@ export class SRC {
 
     // ---- Shader ----
     static shaderClassComment = () => lm({
-        "de": "Ein Shader-Programm (GLSL-Fragment-Shader im Processing-Stil), das verändert, wie eine Figur oder die Bühne gezeichnet wird",
-        "en": "A shader program (a GLSL fragment shader in Processing's style) that changes how a sprite or the stage is drawn",
-    });
-    static shaderConstructorComment = () => lm({
-        "de": "Lädt einen Shader aus einer Fragment-Shader-Datei. Eigene Vertex-Shader gibt es nur in der Desktop-Version; der Standard von Processing wird angenommen",
-        "en": "Loads a shader from a fragment shader file. Custom vertex shaders are desktop only; Processing's default one is accepted",
+        "de": "Ein Shader-Programm (der Rumpf eines GLSL-Fragment-Shaders), das verändert, wie eine Figur oder die Bühne gezeichnet wird",
+        "en": "A shader program (the body of a GLSL fragment shader) that changes how a sprite or the stage is drawn",
     });
     static shaderConstructor2Comment = () => lm({
         "de": "Kopiert einen Shader",

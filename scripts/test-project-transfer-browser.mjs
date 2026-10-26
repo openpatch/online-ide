@@ -31,7 +31,7 @@ try {
     });
     await page.goto(`http://127.0.0.1:${port}/src/test/browser/transfer.html`);
     await page.waitForFunction(() => !!window.transferTest, undefined, { timeout: 30000 });
-    const shaderText = '// Wellen: Größe\nvoid main() {\n    gl_FragColor = vec4(0.25);\n}\n';
+    const shaderText = '// Wellen: Größe\nvoid main() {\n    color = vec4(0.25);\n}\n';
     for (const [name, text, readOnly] of [
         ['assets/waves.frag', shaderText, false],
         ['assets/default.vert', 'void main() { gl_Position = vec4(0.0); }\n', true],
