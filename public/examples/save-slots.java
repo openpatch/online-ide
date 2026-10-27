@@ -1,10 +1,9 @@
-void main() {
-  Window window = new Window(640, 480);
-  window.setStage(new SaveSlotStage());
-}
-
 /** An ordinary Java entry point; the same stage runs in the browser. */
 class SaveSlotGame {
+  public static void main(String[] args) {
+    Window window = new Window(640, 480);
+    window.setStage(new SaveSlotStage());
+  }
 }
 
 /** Collect coins, then save and restore the score and both sprite positions. */
