@@ -29,7 +29,7 @@ try {
     page.on('dialog', dialog => dialog.type() === 'prompt' ? dialog.accept('student.zip') : dialog.dismiss());
     await page.goto('http://127.0.0.1:' + server.httpServer.address().port + '/src/test/browser/transfer.html');
     await page.waitForFunction(() => !!window.transferTest);
-    await page.locator('input[accept=".json,.zip"]').setInputFiles(path.resolve(checkpointPath));
+    await page.locator('input[accept=".json,.zip,.scratch4j"]').setInputFiles(path.resolve(checkpointPath));
     await page.waitForFunction(id => window.transferTest.snapshot().settings.scratchProject?.checkpoint === id,
         checkpoint.settings.scratchProject.checkpoint);
     assert.deepEqual(await page.evaluate(() => window.transferTest.compile()), []);
@@ -37,11 +37,11 @@ try {
     const edited = main.replace('new Window(768, 432)', 'new Window(800, 450)') + '\n// continued in browser\n';
     await page.evaluate(source => window.transferTest.edit('Main.java', source), edited);
     const download = page.waitForEvent('download');
-    // the export button opens a dialog; its first option saves the ZIP for a local IDE
+    // the export button opens a dialog; for a Scratch project its first option saves the file for Studio
     await page.locator('.img_export-dark').click();
-    await page.locator('.joe_exportDialog input').first().fill('student.zip');
+    await page.locator('.joe_exportDialog input').first().fill('student');
     await page.locator('.joe_exportDialog .joe_exportButton').first().click();
-    const browserZip = path.join(temporary, 'browser.zip');
+    const browserZip = path.join(temporary, 'student.scratch4j');
     await (await download).saveAs(browserZip);
     const imported = cli('import', browserZip, path.join(temporary, 'studio'));
     const source = path.join(imported, 'Main.java');
@@ -58,7 +58,7 @@ try {
     assert.match(testOutput, /4 tests successful/);
     const studioZip = path.join(temporary, 'studio.zip');
     cli('export', imported, studioZip);
-    await page.locator('input[accept=".json,.zip"]').setInputFiles(studioZip);
+    await page.locator('input[accept=".json,.zip,.scratch4j"]').setInputFiles(studioZip);
     await page.waitForFunction(() => window.transferTest.snapshot().settings.scratchProject?.sourceEnvironment === 'studio');
     assert.deepEqual(await page.evaluate(() => window.transferTest.compile()), []);
     const returned = await page.evaluate(() => window.transferTest.snapshot());

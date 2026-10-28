@@ -72,7 +72,7 @@ try {
         { name: 'identity.frag', text: 'uniform sampler2D texture;\n' },
     ] };
     const bytes = Buffer.from(await page.evaluate(workspace => window.transferTest.makeZip(workspace), workspace));
-    await page.locator('input[accept=".json,.zip"]').setInputFiles({ name: 'game.zip', mimeType: 'application/zip', buffer: bytes });
+    await page.locator('input[accept=".json,.zip,.scratch4j"]').setInputFiles({ name: 'game.zip', mimeType: 'application/zip', buffer: bytes });
     await page.waitForFunction(() => window.transferTest.snapshot().settings.libraries.includes('nrw'));
     await waitForSavedWorkspace(saved => saved.settings?.libraries?.includes('nrw'));
     const loaded = await page.evaluate(() => window.transferTest.snapshot());
@@ -82,11 +82,12 @@ try {
     const edited = source.replace('student edit', 'continued in browser');
     await page.evaluate(edited => window.transferTest.edit('Main.java', edited), edited);
     const downloaded = page.waitForEvent('download');
-    // the export button opens a dialog; its first option saves the ZIP for a local IDE
+    // the export button opens a dialog; for a Scratch project its first option saves the ZIP for Studio
     await page.locator('.img_export-dark').click();
-    await page.locator('.joe_exportDialog input').first().fill('roundtrip.zip');
+    await page.locator('.joe_exportDialog input').first().fill('roundtrip');
     await page.locator('.joe_exportDialog .joe_exportButton').first().click();
     const download = await downloaded;
+    assert.equal(download.suggestedFilename(), 'roundtrip.scratch4j');
     const artifacts = process.env.SCRATCH_BROWSER_ARTIFACTS || path.join(os.tmpdir(), 'scratch-browser-tests');
     await fs.mkdir(artifacts, { recursive: true });
     const target = path.join(artifacts, 'browser-project.zip');
@@ -103,19 +104,19 @@ try {
     await page.keyboard.press('Escape');
     if (process.env.SCRATCH_TRANSFER_INPUT) {
         const input = process.env.SCRATCH_TRANSFER_INPUT;
-        await page.locator('input[accept=".json,.zip"]').setInputFiles(input);
+        await page.locator('input[accept=".json,.zip,.scratch4j"]').setInputFiles(input);
         await page.waitForFunction(() => window.transferTest.snapshot().settings.scratchProject?.sourceEnvironment === 'studio');
         assert.deepEqual(await page.evaluate(() => window.transferTest.compile()), []);
         const files = await page.evaluate(() => window.transferTest.snapshot().files);
         assert.ok(files.some(file => file.name === 'Main.java' && file.text.includes('continued in Studio')));
         assert.ok(files.some(file => file.name === 'assets/image.png' && file.text.endsWith('AAECA/8=')));
         console.log('Studio ZIP reopened and compiled in the embedded browser: passed');
-        await page.locator('input[accept=".json,.zip"]').setInputFiles({ name: 'game.zip', mimeType: 'application/zip', buffer: bytes });
+        await page.locator('input[accept=".json,.zip,.scratch4j"]').setInputFiles({ name: 'game.zip', mimeType: 'application/zip', buffer: bytes });
         await page.waitForFunction(() => window.transferTest.snapshot().settings.scratchProject?.sourceEnvironment === 'browser');
         await page.evaluate(edited => window.transferTest.edit('Main.java', edited), edited);
     }
     const rejected = page.waitForEvent('dialog');
-    await page.locator('input[accept=".json,.zip"]').setInputFiles({ name: 'corrupt.zip', mimeType: 'application/zip', buffer: Buffer.from('broken archive') });
+    await page.locator('input[accept=".json,.zip,.scratch4j"]').setInputFiles({ name: 'corrupt.zip', mimeType: 'application/zip', buffer: Buffer.from('broken archive') });
     await rejected;
     assert.equal(alerts.length, 1);
     assert.equal(await page.evaluate(() => window.transferTest.snapshot().files.find(file => file.name === 'Main.java').text), edited);
@@ -123,7 +124,7 @@ try {
         const folder = process.env.SCRATCH_CHECKPOINT_DIR;
         for (const name of (await fs.readdir(folder)).filter(name => name.endsWith('.json')).sort()) {
             const checkpoint = JSON.parse(await fs.readFile(path.join(folder, name), 'utf8'));
-            await page.locator('input[accept=".json,.zip"]').setInputFiles(path.join(folder, name));
+            await page.locator('input[accept=".json,.zip,.scratch4j"]').setInputFiles(path.join(folder, name));
             await page.waitForFunction(id => window.transferTest.snapshot().settings.scratchProject?.checkpoint === id,
                 checkpoint.settings.scratchProject.checkpoint);
             assert.deepEqual(await page.evaluate(() => window.transferTest.compile()), [], name);
