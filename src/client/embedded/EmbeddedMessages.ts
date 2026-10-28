@@ -3,6 +3,12 @@ import { lm } from "../../tools/language/LanguageManager";
 export class EmbeddedMessages {
     static Export = () => lm({ de: 'Exportieren', en: 'Export' });
     static ExportHeading = () => lm({ de: 'Projekt exportieren', en: 'Export project' });
+    static ExportStudioTitle = () => lm({ de: 'In Scratch for Java Studio öffnen', en: 'Open in Scratch for Java Studio' });
+    static ExportStudioDescription = () => lm({
+        de: 'Speichert das Projekt als .scratch4j-Datei. Ein Doppelklick öffnet sie in Scratch for Java Studio. Dort läuft das Spiel mit der echten Bibliothek und lässt sich als Programm oder Webseite exportieren.',
+        en: 'Saves the project as a .scratch4j file. Double-click it to open it in Scratch for Java Studio. There the game runs on the real library and can be exported as an app or a web page.' });
+    static ExportStudioButton = () => lm({ de: 'Für Studio speichern', en: 'Save for Studio' });
+    static ExportStudioDownload = () => lm({ de: 'Scratch for Java Studio herunterladen', en: 'Download Scratch for Java Studio' });
     static ExportLocalTitle = () => lm({ de: 'Als ZIP exportieren (auch für lokale IDEs geeignet)', en: 'Export as ZIP (also suited for local IDEs)' });
     static ExportLocalDescription = () => lm({
         de: 'Speichert alle Dateien des Projekts und die Bilder, die das Programm lädt, als ZIP-Datei. Sie lässt sich hier über „Öffnen“, in der Online-IDE über „Workspace importieren“ oder in einer lokalen IDE öffnen.',

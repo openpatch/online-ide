@@ -384,6 +384,11 @@ Are you sure?`
         'en': 'Export as ZIP (also suited for local IDEs)'
     });
 
+    static openInStudio = () => lm({
+        'de': 'In Scratch for Java Studio öffnen (.scratch4j)',
+        'en': 'Open in Scratch for Java Studio (.scratch4j)'
+    });
+
     static exportForLocalIDEFailed = () => lm({
         'de': 'Der Workspace konnte nicht exportiert werden:',
         'en': 'The workspace could not be exported:'

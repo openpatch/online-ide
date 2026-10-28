@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, test } from 'vitest';
 import JSZip from 'jszip';
-import { exportProjectZip, fetchProjectAssets, importProjectZip, projectPath, referencedAssetPaths, workspacePaths } from '../client/workspace/PortableProject';
+import { exportProjectZip, fetchProjectAssets, importProjectZip, isProjectZipName, isScratchProject, projectPath, projectZipBaseName, referencedAssetPaths, STUDIO_EXTENSION, workspacePaths } from '../client/workspace/PortableProject';
 import type { ExportedWorkspace } from '../client/workspace/WorkspaceImporterExporter';
 
 function workspace(flavor: string): ExportedWorkspace {
@@ -168,4 +168,17 @@ test('a Scratch project is still exported for Studio', async () => {
     const archive = await JSZip.loadAsync(await exportProjectZip(workspace('nrw')));
     expect(archive.file('.scratch4j/project.json')).not.toBeNull();
     expect(archive.file('.online-ide/workspace.json')).toBeNull();
+});
+
+test('the Studio file is a project ZIP under its own extension, offered for Scratch projects only', () => {
+    expect(STUDIO_EXTENSION).toBe('.scratch4j');
+    for (const name of ['game.zip', 'game.ZIP', 'game.scratch4j', 'game.Scratch4J']) {
+        expect(isProjectZipName(name)).toBe(true);
+        expect(projectZipBaseName(name)).toBe('game');
+    }
+    expect(isProjectZipName('game.json')).toBe(false);
+    expect(isScratchProject(workspace('standard'))).toBe(true);
+    expect(isScratchProject(workspace('nrw'))).toBe(true);
+    expect(isScratchProject({ settings: { language: 'Java', libraries: [] } })).toBe(false);
+    expect(isScratchProject({ settings: { language: 'Java', libraries: ['scratch', 'gng'] } })).toBe(false);
 });

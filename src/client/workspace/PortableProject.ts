@@ -8,6 +8,20 @@ const METADATA = '.scratch4j/project.json';
 const WORKSPACE_METADATA = '.online-ide/workspace.json';
 const WORKSPACE_SPRITESHEET = '.online-ide/spritesheet.zip';
 const MAX_FILE = 16 * 1024 * 1024;
+/** A project ZIP under the extension Studio's installers register: a double-click opens it in Studio. */
+export const STUDIO_EXTENSION = '.scratch4j';
+export const STUDIO_DOWNLOAD = 'https://github.com/openpatch/scratch-for-java-ide/releases';
+const PROJECT_ZIP = /\.(zip|scratch4j)$/i;
+
+/** True for a file name {@link importProjectZip} reads. */
+export function isProjectZipName(name: string): boolean {
+    return PROJECT_ZIP.test(name);
+}
+
+/** The file name without its ZIP extension: the imported project's name. */
+export function projectZipBaseName(name: string): string {
+    return name.replace(PROJECT_ZIP, '');
+}
 const MAX_TOTAL = 64 * 1024 * 1024;
 const TEXT = /\.(java|md|txt|json|xml|tmx|tsx|frag|vert|glsl|csv|properties)$/i;
 const MIME: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
@@ -138,7 +152,7 @@ export async function fetchProjectAssets(paths: string[], resolve: (path: string
  * at most the NRW classes next to it. Every other workspace is exported as a
  * workspace ZIP that carries its settings for the way back.
  */
-export function isScratchProject(workspace: ExportedWorkspace): boolean {
+export function isScratchProject(workspace: Pick<ExportedWorkspace, 'settings'>): boolean {
     const libraries = workspace.settings?.libraries ?? [];
     return workspace.settings?.language === 'Java' && libraries.includes('scratch')
         && libraries.every(id => ['scratch', 'nrw'].includes(id));

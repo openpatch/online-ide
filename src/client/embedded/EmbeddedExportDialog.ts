@@ -1,9 +1,12 @@
 import jQuery from "jquery";
 import { showEmbeddedDialog } from "./EmbeddedDialog";
 import { EmbeddedMessages } from "./EmbeddedMessages";
+import { STUDIO_DOWNLOAD, STUDIO_EXTENSION } from "../workspace/PortableProject";
 
 export type ExportActions = {
     defaultZipName: string,
+    /** set for a Scratch for Java project: the same ZIP under the extension Studio opens */
+    defaultStudioName?: string,
     /** saves the ZIP under that name; resolves to the paths it could not take along */
     saveZip: (name: string) => Promise<string[]>,
     defaultJsonName: string,
@@ -14,13 +17,19 @@ export type ExportActions = {
 };
 
 /**
- * The dialog behind the export button: the project as a ZIP for a local IDE,
+ * The dialog behind the export button: a Scratch for Java project for Studio, the project as a ZIP for a local IDE,
  * as a workspace JSON file or as a link. Progress, results and errors are shown
  * in the dialog itself.
  */
 export function showExportDialog($outerDiv: JQuery<HTMLElement>, actions: ExportActions) {
 
     let { $panel } = showEmbeddedDialog($outerDiv, EmbeddedMessages.ExportHeading(), 'joe_exportDialog');
+
+    if (actions.defaultStudioName) $panel.append(makeFileOption({
+        title: EmbeddedMessages.ExportStudioTitle(), icon: 'img_export-dark', description: EmbeddedMessages.ExportStudioDescription(),
+        buttonText: EmbeddedMessages.ExportStudioButton(), defaultName: actions.defaultStudioName, extension: STUDIO_EXTENSION,
+        save: actions.saveZip, link: { href: STUDIO_DOWNLOAD, text: EmbeddedMessages.ExportStudioDownload() },
+    }));
 
     $panel.append(makeFileOption({
         title: EmbeddedMessages.ExportLocalTitle(), icon: 'img_export-dark', description: EmbeddedMessages.ExportLocalDescription(),
@@ -50,6 +59,8 @@ function makeOption(title: string, icon: string, description: string) {
 type FileOption = {
     title: string, icon: string, description: string, buttonText: string,
     defaultName: string, extension: string,
+    /** shown below the description */
+    link?: { href: string, text: string },
     /** saves the file under that name; resolves to the paths it could not take along */
     save: (name: string) => Promise<string[]>,
 };
@@ -57,6 +68,8 @@ type FileOption = {
 /** A way out as a file: its name, a save button, and what came of it. */
 function makeFileOption(option: FileOption) {
     let { $option, $status, showStatus } = makeOption(option.title, option.icon, option.description);
+    if (option.link) $option.append(jQuery('<div class="joe_exportOptionDescription"></div>').append(
+        jQuery('<a target="_blank" rel="noopener"></a>').attr('href', option.link.href).text(option.link.text)));
 
     let $name = jQuery('<input type="text" spellcheck="false">')
         .val(option.defaultName).attr('aria-label', EmbeddedMessages.ProjectFilename())

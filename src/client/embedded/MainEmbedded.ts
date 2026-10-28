@@ -42,7 +42,7 @@ import { SpritesheetData } from "../spritemanager/SpritesheetData.js";
 import { GUIFile } from "../workspace/File.js";
 import { Workspace } from "../workspace/Workspace.js";
 import { ExportedWorkspace, WorkspaceExporter } from "../workspace/WorkspaceImporterExporter.js";
-import { exportProjectZip, fetchProjectAssets, importProjectZip, referencedAssetPaths, workspacePaths } from '../workspace/PortableProject';
+import { exportProjectZip, fetchProjectAssets, importProjectZip, isProjectZipName, isScratchProject, projectZipBaseName, referencedAssetPaths, STUDIO_EXTENSION, workspacePaths } from '../workspace/PortableProject';
 import { requestedAssetPaths, resolveAssetUrl, setAssetBase } from '../../compiler/java/runtime/graphics/scratch/ScratchAssetUrls';
 import { configFromURLParameters, sharedWorkspaceIdFromURL } from "./EmbeddedURLConfig.js";
 import { showURLParametersPanel } from "./EmbeddedURLParametersPanel.js";
@@ -685,7 +685,7 @@ export class MainEmbedded implements MainBase {
             that.loadWorkspaceFromFile(files[0]);
         })
         $buttonOpen.attr('title', EmbeddedMessages.ImportProject());
-        $buttonOpen.find('input').attr('accept', '.json,.zip');
+        $buttonOpen.find('input').attr('accept', '.json,.zip,' + STUDIO_EXTENSION);
 
         // one button for every way the project leaves the page: ZIP for a local IDE, workspace JSON, link
         let $buttonExport = jQuery('<div class="img_export-dark jo_button jo_active" style="margin-right: 8px;"></div>')
@@ -693,6 +693,7 @@ export class MainEmbedded implements MainBase {
         $buttonExport.on('click', () => {
             showExportDialog(that.$outerDiv, {
                 defaultZipName: that.currentWorkspace.name + '.zip',
+                defaultStudioName: isScratchProject(that.currentWorkspace) ? that.currentWorkspace.name + STUDIO_EXTENSION : undefined,
                 saveZip: name => that.saveProjectZip(name),
                 defaultJsonName: that.config.jsonFilename ?? "workspace.json",
                 saveJson: name => that.saveWorkspaceToFile(name),
@@ -1098,8 +1099,8 @@ export class MainEmbedded implements MainBase {
         try {
             let ew: ExportedWorkspace;
             let warnings: string[] = [];
-            if (file.name.toLowerCase().endsWith('.zip')) {
-                const result = await importProjectZip(await file.arrayBuffer(), file.name.replace(/\.zip$/i, ''));
+            if (isProjectZipName(file.name)) {
+                const result = await importProjectZip(await file.arrayBuffer(), projectZipBaseName(file.name));
                 ew = result.workspace;
                 warnings = result.warnings;
             } else {

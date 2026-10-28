@@ -10,7 +10,7 @@ import { Treeview } from "../../../tools/components/treeview/Treeview.js";
 import { SimpleProgressbar } from "./ProgressIndicator.js";
 import { TreeviewNode } from "../../../tools/components/treeview/TreeviewNode.js";
 import JSZip from "jszip";
-import { importProjectZip } from "../../workspace/PortableProject.js";
+import { importProjectZip, isProjectZipName, projectZipBaseName } from "../../workspace/PortableProject.js";
 
 
 export class ImportWorkspaceGUI {
@@ -139,7 +139,7 @@ export class ImportWorkspaceGUI {
         for (let i = 0; i < files.length; i++) {
             let f = files[i];
 
-            if (f.name.endsWith(".zip")) {
+            if (isProjectZipName(f.name)) {
                 let jsZip = new JSZip();
                 jsZip.loadAsync(f).then((zip) => {
                     let jsonFile = zip.file("all_workspaces.json");
@@ -171,7 +171,7 @@ export class ImportWorkspaceGUI {
 
     async addProjectZip(f: File, treeview: Treeview<ExportedWorkspace, number>) {
         try {
-            let { workspace, warnings } = await importProjectZip(new Uint8Array(await f.arrayBuffer()), f.name.replace(/\.zip$/i, ''));
+            let { workspace, warnings } = await importProjectZip(new Uint8Array(await f.arrayBuffer()), projectZipBaseName(f.name));
             workspace.id = this.nextProjectZipId--;
             treeview.addNode(false, workspace.name, 'img_workspace-dark', workspace);
             if (warnings.length) alert(warnings.join('\n\n'));
