@@ -81,7 +81,7 @@ class ExtensionsStage extends Stage {
             throw new RuntimeException("map collision flip");
         TiledMap renderedMap=new TiledMap("/test/extensions-map.tmx",this);
         renderedMap.showLayer("ground", Layer.BACKGROUND);
-        List<Sprite> made=renderedMap.spawn("spawn");
+        List<Sprite> made=renderedMap.spawn("spawn", SpawnMap.class, SpawnXY.class, SpawnDefault.class);
         if (made.size()!=3 || !(made.get(0) instanceof SpawnMap) || !(made.get(1) instanceof SpawnXY)
             || !(made.get(2) instanceof SpawnDefault)) throw new RuntimeException("spawn order and markers");
         SpawnMap mapped=(SpawnMap)made.get(0);
@@ -94,14 +94,18 @@ class ExtensionsStage extends Stage {
             throw new RuntimeException("spawn XY constructor");
         if (!((SpawnDefault)made.get(2)).ready || made.get(2).getHitbox().getBounds().width()!=5)
             throw new RuntimeException("spawn default constructor and polygon hitbox");
+        if (renderedMap.spawn("spawn", SpawnXY.class).size()!=1) throw new RuntimeException("spawn only the given classes");
         boolean rejected=false;
-        try { renderedMap.spawn("bad"); } catch (RuntimeException e) { rejected=true; }
+        try { renderedMap.spawn("spawn"); } catch (RuntimeException e) { rejected=e.getMessage().contains("Player.class"); }
+        if (!rejected) throw new RuntimeException("spawn without classes accepted");
+        rejected=false;
+        try { renderedMap.spawn("bad", SpawnBad.class); } catch (RuntimeException e) { rejected=true; }
         if (!rejected) throw new RuntimeException("spawn bad constructor accepted");
         rejected=false;
-        try { renderedMap.spawn("explodes"); } catch (RuntimeException e) { rejected=e.getMessage().equals("constructor failed"); }
+        try { renderedMap.spawn("explodes", SpawnExplodes.class); } catch (RuntimeException e) { rejected=e.getMessage().equals("constructor failed"); }
         if (!rejected) throw new RuntimeException("spawn constructor exception lost");
         rejected=false;
-        try { renderedMap.spawn("absent"); } catch (RuntimeException e) { rejected=true; }
+        try { renderedMap.spawn("absent", SpawnDefault.class); } catch (RuntimeException e) { rejected=true; }
         if (!rejected) throw new RuntimeException("spawn absent layer accepted");
         addSound("hit", "impactWood_heavy_001");
         SoundPlayback first=playSoundCopy("hit",30), second=playSoundCopy("hit",80);

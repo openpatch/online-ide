@@ -50,7 +50,7 @@ void main() {
   println(map.getProperty("biome","forest")); println(map.getPropertyInt("lives"));
   Shape[] shapes=map.getTileCollisionShapes("ground",0,0);
   Shape[] local=map.getTileCollisionShapes(map.getTileId("ground",0,0));
-  List<Sprite> spawned=map.spawn("objects");
+  List<Sprite> spawned=map.spawn("objects",Road.class);
   println(spawned.size());
 }`);
     compiler.setFiles([file]);

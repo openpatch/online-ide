@@ -14,10 +14,9 @@ import { ScratchMapObjectClass } from "./ScratchDesktopOnlyClasses";
 import { ScratchShapeClass } from "./ScratchShapeClasses";
 import type { ScratchStageClass } from "./ScratchStageClass";
 import { ScratchWorkspaceAssets } from "./ScratchWorkspaceAssets";
-import type { JavaExecutable } from "../../../JavaExecutable";
 import { JavaClass } from "../../../types/JavaClass";
-import type { StaticNonPrimitiveType } from "../../../types/StaticNonPrimitiveType";
 import { ArrayListClass } from "../../system/collections/ArrayListClass";
+import { ClassClass } from "../../system/ClassClass";
 import { ScratchSpriteClass } from "./ScratchSpriteClass";
 import { ScratchTiledStamp, tiledTexture } from "./ScratchTiledRendering";
 import { SRC } from "./ScratchLibraryComments";
@@ -92,7 +91,7 @@ export class ScratchTiledMapClass extends ObjectClass {
         { type: "method", signature: "Shape[] getTileCollisionShapes(int tileId)", native: ScratchTiledMapClass.prototype._getTileCollisionShapes },
         { type: "method", signature: "Shape[] getTileCollisionShapes(string layerName, int column, int row)", native: ScratchTiledMapClass.prototype._getCellCollisionShapes },
         { type: "method", signature: "MapObject[] getObjectsFromLayer(string name)", native: ScratchTiledMapClass.prototype._getObjectsFromLayer },
-        { type: "method", signature: "java.util.List<Sprite> spawn(string layerName)", java: ScratchTiledMapClass.prototype._mj$spawn$List$string },
+        { type: "method", signature: "java.util.List<Sprite> spawn(string layerName, Class<? extends Sprite>... types)", java: ScratchTiledMapClass.prototype._mj$spawn$List$string$Class_I },
         { type: "method", signature: "void showLayer(string name, Layer layer)", java: ScratchTiledMapClass.prototype._mj$showLayer$void$string$Layer, comment: SRC.tiledShowLayerComment },
         { type: "method", signature: "void hideLayer(string name)", native: ScratchTiledMapClass.prototype._hideLayer, comment: SRC.tiledHideLayerComment },
     ];
@@ -257,26 +256,23 @@ export class ScratchTiledMapClass extends ObjectClass {
         }) ?? null;
     }
 
-    private spriteClass(t: Thread, name: string): JavaClass | undefined {
+    /** The one of the given classes an object's type names, by its simple or its full name. */
+    private spriteClass(name: string, types: ClassClass[]): JavaClass | undefined {
         if (!name?.trim()) return undefined;
-        const executable = t.scheduler.interpreter.executable as JavaExecutable;
-        let owner: NonPrimitiveType | StaticNonPrimitiveType = (this.stage!.constructor as typeof ScratchStageClass).type;
-        while (owner.outerType) owner = owner.outerType;
-        const pkg = owner.getAbsoluteName().split('.').slice(0, -1).join('.');
-        for (const candidate of pkg ? [pkg + '.' + name, name] : [name]) {
-            const type = executable.moduleManager.typestore.getType(candidate)
-                ?? executable.libraryModuleManager.typestore.getType(candidate);
-            if (!type) continue;
+        for (const c of types) {
+            const type = c?.type;
             if (!(type instanceof JavaClass) || !type.runtimeClass
-                || (type.runtimeClass !== ScratchSpriteClass && !(type.runtimeClass.prototype instanceof ScratchSpriteClass))) return undefined;
-            return type;
+                || (type.runtimeClass !== ScratchSpriteClass && !(type.runtimeClass.prototype instanceof ScratchSpriteClass))) continue;
+            if (type.identifier === name || type.getAbsoluteName() === name) return type;
         }
         return undefined;
     }
 
-    _mj$spawn$List$string(t: Thread, callback: CallbackParameter, name: string) {
+    _mj$spawn$List$string$Class_I(t: Thread, callback: CallbackParameter, name: string, types: ClassClass[]) {
         const stage = this.stage;
         if (!stage) throw new RuntimeExceptionClass("This map has no stage. Use new TiledMap(path, stage) to stamp or spawn.");
+        if (!types?.length) throw new RuntimeExceptionClass(
+            `Name the sprite classes to make, for example map.spawn("${name}", Player.class, Wall.class).`);
         const objects = this._getObjectsFromLayer(name);
         if (!objects) throw new RuntimeExceptionClass(`The map has no object layer '${name}'.`);
         const made: ScratchSpriteClass[] = [];
@@ -284,7 +280,7 @@ export class ScratchTiledMapClass extends ObjectClass {
         const next = () => {
             while (index < objects.length) {
                 const object = objects[index++];
-                const type = this.spriteClass(t, object.type);
+                const type = this.spriteClass(object.type, types);
                 if (!type) continue;
                 const constructors = type.getOwnMethods().filter(method => method.isConstructor && !method.hasOuterClassParameter);
                 const constructor = constructors.find(method => method.parameters.length === 1

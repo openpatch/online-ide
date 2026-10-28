@@ -2560,10 +2560,6 @@ export class SRC {
         "de": "Speichert das Objekt in der Datei",
         "en": "Saves the object to the file",
     });
-    static fileSaveXMLComment = () => lm({
-        "de": "Speichert das Objekt als XML in der Datei",
-        "en": "Saves the object to the file as XML",
-    });
     static fileLoadComment = () => lm({
         "de": "Lädt das Objekt aus der Datei",
         "en": "Loads the object from the file",
@@ -2571,14 +2567,6 @@ export class SRC {
     static fileLoadOrCreateComment = () => lm({
         "de": "Lädt das Objekt aus der Datei oder erzeugt es neu",
         "en": "Loads the object from the file or creates it new",
-    });
-    static fileLoadXMLComment = () => lm({
-        "de": "Lädt das Objekt als XML aus der Datei",
-        "en": "Loads the object from the file as XML",
-    });
-    static fileLoadXMLOrCreateComment = () => lm({
-        "de": "Lädt das Objekt als XML aus der Datei oder erzeugt es neu",
-        "en": "Loads the object from the file as XML or creates it new",
     });
     static mapObjectSetClassNameComment = () => lm({
         "de": "Setzt den Namen der Klasse, zu der dieses Objekt gehört",

@@ -2818,22 +2818,7 @@ export const scratchBrowserMembers = [
     "reason": "This API requires the desktop runtime. Browser declarations may report the limitation without performing the operation."
   },
   {
-    "id": "save/File/loadXML",
-    "status": "desktop-only",
-    "reason": "This API requires the desktop runtime. Browser declarations may report the limitation without performing the operation."
-  },
-  {
-    "id": "save/File/loadXMLOrCreate",
-    "status": "desktop-only",
-    "reason": "This API requires the desktop runtime. Browser declarations may report the limitation without performing the operation."
-  },
-  {
     "id": "save/File/save",
-    "status": "desktop-only",
-    "reason": "This API requires the desktop runtime. Browser declarations may report the limitation without performing the operation."
-  },
-  {
-    "id": "save/File/saveXML",
     "status": "desktop-only",
     "reason": "This API requires the desktop runtime. Browser declarations may report the limitation without performing the operation."
   },

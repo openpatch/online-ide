@@ -43,21 +43,15 @@ export class ScratchFileClass extends ObjectClass {
         { type: "declaration", package: "org.openpatch.scratch.save", signature: "class File extends Object", comment: SRC.fileClassComment },
         { type: "method", signature: "File()", native: ScratchFileClass.prototype._c0, comment: SRC.fileConstructorComment },
         { type: "method", signature: "static void save(string path, Object value)", native: ScratchFileClass._save, comment: SRC.fileSaveComment },
-        { type: "method", signature: "static void saveXML(string path, Object value)", native: ScratchFileClass._saveXML, comment: SRC.fileSaveXMLComment },
         { type: "method", signature: "static Object load(string path, Class type)", native: ScratchFileClass._load, comment: SRC.fileLoadComment },
         { type: "method", signature: "static Object loadOrCreate(string path, Class type)", native: ScratchFileClass._loadOrCreate, comment: SRC.fileLoadOrCreateComment },
-        { type: "method", signature: "static Object loadXML(string path, Class type)", native: ScratchFileClass._loadXML, comment: SRC.fileLoadXMLComment },
-        { type: "method", signature: "static Object loadXMLOrCreate(string path, Class type)", native: ScratchFileClass._loadXMLOrCreate, comment: SRC.fileLoadXMLOrCreateComment },
     ];
     static type: NonPrimitiveType;
 
     _c0() { desktopOnly("File", FILE_HINT); return this; }
     static _save(_path: string, _value: any) { desktopOnly("File.save()", FILE_HINT); }
-    static _saveXML(_path: string, _value: any) { desktopOnly("File.saveXML()", FILE_HINT); }
     static _load(_path: string, _type: any): any { return desktopOnlyValue("File.load()", null, FILE_HINT); }
     static _loadOrCreate(_path: string, _type: any): any { return desktopOnlyValue("File.loadOrCreate()", null, FILE_HINT); }
-    static _loadXML(_path: string, _type: any): any { return desktopOnlyValue("File.loadXML()", null, FILE_HINT); }
-    static _loadXMLOrCreate(_path: string, _type: any): any { return desktopOnlyValue("File.loadXMLOrCreate()", null, FILE_HINT); }
 }
 
 /** One object out of a Tiled object layer. */
