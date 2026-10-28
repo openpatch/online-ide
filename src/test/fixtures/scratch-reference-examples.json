@@ -1,6 +1,6 @@
 {
-  "desktopVersion": "7.0.0",
-  "browserVersion": "7.0.0-browser.1",
+  "desktopVersion": "7.1.0",
+  "browserVersion": "7.1.0-browser.1",
   "examples": [
     {
       "id": "Camera/changeX#0",
