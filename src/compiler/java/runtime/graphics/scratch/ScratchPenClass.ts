@@ -285,9 +285,12 @@ export class ScratchPenClass extends ObjectClass {
     /** Clear only this pen's own drawing (internal). */
     _eraseOwnGraphics() { this.getLayer()?.clear(); }
 
-    /** Stage lifecycle (internal; not part of the 7.0 API). */
+    /**
+     * Stage lifecycle (internal; not part of the 7.0 API). What the pen drew
+     * stays: in 7.0 it is on the layer's canvas, not the pen's, so removing a
+     * sprite or a pen erases nothing (only eraseAll does).
+     */
     _removedFromStage(_stage: ObjectClass) {
-        this._eraseOwnGraphics();
         if (this.world) ScratchPenClass.allPens.get(this.world)?.delete(this);
     }
 }
