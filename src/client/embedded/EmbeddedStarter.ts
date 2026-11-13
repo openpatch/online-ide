@@ -41,6 +41,7 @@ export type JOScript = {
     text: string,
     url?: string,
     readOnly?: boolean,
+    hidden?: boolean,
     asset?: boolean
 }
 

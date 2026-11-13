@@ -31,6 +31,13 @@ export class GUIFile extends CompilerFile {
 
     readOnly: boolean = false;
 
+    /**
+     * A file the author of a page hid: it stays in the workspace — it still
+     * compiles and its tests still run — but the file explorer never shows
+     * it, so readers cannot open, edit or delete it.
+     */
+    hidden: boolean = false;
+
 
     // GUI references:
     private monacoModel?: monaco.editor.ITextModel;

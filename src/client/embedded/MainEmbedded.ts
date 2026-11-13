@@ -279,6 +279,10 @@ export class MainEmbedded implements MainBase {
         return this.scriptListFromHtml.some(script => script.title === identifier && script.readOnly);
     }
 
+    isHiddenScript(identifier: string): boolean {
+        return this.scriptListFromHtml.some(script => script.title === identifier && script.hidden);
+    }
+
     readClassDiagram() {
         if (!this.config.withClassDiagram) return;
 
@@ -346,7 +350,7 @@ export class MainEmbedded implements MainBase {
 
         if (this.config.withFileList) {
             for (let file of this.currentWorkspace.getFiles()) {
-                this.fileExplorer.addFile(file);
+                if (!file.hidden) this.fileExplorer.addFile(file);
             }
             this.fileExplorer.selectFirstFileIfPresent();
         } else {
@@ -522,9 +526,10 @@ export class MainEmbedded implements MainBase {
                                 if (!isAssetFile(file)) file.getMonacoModel();
                                 file.setSaved(true);
                                 file.readOnly = that.isReadOnlyScript(name);
+                                file.hidden = that.isHiddenScript(name);
 
-                                that.fileExplorer?.addFile(file);
                                 that.currentWorkspace.addFile(file);
+                                if (!file.hidden) that.fileExplorer?.addFile(file);
                                 that.showResetButton();
 
                                 // console.log("Retrieving script " + scriptId);
@@ -620,6 +625,7 @@ export class MainEmbedded implements MainBase {
 
         let file = new GUIFile(this, script.title, script.text);
         file.readOnly = script.readOnly || false;
+        file.hidden = script.hidden || false;
         file.id = this.currentWorkspace.getFiles().length;
 
         this.currentWorkspace.addFile(file);
